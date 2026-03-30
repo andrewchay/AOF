@@ -1,0 +1,25 @@
+{
+  "topic": "api_demo_topic",
+  "created_at": "20260326_161956",
+  "inputs": {
+    "docs_path": "/Users/chaihao/LLM/AOF/tools/data_adapter/samples/TEST_DATA_miyoushe_post_metrics_case.sql",
+    "metadata_json": "/Users/chaihao/LLM/AOF/data/api_runs/api_demo_topic/metadata_api_demo_topic.json",
+    "feedback_jsonl": ""
+  },
+  "artifacts": {
+    "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_api_demo_topic_ontology.owl",
+    "alignment_report_json": "/Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_alignment_report_api_demo_topic_20260326_161956.json",
+    "alignment_report_md": "/Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_alignment_report_api_demo_topic_20260326_161956.md",
+    "feedback_candidates_jsonl": "/Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_api_demo_topic_20260326_161956.jsonl",
+    "mapping_dir": "/Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/mapping",
+    "regression_jsonl": "/Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/regression/regression_cases_api_demo_topic_20260326_161956.jsonl",
+    "regression_summary_md": "/Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/regression/regression_summary_api_demo_topic_20260326_161956.md",
+    "skills_update_md": "/Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/artifacts/skills_update_suggestions_api_demo_topic_20260326_161956.md"
+  },
+  "logs": {
+    "ontology_stdout": "[step] normalize input\n[ok] normalized=4\n[txt] /Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_api_demo_topic_20260326_161956.txt\n[jsonl] /Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_api_demo_topic_20260326_161956.jsonl\n[step] parsed semantics: queries=4, tables=5, metrics=5, fields=8\n[step] ontology generated: /Users/chaihao/LLM/AOF/ontologies/TEST_DATA_api_demo_topic_ontology.owl\n[status] aligned\n[candidates] 0\n[jsonl] /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_api_demo_topic_20260326_161956.jsonl\n[md] /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_api_demo_topic_20260326_161956.md\n- feedback_jsonl: /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_api_demo_topic_20260326_161956.jsonl\n- feedback_md: /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_api_demo_topic_20260326_161956.md\n[done]\n- ontology: /Users/chaihao/LLM/AOF/ontologies/TEST_DATA_api_demo_topic_ontology.owl\n- report_json: /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_alignment_report_api_demo_topic_20260326_161956.json\n- report_md: /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_alignment_report_api_demo_topic_20260326_161956.md\n",
+    "mapping_stdout": "[done] mapping library\n- term_mapping: /Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/mapping/term_mapping.yaml\n- metric_catalog: /Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/mapping/metric_catalog.yaml\n- dimension_mapping: /Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/mapping/dimension_mapping.yaml\n- sql_pattern_library: /Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/mapping/sql_pattern_library.yaml\n",
+    "regression_stdout": "[done] regression library\n- regression_jsonl: /Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/regression/regression_cases_api_demo_topic_20260326_161956.jsonl\n- regression_summary: /Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/regression/regression_summary_api_demo_topic_20260326_161956.md\n- cases: 4\n",
+    "skills_stdout": "[done] skills update suggestions\n- skills_update_md: /Users/chaihao/LLM/AOF/data/middle_layer/api_demo_topic/artifacts/skills_update_suggestions_api_demo_topic_20260326_161956.md\n"
+  }
+}

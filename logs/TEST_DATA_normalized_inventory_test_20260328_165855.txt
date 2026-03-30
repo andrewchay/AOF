@@ -1,0 +1,1 @@
+[source=sql, index=1, table=inventory] {"_kind": "insert", "_table": "inventory", "_columns": "(sku, name, stock)", "_values_sql": "('SKU-1', '竹简', 120),\n('SKU-2', '帛书', 45)"}

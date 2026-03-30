@@ -1,0 +1,20 @@
+-
+  pattern_id: metric_by_date_v1
+  intent: 按日期统计指标
+  sql_template: "SELECT ${date_field}, ${agg_expr} FROM ${table} WHERE ${filters} GROUP BY ${date_field}"
+  required_slots:
+  - date_field
+  - agg_expr
+  - table
+  - filters
+-
+  pattern_id: window_range_metric_v1
+  intent: 时间窗口指标统计
+  sql_template: "SELECT ${agg_expr} FROM ${table} WHERE ${date_field} BETWEEN ${start_date} AND ${end_date} AND ${filters}"
+  required_slots:
+  - agg_expr
+  - table
+  - date_field
+  - start_date
+  - end_date
+  - filters

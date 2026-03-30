@@ -1,0 +1,24 @@
+{
+  "topic": "miyoushe_loop_auto_demo",
+  "status": "max_iterations_reached",
+  "round_stats": [
+    {
+      "iteration": 1,
+      "matched_count": 16,
+      "unmatched_count": 1
+    }
+  ],
+  "bucket_counts": [
+    {
+      "bucket": "数据表概念缺失",
+      "count": 1
+    }
+  ],
+  "top_terms": [
+    {
+      "term": "temporarytable",
+      "category": "classes",
+      "count": 1
+    }
+  ]
+}

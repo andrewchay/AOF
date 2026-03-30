@@ -1,0 +1,9 @@
+{
+  "timestamp_utc": "2026-03-25T03:21:25.146125+00:00",
+  "spec": "/private/tmp/aof_spec.deepseek.test_miyoushe_post_metrics_ontology_v2.json",
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "dry_run": false,
+  "stages": {
+    "add": "PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('e8f3ed0c-6588-5917-a996-d02958671831'), dataset_id=UUID('938a5756-e942-5b6a-9417-1329caa028ed'), dataset_name='test_miyoushe_post_metrics_ontology_v2_20260325', payload=None, data_ingestion_info=[{'run_info': PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('e8f3ed0c-6588-5917-a996-d02958671831'), dataset_id=UUID('938a5756-e942-5b6a-9417-1329caa028ed'), dataset_name='test_miyoushe_post_metrics_ontology_v2_20260325', payload=None, data_ingestion_info=None), 'data_id': UUID('b373932f-6639-5aef-9e4e-4d1c0eed8f63')}])"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-03-25T00:14:55.854429+00:00",
+  "spec": "/private/tmp/aof_spec.deepseek.real.json",
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "dry_run": false,
+  "stages": {},
+  "error": {
+    "type": "AOFBridgeError",
+    "message": "cognee.cognify 执行失败（retries=0, backoff_seconds=1.0）; root_cause=EmbeddingException: EmbeddingException: Failed to index data points using model deepseek/deepseek-embedding (Status code: 422)"
+  }
+}

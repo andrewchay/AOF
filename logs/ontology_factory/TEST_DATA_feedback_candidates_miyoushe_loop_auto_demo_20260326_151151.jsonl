@@ -1,0 +1,7 @@
+{"action": "map_term", "term": "mihoyo community", "class": "TODO_CLASS", "note": "iter=1 category=individuals; choose map_term/add_class/add_individual as needed"}
+{"action": "map_term", "term": "data", "class": "TODO_CLASS", "note": "iter=1 category=classes; choose map_term/add_class/add_individual as needed"}
+{"action": "map_term", "term": "test data", "class": "TODO_CLASS", "note": "iter=1 category=individuals; choose map_term/add_class/add_individual as needed"}
+{"action": "map_term", "term": "date", "class": "TODO_CLASS", "note": "iter=1 category=classes; choose map_term/add_class/add_individual as needed"}
+{"action": "map_term", "term": "yesterday", "class": "TODO_CLASS", "note": "iter=1 category=individuals; choose map_term/add_class/add_individual as needed"}
+{"action": "map_term", "term": "daterange", "class": "TODO_CLASS", "note": "iter=1 category=classes; choose map_term/add_class/add_individual as needed"}
+{"action": "map_term", "term": "last 30 days", "class": "TODO_CLASS", "note": "iter=1 category=individuals; choose map_term/add_class/add_individual as needed"}

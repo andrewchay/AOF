@@ -1,0 +1,52 @@
+{
+  "topic": "miyoushe_factory_demo",
+  "topic_slug": "miyoushe_factory_demo",
+  "input": "/Users/chaihao/LLM/AOF/tools/data_adapter/samples/TEST_DATA_miyoushe_post_metrics_case.sql",
+  "normalized_txt": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_factory_demo_20260325_160719.txt",
+  "normalized_jsonl": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_factory_demo_20260325_160719.jsonl",
+  "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_miyoushe_factory_demo_ontology.owl",
+  "iterations": [
+    {
+      "iteration": 1,
+      "dataset": "test_miyoushe_factory_demo_20260325_160719_iter1",
+      "spec": "/tmp/aof_spec.miyoushe_factory_demo.20260325_160719.iter1.json",
+      "aof_add_result": "/Users/chaihao/LLM/AOF/logs/aof_add_result.test_factory_miyoushe_factory_demo_20260325_160719_iter1.json",
+      "aof_run_result": "/Users/chaihao/LLM/AOF/logs/aof_run_result.test_factory_miyoushe_factory_demo_20260325_160719_iter1.json",
+      "log_file": "/Users/chaihao/LLM/cognee/logs/2026-03-25_16-07-35.log",
+      "unmatched_count": 3,
+      "matched_count": 14,
+      "unmatched": [
+        {
+          "term": "mihoyo community",
+          "category": "individuals"
+        },
+        {
+          "term": "datacategory",
+          "category": "classes"
+        },
+        {
+          "term": "test data",
+          "category": "individuals"
+        }
+      ],
+      "added_from_unmatched": [
+        "individual:mihoyo_community:CommunityPlatform",
+        "class:Datacategory",
+        "individual:test_data:Process"
+      ]
+    },
+    {
+      "iteration": 2,
+      "dataset": "test_miyoushe_factory_demo_20260325_160719_iter2",
+      "spec": "/tmp/aof_spec.miyoushe_factory_demo.20260325_160719.iter2.json",
+      "aof_add_result": "/Users/chaihao/LLM/AOF/logs/aof_add_result.test_factory_miyoushe_factory_demo_20260325_160719_iter2.json",
+      "aof_run_result": "/Users/chaihao/LLM/AOF/logs/aof_run_result.test_factory_miyoushe_factory_demo_20260325_160719_iter2.json",
+      "log_file": "/Users/chaihao/LLM/cognee/logs/2026-03-25_16-08-38.log",
+      "unmatched_count": 0,
+      "matched_count": 15,
+      "unmatched": [],
+      "added_from_unmatched": []
+    }
+  ],
+  "status": "aligned"
+}

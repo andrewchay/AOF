@@ -1,0 +1,10 @@
+{
+  "topic": "api_guide_test",
+  "topic_slug": "api_guide_test",
+  "input": "/private/tmp/test_guide.md",
+  "normalized_txt": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_api_guide_test_20260329_091053.txt",
+  "normalized_jsonl": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_api_guide_test_20260329_091053.jsonl",
+  "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_api_guide_test_ontology.owl",
+  "iterations": [],
+  "status": "ontology_built_only"
+}

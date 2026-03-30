@@ -1,0 +1,9 @@
+{
+  "timestamp_utc": "2026-03-28T09:06:19.760359+00:00",
+  "spec": "/Users/chaihao/LLM/AOF/aof_spec.deepseek.test.json",
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "dry_run": false,
+  "stages": {
+    "add": "PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('352de6fb-acca-583b-bd44-de0b197aabd7'), dataset_id=UUID('9db56101-7893-5f4d-9ef7-cff1f332b90f'), dataset_name='deepseek_test_dataset', payload=None, data_ingestion_info=[{'run_info': PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('352de6fb-acca-583b-bd44-de0b197aabd7'), dataset_id=UUID('9db56101-7893-5f4d-9ef7-cff1f332b90f'), dataset_name='deepseek_test_dataset', payload=None, data_ingestion_info=None), 'data_id': UUID('db0ce678-ea1f-51f3-ae3f-3151af8b17df')}])"
+  }
+}

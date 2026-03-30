@@ -1,0 +1,16 @@
+{
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "dataset": "main_dataset",
+  "runtime": {
+    "run_in_background": false,
+    "incremental_loading": true,
+    "data_per_batch": 20
+  },
+  "ontology": {
+    "file": "/Users/chaihao/LLM/cognee/examples/guides/ontology_input_example/basic_ontology.owl",
+    "matching_cutoff": 0.8
+  },
+  "cognee": {
+    "root": "/Users/chaihao/LLM/cognee"
+  }
+}

@@ -1,0 +1,2 @@
+{"action": "add", "term": "test_term", "type": "class"}
+{"action": "modify", "term": "other_term", "mapping": "NewMapping"}

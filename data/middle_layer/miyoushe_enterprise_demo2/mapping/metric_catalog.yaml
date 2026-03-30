@@ -1,0 +1,75 @@
+-
+  metric_id: post_cnt_30d
+  cn_name: post_cnt_30d
+  agg: count
+  measure: "*"
+  base_table: dim_community.dim_community_post_info_snapshot
+  required_filters:
+  - "logregion = 'pro'"
+  - logdate = date_sub(current_date, 1)
+  - game_id = -1
+  - is_delete = 0
+  - is_sandbox = 0
+  - "post_type NOT IN ('7')"
+  - forum_id NOT IN (28)
+  - substr(create_datetime, 1, 10) BETWEEN date_sub(current_date, 30)
+-
+  metric_id: vertical_post_cnt_yesterday
+  cn_name: vertical_post_cnt_yesterday
+  agg: count
+  measure: "*"
+  base_table: dim_community.dim_community_post_info_snapshot
+  required_filters:
+  - "logregion = 'pro'"
+  - logdate = date_sub(current_date, 1)
+  - is_delete = 0
+  - is_sandbox = 0
+  - "post_type NOT IN ('7')"
+  - forum_id NOT IN (28)
+  - "game_id = '-1'"
+  - substr(create_datetime, 1, 10) = logdate
+-
+  metric_id: post_id
+  cn_name: post_id
+  agg: count
+  measure: "*"
+  base_table: dim_community.dim_community_post_info_snapshot
+  required_filters:
+  - "logregion = 'pro'"
+  - logdate = date_sub(current_date, 1)
+  - substr(create_datetime, 1, 10) = logdate
+  - is_delete = 0
+  - is_sandbox = 0
+  - forum_id NOT IN (28)
+  - "post_type NOT IN ('7') ), quality_vertical_tag_post AS ( SELECT DISTINCT item_id AS post_id FROM dwd_community.dwd_community_post_tag_item_df WHERE logregion = 'pro'"
+  - logdate = date_sub(current_date, 1)
+-
+  metric_id: vertical_tag_post_cnt_yesterday
+  cn_name: vertical_tag_post_cnt_yesterday
+  agg: count
+  measure: "*"
+  base_table: dim_community.dim_community_post_info_snapshot
+  required_filters:
+  - "logregion = 'pro'"
+  - logdate = date_sub(current_date, 1)
+  - is_delete = 0
+  - is_sandbox = 0
+  - "post_type NOT IN ('7')"
+  - forum_id NOT IN (28)
+  - "substr(create_datetime, 1, 10) = logdate ), vertical_tag_post AS ( SELECT DISTINCT item_id AS post_id FROM dwd_community.dwd_community_post_tag_item_df WHERE logregion = 'pro'"
+  - logdate = date_sub(current_date, 1)
+-
+  metric_id: quality_vertical_post_cnt_yesterday
+  cn_name: quality_vertical_post_cnt_yesterday
+  agg: count
+  measure: "*"
+  base_table: dim_community.dim_community_post_info_snapshot
+  required_filters:
+  - "logregion = 'pro'"
+  - logdate = date_sub(current_date, 1)
+  - substr(create_datetime, 1, 10) = logdate
+  - is_delete = 0
+  - is_sandbox = 0
+  - forum_id NOT IN (28)
+  - "post_type NOT IN ('7') ), quality_vertical_tag_post AS ( SELECT DISTINCT item_id AS post_id FROM dwd_community.dwd_community_post_tag_item_df WHERE logregion = 'pro'"
+  - logdate = date_sub(current_date, 1)

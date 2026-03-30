@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-03-24T16:02:16.456456+00:00",
+  "spec": "/Users/chaihao/LLM/AOF/aof_spec.example.json",
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "dry_run": false,
+  "stages": {},
+  "error": {
+    "type": "PreflightError",
+    "message": "Preflight(add) 失败:\n- cognee 依赖缺失: structlog\n- 缺少环境变量 LLM_API_KEY"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "topic": "pack_ontology_demo",
+  "topic_slug": "pack_ontology_demo",
+  "input": "/Users/chaihao/LLM/AOF/tools/data_adapter/samples/TEST_DATA_miyoushe_post_metrics_case.sql",
+  "normalized_txt": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_pack_ontology_demo_20260326_192043.txt",
+  "normalized_jsonl": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_pack_ontology_demo_20260326_192043.jsonl",
+  "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_pack_ontology_demo_ontology.owl",
+  "iterations": [],
+  "status": "ontology_built_only"
+}

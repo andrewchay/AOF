@@ -1,0 +1,30 @@
+-
+  term: post_cnt_30d
+  canonical_metric: post_cnt_30d
+  aliases:
+  grain: day
+  domain: api_demo_topic
+-
+  term: vertical_post_cnt_yesterday
+  canonical_metric: vertical_post_cnt_yesterday
+  aliases:
+  grain: day
+  domain: api_demo_topic
+-
+  term: post_id
+  canonical_metric: post_id
+  aliases:
+  grain: day
+  domain: api_demo_topic
+-
+  term: vertical_tag_post_cnt_yesterday
+  canonical_metric: vertical_tag_post_cnt_yesterday
+  aliases:
+  grain: day
+  domain: api_demo_topic
+-
+  term: quality_vertical_post_cnt_yesterday
+  canonical_metric: quality_vertical_post_cnt_yesterday
+  aliases:
+  grain: day
+  domain: api_demo_topic

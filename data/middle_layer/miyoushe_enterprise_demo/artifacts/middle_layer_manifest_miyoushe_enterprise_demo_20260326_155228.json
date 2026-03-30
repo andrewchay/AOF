@@ -1,0 +1,23 @@
+{
+  "topic": "miyoushe_enterprise_demo",
+  "created_at": "20260326_155228",
+  "inputs": {
+    "docs_path": "/Users/chaihao/LLM/AOF/tools/data_adapter/samples/TEST_DATA_miyoushe_post_metrics_case.sql",
+    "metadata_json": "/Users/chaihao/LLM/AOF/samples/middle_layer/TEST_DATA_metadata_sample.json",
+    "feedback_jsonl": ""
+  },
+  "artifacts": {
+    "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_miyoushe_enterprise_demo_ontology.owl",
+    "alignment_report_json": "/Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_alignment_report_miyoushe_enterprise_demo_20260326_155228.json",
+    "alignment_report_md": "/Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_alignment_report_miyoushe_enterprise_demo_20260326_155228.md",
+    "feedback_candidates_jsonl": "/Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_miyoushe_enterprise_demo_20260326_155228.jsonl",
+    "mapping_dir": "/Users/chaihao/LLM/AOF/data/middle_layer/miyoushe_enterprise_demo/mapping",
+    "regression_jsonl": "/Users/chaihao/LLM/AOF/data/middle_layer/miyoushe_enterprise_demo/regression/regression_cases_miyoushe_enterprise_demo_20260326_155228.jsonl",
+    "regression_summary_md": "/Users/chaihao/LLM/AOF/data/middle_layer/miyoushe_enterprise_demo/regression/regression_summary_miyoushe_enterprise_demo_20260326_155228.md"
+  },
+  "logs": {
+    "ontology_stdout": "[step] normalize input\n[ok] normalized=4\n[txt] /Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_enterprise_demo_20260326_155228.txt\n[jsonl] /Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_enterprise_demo_20260326_155228.jsonl\n[step] parsed semantics: queries=4, tables=5, metrics=5, fields=8\n[step] ontology generated: /Users/chaihao/LLM/AOF/ontologies/TEST_DATA_miyoushe_enterprise_demo_ontology.owl\n[status] aligned\n[candidates] 0\n[jsonl] /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_miyoushe_enterprise_demo_20260326_155228.jsonl\n[md] /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_miyoushe_enterprise_demo_20260326_155228.md\n- feedback_jsonl: /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_miyoushe_enterprise_demo_20260326_155228.jsonl\n- feedback_md: /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_feedback_candidates_miyoushe_enterprise_demo_20260326_155228.md\n[done]\n- ontology: /Users/chaihao/LLM/AOF/ontologies/TEST_DATA_miyoushe_enterprise_demo_ontology.owl\n- report_json: /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_alignment_report_miyoushe_enterprise_demo_20260326_155228.json\n- report_md: /Users/chaihao/LLM/AOF/logs/ontology_factory/TEST_DATA_alignment_report_miyoushe_enterprise_demo_20260326_155228.md\n",
+    "mapping_stdout": "[done] mapping library\n- term_mapping: /Users/chaihao/LLM/AOF/data/middle_layer/miyoushe_enterprise_demo/mapping/term_mapping.yaml\n- metric_catalog: /Users/chaihao/LLM/AOF/data/middle_layer/miyoushe_enterprise_demo/mapping/metric_catalog.yaml\n- dimension_mapping: /Users/chaihao/LLM/AOF/data/middle_layer/miyoushe_enterprise_demo/mapping/dimension_mapping.yaml\n- sql_pattern_library: /Users/chaihao/LLM/AOF/data/middle_layer/miyoushe_enterprise_demo/mapping/sql_pattern_library.yaml\n",
+    "regression_stdout": "[done] regression library\n- regression_jsonl: /Users/chaihao/LLM/AOF/data/middle_layer/miyoushe_enterprise_demo/regression/regression_cases_miyoushe_enterprise_demo_20260326_155228.jsonl\n- regression_summary: /Users/chaihao/LLM/AOF/data/middle_layer/miyoushe_enterprise_demo/regression/regression_summary_miyoushe_enterprise_demo_20260326_155228.md\n- cases: 4\n"
+  }
+}

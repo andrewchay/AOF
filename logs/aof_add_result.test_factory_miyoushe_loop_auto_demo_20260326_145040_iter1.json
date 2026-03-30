@@ -1,0 +1,9 @@
+{
+  "timestamp_utc": "2026-03-26T06:50:45.340208+00:00",
+  "spec": "/private/tmp/aof_spec.miyoushe_loop_auto_demo.20260326_145040.iter1.json",
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "dry_run": false,
+  "stages": {
+    "add": "PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('7b7a58d7-5d5e-5c49-9e94-c3e599b7a438'), dataset_id=UUID('b8d8cd1b-d7ad-57f5-be03-b71bfdb478d7'), dataset_name='test_miyoushe_loop_auto_demo_20260326_145040_iter1', payload=None, data_ingestion_info=[{'run_info': PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('7b7a58d7-5d5e-5c49-9e94-c3e599b7a438'), dataset_id=UUID('b8d8cd1b-d7ad-57f5-be03-b71bfdb478d7'), dataset_name='test_miyoushe_loop_auto_demo_20260326_145040_iter1', payload=None, data_ingestion_info=None), 'data_id': UUID('b373932f-6639-5aef-9e4e-4d1c0eed8f63')}])"
+  }
+}

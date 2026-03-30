@@ -1,0 +1,10 @@
+{
+  "topic": "miyoushe_enterprise_demo2",
+  "topic_slug": "miyoushe_enterprise_demo2",
+  "input": "/private/var/folders/4h/trqk0by10x58q21z3q4r3dfr0000gq/T/aof_middle_layer_miyoushe_enterprise_demo2.sql",
+  "normalized_txt": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_enterprise_demo2_20260326_155604.txt",
+  "normalized_jsonl": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_enterprise_demo2_20260326_155604.jsonl",
+  "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_miyoushe_enterprise_demo2_ontology.owl",
+  "iterations": [],
+  "status": "ontology_built_only"
+}

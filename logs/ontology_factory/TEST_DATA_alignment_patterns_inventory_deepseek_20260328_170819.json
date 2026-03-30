@@ -1,0 +1,112 @@
+{
+  "topic": "inventory_deepseek",
+  "status": "max_iterations_reached",
+  "round_stats": [
+    {
+      "iteration": 1,
+      "matched_count": 1,
+      "unmatched_count": 15
+    },
+    {
+      "iteration": 2,
+      "matched_count": 12,
+      "unmatched_count": 3
+    }
+  ],
+  "bucket_counts": [
+    {
+      "bucket": "通用实例缺失",
+      "count": 12
+    },
+    {
+      "bucket": "通用类概念缺失",
+      "count": 5
+    },
+    {
+      "bucket": "数据表概念缺失",
+      "count": 1
+    }
+  ],
+  "top_terms": [
+    {
+      "term": "竹简",
+      "category": "individuals",
+      "count": 2
+    },
+    {
+      "term": "帛书",
+      "category": "individuals",
+      "count": 2
+    },
+    {
+      "term": "table",
+      "category": "classes",
+      "count": 1
+    },
+    {
+      "term": "column",
+      "category": "classes",
+      "count": 1
+    },
+    {
+      "term": "sku",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "name",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "stock",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "product",
+      "category": "classes",
+      "count": 1
+    },
+    {
+      "term": "sku-1",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "quantity",
+      "category": "classes",
+      "count": 1
+    },
+    {
+      "term": "120",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "sku-2",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "45",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "operation",
+      "category": "classes",
+      "count": 1
+    },
+    {
+      "term": "insert operation",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "productname",
+      "category": "classes",
+      "count": 1
+    }
+  ]
+}

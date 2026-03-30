@@ -1,0 +1,100 @@
+# AOF Semantic Middle Layer API - Production Docker Compose
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  aof-semantic-api:
+    build:
+      context: ../..
+      dockerfile: services/semantic_middle_layer_api/Dockerfile
+      args:
+        INSTALL_COGNEE: "1"
+        COGNEE_PIP_SPEC: "cognee==0.1.45"  # Pin version for production
+    image: aof-semantic-api:${VERSION:-latest}
+    container_name: aof-semantic-api-prod
+    restart: always
+    
+    ports:
+      - "127.0.0.1:8787:8787"  # Bind to localhost only, use reverse proxy
+    
+    environment:
+      - AOF_ROOT=/app/AOF
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-custom}
+      - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-chat}
+      - LLM_ENDPOINT=${LLM_ENDPOINT:-https://api.deepseek.com/v1}
+      - COGNEE_ROOT=${COGNEE_ROOT:-}
+      - PYTHONUNBUFFERED=1
+      # Production optimizations
+      - UVICORN_WORKERS=2
+      - UVICORN_LOOP=uvloop
+    
+    volumes:
+      - aof-data:/app/AOF/data
+      - aof-logs:/app/AOF/logs
+      - aof-ontologies:/app/AOF/ontologies
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Strict resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        labels: "service_name,environment"
+        env: "OS_VERSION"
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+
+  # Nginx reverse proxy (optional but recommended for production)
+  nginx:
+    image: nginx:alpine
+    container_name: aof-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - aof-semantic-api
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+volumes:
+  aof-data:
+    driver: local
+  aof-logs:
+    driver: local
+  aof-ontologies:
+    driver: local

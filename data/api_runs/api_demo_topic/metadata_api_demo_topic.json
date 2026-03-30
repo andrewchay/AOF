@@ -1,0 +1,46 @@
+{
+  "tables": [
+    {
+      "name": "dws_community.dws_community_user_login_snapshot",
+      "columns": [
+        {
+          "name": "logdate",
+          "type": "date"
+        },
+        {
+          "name": "account_id",
+          "type": "bigint"
+        },
+        {
+          "name": "platform",
+          "type": "string"
+        },
+        {
+          "name": "game_id",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "dim_community.dim_community_post_info_snapshot",
+      "columns": [
+        {
+          "name": "post_id",
+          "type": "bigint"
+        },
+        {
+          "name": "create_datetime",
+          "type": "string"
+        },
+        {
+          "name": "logdate",
+          "type": "date"
+        },
+        {
+          "name": "forum_id",
+          "type": "int"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+-- TEST_DATA: 米游社稿件指标案例 SQL（仅用于流程验证，非生产口径）
+
+-- TEST_DATA: 米游社近30天发布稿件数（不含今天，严格使用快照表）
+SELECT
+    COUNT(DISTINCT post_id) AS post_cnt_30d
+FROM dim_community.dim_community_post_info_snapshot
+WHERE logregion = 'pro'
+  AND logdate = date_sub(current_date, 1)
+  AND game_id = -1
+  AND is_delete = 0
+  AND is_sandbox = 0
+  AND post_type NOT IN ('7')
+  AND forum_id NOT IN (28)
+  AND substr(create_datetime, 1, 10)
+        BETWEEN date_sub(current_date, 30)
+            AND date_sub(current_date, 1);
+
+-- TEST_DATA: 昨天发布的垂类稿件数
+SELECT
+    COUNT(DISTINCT post_id) AS vertical_post_cnt_yesterday
+FROM dim_community.dim_community_post_info_snapshot
+WHERE logregion = 'pro'
+  AND logdate = date_sub(current_date, 1)
+  AND is_delete = 0
+  AND is_sandbox = 0
+  AND post_type NOT IN ('7')
+  AND forum_id NOT IN (28)
+  AND game_id = '-1'
+  AND substr(create_datetime, 1, 10) = logdate;
+
+-- TEST_DATA: 昨天发布的【垂类标签】稿件数
+WITH
+valid_post_yesterday AS (
+    SELECT
+        post_id
+    FROM dim_community.dim_community_post_info_snapshot
+    WHERE logregion = 'pro'
+      AND logdate = date_sub(current_date, 1)
+      AND is_delete = 0
+      AND is_sandbox = 0
+      AND post_type NOT IN ('7')
+      AND forum_id NOT IN (28)
+      AND substr(create_datetime, 1, 10) = logdate
+),
+vertical_tag_post AS (
+    SELECT DISTINCT
+        item_id AS post_id
+    FROM dwd_community.dwd_community_post_tag_item_df
+    WHERE logregion = 'pro'
+      AND logdate = date_sub(current_date, 1)
+      AND regexp_like(content_tag, '\"[0-9]+\":\"1\"')
+)
+SELECT
+    COUNT(DISTINCT p.post_id) AS vertical_tag_post_cnt_yesterday
+FROM valid_post_yesterday p
+JOIN vertical_tag_post t
+  ON p.post_id = t.post_id;
+
+-- TEST_DATA: 昨天发布的【优质垂类】稿件数
+WITH
+valid_post_yesterday AS (
+    SELECT
+        post_id
+    FROM dim_community.dim_community_post_info_snapshot
+    WHERE logregion = 'pro'
+      AND logdate = date_sub(current_date, 1)
+      AND substr(create_datetime, 1, 10) = logdate
+      AND is_delete = 0
+      AND is_sandbox = 0
+      AND forum_id NOT IN (28)
+      AND post_type NOT IN ('7')
+),
+quality_vertical_tag_post AS (
+    SELECT DISTINCT
+        item_id AS post_id
+    FROM dwd_community.dwd_community_post_tag_item_df
+    WHERE logregion = 'pro'
+      AND logdate = date_sub(current_date, 1)
+      AND regexp_like(content_tag, '\"7\":\"1\"')
+)
+SELECT
+    COUNT(DISTINCT p.post_id) AS quality_vertical_post_cnt_yesterday
+FROM valid_post_yesterday p
+JOIN quality_vertical_tag_post t
+  ON p.post_id = t.post_id;

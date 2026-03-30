@@ -1,0 +1,126 @@
+{
+  "topic": "inventory_deepseek",
+  "topic_slug": "inventory_deepseek",
+  "input": "/Users/chaihao/LLM/AOF/tools/data_adapter/samples/inventory.sql",
+  "normalized_txt": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_inventory_deepseek_20260328_170819.txt",
+  "normalized_jsonl": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_inventory_deepseek_20260328_170819.jsonl",
+  "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_inventory_deepseek_ontology.owl",
+  "iterations": [
+    {
+      "iteration": 1,
+      "dataset": "test_inventory_deepseek_20260328_170819_iter1",
+      "spec": "/tmp/aof_spec.inventory_deepseek.20260328_170819.iter1.json",
+      "aof_add_result": "/Users/chaihao/LLM/AOF/logs/aof_add_result.test_factory_inventory_deepseek_20260328_170819_iter1.json",
+      "aof_run_result": "/Users/chaihao/LLM/AOF/logs/aof_run_result.test_factory_inventory_deepseek_20260328_170819_iter1.json",
+      "log_file": "/Users/chaihao/LLM/cognee/logs/2026-03-28_17-08-46.log",
+      "unmatched_count": 15,
+      "matched_count": 1,
+      "unmatched": [
+        {
+          "term": "table",
+          "category": "classes"
+        },
+        {
+          "term": "column",
+          "category": "classes"
+        },
+        {
+          "term": "sku",
+          "category": "individuals"
+        },
+        {
+          "term": "name",
+          "category": "individuals"
+        },
+        {
+          "term": "stock",
+          "category": "individuals"
+        },
+        {
+          "term": "product",
+          "category": "classes"
+        },
+        {
+          "term": "sku-1",
+          "category": "individuals"
+        },
+        {
+          "term": "竹简",
+          "category": "individuals"
+        },
+        {
+          "term": "quantity",
+          "category": "classes"
+        },
+        {
+          "term": "120",
+          "category": "individuals"
+        },
+        {
+          "term": "sku-2",
+          "category": "individuals"
+        },
+        {
+          "term": "帛书",
+          "category": "individuals"
+        },
+        {
+          "term": "45",
+          "category": "individuals"
+        },
+        {
+          "term": "operation",
+          "category": "classes"
+        },
+        {
+          "term": "insert operation",
+          "category": "individuals"
+        }
+      ],
+      "added_from_unmatched": [
+        "class:Table",
+        "class:Column",
+        "individual:sku:Process",
+        "individual:name:Process",
+        "individual:stock:Process",
+        "class:Product",
+        "individual:sku_1:Process",
+        "individual:item:Process",
+        "class:Quantity",
+        "individual:120:Process",
+        "individual:sku_2:Process",
+        "individual:45:Process",
+        "class:Operation",
+        "individual:insert_operation:Process"
+      ]
+    },
+    {
+      "iteration": 2,
+      "dataset": "test_inventory_deepseek_20260328_170819_iter2",
+      "spec": "/tmp/aof_spec.inventory_deepseek.20260328_170819.iter2.json",
+      "aof_add_result": "/Users/chaihao/LLM/AOF/logs/aof_add_result.test_factory_inventory_deepseek_20260328_170819_iter2.json",
+      "aof_run_result": "/Users/chaihao/LLM/AOF/logs/aof_run_result.test_factory_inventory_deepseek_20260328_170819_iter2.json",
+      "log_file": "/Users/chaihao/LLM/cognee/logs/2026-03-28_17-09-39.log",
+      "unmatched_count": 3,
+      "matched_count": 12,
+      "unmatched": [
+        {
+          "term": "productname",
+          "category": "classes"
+        },
+        {
+          "term": "竹简",
+          "category": "individuals"
+        },
+        {
+          "term": "帛书",
+          "category": "individuals"
+        }
+      ],
+      "added_from_unmatched": [
+        "class:Productname"
+      ]
+    }
+  ],
+  "status": "max_iterations_reached"
+}

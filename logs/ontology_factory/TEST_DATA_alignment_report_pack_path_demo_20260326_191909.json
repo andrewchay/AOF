@@ -1,0 +1,10 @@
+{
+  "topic": "pack_path_demo",
+  "topic_slug": "pack_path_demo",
+  "input": "/private/var/folders/4h/trqk0by10x58q21z3q4r3dfr0000gq/T/aof_middle_layer_pack_path_demo.sql",
+  "normalized_txt": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_pack_path_demo_20260326_191909.txt",
+  "normalized_jsonl": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_pack_path_demo_20260326_191909.jsonl",
+  "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_pack_path_demo_ontology.owl",
+  "iterations": [],
+  "status": "ontology_built_only"
+}

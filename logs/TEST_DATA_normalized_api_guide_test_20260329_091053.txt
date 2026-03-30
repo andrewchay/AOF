@@ -1,0 +1,20 @@
+[annotation] type=documentation
+[concepts] API, createOrder, 创建订单, 订单管理 API
+[text]
+# 订单管理 API
+
+## 创建订单
+
+使用 `createOrder` 方法创建新订单。
+[code_block]
+INSERT INTO orders (user_id, product_id, quantity)
+VALUES (?, ?, ?);
+[annotation] type=documentation
+[concepts] user_id, 参数说明, 查询订单
+[text]
+**参数说明**：
+- `user_id`: 用户ID
+
+## 查询订单
+[code_block]
+SELECT status FROM orders WHERE order_id = ?;

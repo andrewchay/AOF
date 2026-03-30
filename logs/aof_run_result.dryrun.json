@@ -1,0 +1,15 @@
+{
+  "timestamp_utc": "2026-03-24T07:22:46.805736+00:00",
+  "spec": "/Users/chaihao/LLM/AOF/aof_spec.example.json",
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "dry_run": true,
+  "stages": {
+    "quality": {
+      "ok": true,
+      "commands": [
+        "python /Users/chaihao/LLM/AOF/tools/quality_gate/lint_text_integrity.py",
+        "python /Users/chaihao/LLM/AOF/tools/quality_gate/lint_markdown.py"
+      ]
+    }
+  }
+}

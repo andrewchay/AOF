@@ -1,0 +1,57 @@
+# AOF Semantic Middle Layer API - Development Docker Compose
+# Usage: docker-compose -f docker-compose.dev.yml up -d
+
+version: '3.8'
+
+services:
+  aof-semantic-api:
+    build:
+      context: ../..
+      dockerfile: services/semantic_middle_layer_api/Dockerfile
+      args:
+        INSTALL_COGNEE: "1"
+        COGNEE_PIP_SPEC: "cognee"
+    image: aof-semantic-api:dev
+    container_name: aof-semantic-api-dev
+    
+    ports:
+      - "8787:8787"
+    
+    environment:
+      - AOF_ROOT=/app/AOF
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-custom}
+      - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-chat}
+      - LLM_ENDPOINT=${LLM_ENDPOINT:-https://api.deepseek.com/v1}
+      - COGNEE_ROOT=${COGNEE_ROOT:-}
+      - PYTHONUNBUFFERED=1
+      # Development settings
+      - UVICORN_RELOAD=true
+      - UVICORN_LOG_LEVEL=debug
+    
+    volumes:
+      # Mount source code for hot reload
+      - ../../services:/app/AOF/services:ro
+      - ../../tools:/app/AOF/tools:ro
+      - ../../bridge:/app/AOF/bridge:ro
+      # Persistent data
+      - ../../data:/app/AOF/data
+      - ../../logs:/app/AOF/logs
+      - ../../ontologies:/app/AOF/ontologies
+    
+    # Override command for development with auto-reload
+    command: [
+      "python", "-m", "uvicorn",
+      "services.semantic_middle_layer_api.app:app",
+      "--host", "0.0.0.0",
+      "--port", "8787",
+      "--reload",
+      "--log-level", "debug"
+    ]
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

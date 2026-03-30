@@ -1,0 +1,13 @@
+{
+  "topic": "miyoushe_feedback_loop_demo",
+  "status": "aligned",
+  "round_stats": [
+    {
+      "iteration": 1,
+      "matched_count": 13,
+      "unmatched_count": 0
+    }
+  ],
+  "bucket_counts": [],
+  "top_terms": []
+}

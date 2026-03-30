@@ -1,0 +1,2 @@
+{"id": "customers-1", "source_kind": "csv", "table": "customers", "text": "[source=csv, index=1, table=customers] id=1; name=张三; city=西安; tier=A", "raw": {"id": "1", "name": "张三", "city": "西安", "tier": "A"}}
+{"id": "customers-2", "source_kind": "csv", "table": "customers", "text": "[source=csv, index=2, table=customers] id=2; name=李四; city=咸阳; tier=B", "raw": {"id": "2", "name": "李四", "city": "咸阳", "tier": "B"}}

@@ -1,0 +1,23 @@
+{
+  "topic": "miyoushe_feedback_demo",
+  "topic_slug": "miyoushe_feedback_demo",
+  "input": "/Users/chaihao/LLM/AOF/tools/data_adapter/samples/TEST_DATA_miyoushe_post_metrics_case.sql",
+  "normalized_txt": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_feedback_demo_20260326_142532.txt",
+  "normalized_jsonl": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_feedback_demo_20260326_142532.jsonl",
+  "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_miyoushe_feedback_demo_ontology.owl",
+  "iterations": [
+    {
+      "iteration": 1,
+      "dataset": "test_miyoushe_feedback_demo_20260326_142532_iter1",
+      "spec": "/tmp/aof_spec.miyoushe_feedback_demo.20260326_142532.iter1.json",
+      "aof_add_result": "/Users/chaihao/LLM/AOF/logs/aof_add_result.test_factory_miyoushe_feedback_demo_20260326_142532_iter1.json",
+      "aof_run_result": "/Users/chaihao/LLM/AOF/logs/aof_run_result.test_factory_miyoushe_feedback_demo_20260326_142532_iter1.json",
+      "log_file": "/Users/chaihao/LLM/cognee/logs/2026-03-26_14-25-44.log",
+      "unmatched_count": 0,
+      "matched_count": 13,
+      "unmatched": [],
+      "added_from_unmatched": []
+    }
+  ],
+  "status": "aligned"
+}

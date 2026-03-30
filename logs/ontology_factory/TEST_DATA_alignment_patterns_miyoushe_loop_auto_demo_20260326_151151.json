@@ -1,0 +1,62 @@
+{
+  "topic": "miyoushe_loop_auto_demo",
+  "status": "max_iterations_reached",
+  "round_stats": [
+    {
+      "iteration": 1,
+      "matched_count": 11,
+      "unmatched_count": 7
+    }
+  ],
+  "bucket_counts": [
+    {
+      "bucket": "通用类概念缺失",
+      "count": 3
+    },
+    {
+      "bucket": "通用实例缺失",
+      "count": 3
+    },
+    {
+      "bucket": "平台实例缺失",
+      "count": 1
+    }
+  ],
+  "top_terms": [
+    {
+      "term": "mihoyo community",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "data",
+      "category": "classes",
+      "count": 1
+    },
+    {
+      "term": "test data",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "date",
+      "category": "classes",
+      "count": 1
+    },
+    {
+      "term": "yesterday",
+      "category": "individuals",
+      "count": 1
+    },
+    {
+      "term": "daterange",
+      "category": "classes",
+      "count": 1
+    },
+    {
+      "term": "last 30 days",
+      "category": "individuals",
+      "count": 1
+    }
+  ]
+}

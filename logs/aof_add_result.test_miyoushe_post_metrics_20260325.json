@@ -1,0 +1,9 @@
+{
+  "timestamp_utc": "2026-03-25T03:05:20.320872+00:00",
+  "spec": "/private/tmp/aof_spec.deepseek.test_miyoushe_post_metrics.json",
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "dry_run": false,
+  "stages": {
+    "add": "PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('ea0649d7-5a1f-5ee9-9afe-284a748c5034'), dataset_id=UUID('6eb91cd7-2018-56d9-83d7-da1eee862ece'), dataset_name='test_miyoushe_post_metrics_20260325', payload=None, data_ingestion_info=[{'run_info': PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('ea0649d7-5a1f-5ee9-9afe-284a748c5034'), dataset_id=UUID('6eb91cd7-2018-56d9-83d7-da1eee862ece'), dataset_name='test_miyoushe_post_metrics_20260325', payload=None, data_ingestion_info=None), 'data_id': UUID('b373932f-6639-5aef-9e4e-4d1c0eed8f63')}])"
+  }
+}

@@ -1,0 +1,193 @@
+openapi: 3.1.0
+info:
+  title: AOF Semantic Middle Layer API
+  version: 0.1.0
+  description: |
+    中间层 API 契约：接收文档/元数据/反馈，输出本体、mapping、回归样例与解释能力。
+servers:
+  - url: https://aof.internal.api
+paths:
+  /v1/ingest/docs:
+    post:
+      summary: 提交文档批次
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic, docs_uri]
+              properties:
+                topic: { type: string }
+                docs_uri: { type: string, description: 文档目录或对象存储地址 }
+      responses:
+        '200':
+          description: accepted
+  /v1/ingest/metadata:
+    post:
+      summary: 提交元数据
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic, metadata]
+              properties:
+                topic: { type: string }
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: accepted
+  /v1/ingest/feedback:
+    post:
+      summary: 提交反馈补丁
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic, patches]
+              properties:
+                topic: { type: string }
+                patches:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: accepted
+  /v1/build/topic:
+    post:
+      summary: 构建中间层产物
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic]
+              properties:
+                topic: { type: string }
+                max_iterations: { type: integer, default: 3 }
+                skip_align: { type: boolean, default: false }
+      responses:
+        '200':
+          description: build started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id: { type: string }
+  /v1/artifacts/{run_id}:
+    get:
+      summary: 获取构建产物路径
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: artifact manifest
+  /v1/semantic/retrieve:
+    post:
+      summary: 语义检索
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic, query]
+              properties:
+                topic: { type: string }
+                query: { type: string }
+      responses:
+        '200':
+          description: semantic entities
+  /v1/semantic/compile:
+    post:
+      summary: 语义编译（不限于 SQL）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic, intent]
+              properties:
+                topic: { type: string }
+                intent: { type: string }
+                target: { type: string, enum: [sql, rule, metric_query, graph_query] }
+      responses:
+        '200':
+          description: compiled plan
+  /v1/semantic/evaluate:
+    post:
+      summary: 候选查询/计划评估
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic, candidate]
+              properties:
+                topic: { type: string }
+                candidate: { type: string }
+      responses:
+        '200':
+          description: score + risks
+  /v1/semantic/explain:
+    post:
+      summary: 解释链路
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic, object_id]
+              properties:
+                topic: { type: string }
+                object_id: { type: string }
+      responses:
+        '200':
+          description: explanation
+  /v1/export/owl:
+    get:
+      summary: 导出 OWL
+      parameters:
+        - name: topic
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: owl content/path
+  /v1/export/mapping:
+    get:
+      summary: 导出 mapping 库
+      parameters:
+        - name: topic
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: mapping files
+  /v1/export/regression:
+    get:
+      summary: 导出回归样例库
+      parameters:
+        - name: topic
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: regression files

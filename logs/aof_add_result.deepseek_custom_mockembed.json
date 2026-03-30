@@ -1,0 +1,9 @@
+{
+  "timestamp_utc": "2026-03-24T18:27:27.537450+00:00",
+  "spec": "/Users/chaihao/LLM/AOF/aof_spec.example.json",
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "dry_run": false,
+  "stages": {
+    "add": "PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('415c5810-d55b-5f0f-b592-7d179eb0543c'), dataset_id=UUID('de9ad863-e9e2-5a36-9481-5e07a2a2e25c'), dataset_name='main_dataset', payload=None, data_ingestion_info=[{'run_info': PipelineRunCompleted(status='PipelineRunCompleted', pipeline_run_id=UUID('415c5810-d55b-5f0f-b592-7d179eb0543c'), dataset_id=UUID('de9ad863-e9e2-5a36-9481-5e07a2a2e25c'), dataset_name='main_dataset', payload=None, data_ingestion_info=None), 'data_id': UUID('db0ce678-ea1f-51f3-ae3f-3151af8b17df')}])"
+  }
+}

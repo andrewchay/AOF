@@ -1,0 +1,10 @@
+{
+  "topic": "api_demo_topic",
+  "topic_slug": "api_demo_topic",
+  "input": "/private/var/folders/4h/trqk0by10x58q21z3q4r3dfr0000gq/T/aof_middle_layer_api_demo_topic.sql",
+  "normalized_txt": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_api_demo_topic_20260326_161956.txt",
+  "normalized_jsonl": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_api_demo_topic_20260326_161956.jsonl",
+  "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_api_demo_topic_ontology.owl",
+  "iterations": [],
+  "status": "ontology_built_only"
+}

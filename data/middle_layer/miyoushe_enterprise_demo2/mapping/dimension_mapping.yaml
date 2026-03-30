@@ -1,0 +1,32 @@
+-
+  business_dim: logdate
+  physical_field: dws_community.dws_community_user_login_snapshot.logdate
+  type: date
+-
+  business_dim: account_id
+  physical_field: dws_community.dws_community_user_login_snapshot.account_id
+  type: bigint
+-
+  business_dim: platform
+  physical_field: dws_community.dws_community_user_login_snapshot.platform
+  type: string
+-
+  business_dim: game_id
+  physical_field: dws_community.dws_community_user_login_snapshot.game_id
+  type: int
+-
+  business_dim: post_id
+  physical_field: dim_community.dim_community_post_info_snapshot.post_id
+  type: bigint
+-
+  business_dim: create_datetime
+  physical_field: dim_community.dim_community_post_info_snapshot.create_datetime
+  type: string
+-
+  business_dim: logdate
+  physical_field: dim_community.dim_community_post_info_snapshot.logdate
+  type: date
+-
+  business_dim: forum_id
+  physical_field: dim_community.dim_community_post_info_snapshot.forum_id
+  type: int

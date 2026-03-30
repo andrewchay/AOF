@@ -1,0 +1,69 @@
+{
+  "topic": "miyoushe_loop_auto_demo",
+  "topic_slug": "miyoushe_loop_auto_demo",
+  "input": "/Users/chaihao/LLM/AOF/tools/data_adapter/samples/TEST_DATA_miyoushe_post_metrics_case.sql",
+  "normalized_txt": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_loop_auto_demo_20260326_145040.txt",
+  "normalized_jsonl": "/Users/chaihao/LLM/AOF/logs/TEST_DATA_normalized_miyoushe_loop_auto_demo_20260326_145040.jsonl",
+  "ontology_file": "/Users/chaihao/LLM/AOF/ontologies/TEST_DATA_miyoushe_loop_auto_demo_ontology.owl",
+  "iterations": [
+    {
+      "iteration": 1,
+      "dataset": "test_miyoushe_loop_auto_demo_20260326_145040_iter1",
+      "spec": "/tmp/aof_spec.miyoushe_loop_auto_demo.20260326_145040.iter1.json",
+      "aof_add_result": "/Users/chaihao/LLM/AOF/logs/aof_add_result.test_factory_miyoushe_loop_auto_demo_20260326_145040_iter1.json",
+      "aof_run_result": "/Users/chaihao/LLM/AOF/logs/aof_run_result.test_factory_miyoushe_loop_auto_demo_20260326_145040_iter1.json",
+      "log_file": "/Users/chaihao/LLM/cognee/logs/2026-03-26_14-50-58.log",
+      "unmatched_count": 4,
+      "matched_count": 21,
+      "unmatched": [
+        {
+          "term": "database_column",
+          "category": "classes"
+        },
+        {
+          "term": "create_datetime",
+          "category": "individuals"
+        },
+        {
+          "term": "item_id",
+          "category": "individuals"
+        },
+        {
+          "term": "content_tag",
+          "category": "individuals"
+        }
+      ],
+      "added_from_unmatched": [
+        "class:DatabaseColumn",
+        "individual:create_datetime:FilterCondition",
+        "individual:item_id:FilterCondition",
+        "individual:content_tag:FilterCondition"
+      ]
+    },
+    {
+      "iteration": 2,
+      "dataset": "test_miyoushe_loop_auto_demo_20260326_145040_iter2",
+      "spec": "/tmp/aof_spec.miyoushe_loop_auto_demo.20260326_145040.iter2.json",
+      "aof_add_result": "/Users/chaihao/LLM/AOF/logs/aof_add_result.test_factory_miyoushe_loop_auto_demo_20260326_145040_iter2.json",
+      "aof_run_result": "/Users/chaihao/LLM/AOF/logs/aof_run_result.test_factory_miyoushe_loop_auto_demo_20260326_145040_iter2.json",
+      "log_file": "/Users/chaihao/LLM/cognee/logs/2026-03-26_14-52-17.log",
+      "unmatched_count": 2,
+      "matched_count": 12,
+      "unmatched": [
+        {
+          "term": "mihoyo community",
+          "category": "individuals"
+        },
+        {
+          "term": "data analysis",
+          "category": "individuals"
+        }
+      ],
+      "added_from_unmatched": [
+        "individual:mihoyo_community:CommunityPlatform",
+        "individual:data_analysis:Process"
+      ]
+    }
+  ],
+  "status": "max_iterations_reached"
+}

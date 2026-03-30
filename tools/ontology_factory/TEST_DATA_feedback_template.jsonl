@@ -1,0 +1,4 @@
+{"action":"add_class","name":"BusinessConstraint","comment":"TEST_DATA: 用户反馈新增约束类"}
+{"action":"add_individual","name":"snapshot_date_t_minus_1","class":"FilterCondition","comment":"TEST_DATA: 快照日期规则"}
+{"action":"add_relation","source":"sql_query_1","predicate":"usesFilterCondition","target":"snapshot_date_t_minus_1"}
+{"action":"map_term","term":"miHoYo Community","class":"CommunityPlatform"}
