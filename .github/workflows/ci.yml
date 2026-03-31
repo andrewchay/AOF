@@ -23,6 +23,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      - name: Governance Gate
+        run: python tools/governance/validate_release_gate.py --root data/governance --strict
+
       - name: Lint (ruff)
         run: ruff check .
 
