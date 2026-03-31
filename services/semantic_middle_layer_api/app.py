@@ -14,12 +14,16 @@ import json
 import os
 import re
 import subprocess
+import time
+import uuid
+from contextlib import nullcontext
+from collections import defaultdict, deque
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
+from fastapi.responses import StreamingResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 # Configuration
@@ -40,6 +44,142 @@ app = FastAPI(
     version='0.2.0',
     description='Enhanced semantic layer with LLM-powered SQL generation and evaluation'
 )
+
+
+# ==================== Observability & Runtime State ====================
+
+OBS_STARTED_AT = datetime.now()
+OBS_TOTAL_REQUESTS = 0
+OBS_TOTAL_ERRORS = 0
+OBS_PATH_STATS: dict[str, dict[str, float]] = defaultdict(lambda: {
+    'requests': 0.0,
+    'errors': 0.0,
+    'latency_ms_sum': 0.0,
+    'latency_ms_max': 0.0,
+})
+OBS_LATENCY_SAMPLES_MS: deque[float] = deque(maxlen=5000)
+
+MAPPING_CACHE_TTL_SECONDS = int(os.environ.get('AOF_MAPPING_CACHE_TTL_SECONDS', '120'))
+MAPPING_CACHE: dict[str, dict[str, Any]] = {}
+SLO_TARGETS_FILE = Path(os.environ.get('AOF_SLO_TARGETS_FILE', str(AOF_ROOT / 'config' / 'observability' / 'slo_targets.yaml')))
+SLO_TARGETS_CACHE: dict[str, Any] | None = None
+
+# OpenTelemetry tracing (optional)
+OTEL_ENABLED = False
+OTEL_TRACER = None
+try:
+    from opentelemetry import trace  # type: ignore
+    from opentelemetry.sdk.resources import Resource  # type: ignore
+    from opentelemetry.sdk.trace import TracerProvider  # type: ignore
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter  # type: ignore
+
+    resource = Resource.create({
+        'service.name': os.environ.get('AOF_OTEL_SERVICE_NAME', 'aof-semantic-api'),
+        'service.version': '0.2.0',
+    })
+    provider = TracerProvider(resource=resource)
+    if os.environ.get('AOF_OTEL_CONSOLE_EXPORTER', '0') == '1':
+        provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+    otlp_endpoint = os.environ.get('AOF_OTEL_EXPORTER_OTLP_ENDPOINT', '').strip()
+    if otlp_endpoint:
+        try:
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # type: ignore
+            provider.add_span_processor(
+                BatchSpanProcessor(
+                    OTLPSpanExporter(endpoint=otlp_endpoint)
+                )
+            )
+        except Exception:
+            # Keep service running even when optional OTLP exporter isn't available.
+            pass
+    trace.set_tracer_provider(provider)
+    OTEL_TRACER = trace.get_tracer('aof.semantic.api')
+    OTEL_ENABLED = True
+except Exception:
+    OTEL_ENABLED = False
+    OTEL_TRACER = None
+
+
+def _record_request_metric(path: str, status_code: int, latency_ms: float) -> None:
+    global OBS_TOTAL_REQUESTS, OBS_TOTAL_ERRORS
+    OBS_TOTAL_REQUESTS += 1
+    if status_code >= 500:
+        OBS_TOTAL_ERRORS += 1
+
+    stats = OBS_PATH_STATS[path]
+    stats['requests'] += 1
+    if status_code >= 500:
+        stats['errors'] += 1
+    stats['latency_ms_sum'] += latency_ms
+    stats['latency_ms_max'] = max(stats['latency_ms_max'], latency_ms)
+    OBS_LATENCY_SAMPLES_MS.append(latency_ms)
+
+
+def _percentile(values: list[float], p: float) -> float:
+    if not values:
+        return 0.0
+    if p <= 0:
+        return values[0]
+    if p >= 1:
+        return values[-1]
+    k = int(round((len(values) - 1) * p))
+    return values[max(0, min(k, len(values) - 1))]
+
+
+@app.middleware('http')
+async def metrics_middleware(request: Request, call_next):
+    started = time.perf_counter()
+    request_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
+    path = request.url.path
+
+    span_name = f'{request.method} {path}'
+    span_ctx = OTEL_TRACER.start_as_current_span(span_name) if OTEL_ENABLED and OTEL_TRACER else nullcontext()
+
+    with span_ctx as span:
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+        except Exception:
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            _record_request_metric(path, 500, elapsed_ms)
+            if span is not None and hasattr(span, 'set_attribute'):
+                span.set_attribute('http.status_code', 500)
+                span.set_attribute('aof.request_id', request_id)
+            raise
+
+        elapsed_ms = (time.perf_counter() - started) * 1000
+        _record_request_metric(path, status_code, elapsed_ms)
+        if span is not None and hasattr(span, 'set_attribute'):
+            span.set_attribute('http.method', request.method)
+            span.set_attribute('http.route', path)
+            span.set_attribute('http.status_code', status_code)
+            span.set_attribute('aof.request_id', request_id)
+            span.set_attribute('aof.latency_ms', elapsed_ms)
+        response.headers['X-Request-ID'] = request_id
+        if OTEL_ENABLED and span is not None and hasattr(span, 'get_span_context'):
+            try:
+                response.headers['X-Trace-ID'] = format(span.get_span_context().trace_id, '032x')
+            except Exception:
+                pass
+        return response
+
+
+def _load_slo_targets() -> dict[str, Any]:
+    global SLO_TARGETS_CACHE
+    if SLO_TARGETS_CACHE is not None:
+        return SLO_TARGETS_CACHE
+    if not SLO_TARGETS_FILE.exists():
+        SLO_TARGETS_CACHE = {}
+        return SLO_TARGETS_CACHE
+    try:
+        import yaml
+        parsed = yaml.safe_load(SLO_TARGETS_FILE.read_text(encoding='utf-8')) or {}
+        if not isinstance(parsed, dict):
+            parsed = {}
+        SLO_TARGETS_CACHE = parsed
+    except Exception:
+        SLO_TARGETS_CACHE = {}
+    return SLO_TARGETS_CACHE
 
 
 # ==================== Request Models ====================
@@ -174,10 +314,20 @@ def _resolve_paths(topic: str) -> tuple[Path, Path | None, Path | None]:
 
 # ==================== Mapping Library Loader ====================
 
-def _load_mapping_library(topic: str) -> dict[str, Any]:
+def _load_mapping_library(topic: str, force_refresh: bool = False) -> dict[str, Any]:
     """Load mapping library for a topic."""
     t = _slugify(topic)
-    mapping_dir = MIDDLE_LAYER_ROOT / t / 'artifacts' / 'mapping_library'
+    cache_key = t
+    now_ts = time.time()
+    cached = MAPPING_CACHE.get(cache_key)
+    if cached and not force_refresh and cached.get('expires_at', 0) > now_ts:
+        cached['hits'] = int(cached.get('hits', 0)) + 1
+        return cached['library']
+
+    # Priority: new mapping directory, fallback to legacy artifacts/mapping_library.
+    mapping_dir = MIDDLE_LAYER_ROOT / t / 'mapping'
+    if not mapping_dir.exists():
+        mapping_dir = MIDDLE_LAYER_ROOT / t / 'artifacts' / 'mapping_library'
     
     library = {
         'terms': {},
@@ -187,7 +337,9 @@ def _load_mapping_library(topic: str) -> dict[str, Any]:
     }
     
     # Load term mappings
-    term_file = mapping_dir / 'term_library.yaml'
+    term_file = mapping_dir / 'term_mapping.yaml'
+    if not term_file.exists():
+        term_file = mapping_dir / 'term_library.yaml'
     if term_file.exists():
         try:
             import yaml
@@ -196,7 +348,9 @@ def _load_mapping_library(topic: str) -> dict[str, Any]:
             pass
     
     # Load metric mappings
-    metric_file = mapping_dir / 'metric_library.yaml'
+    metric_file = mapping_dir / 'metric_catalog.yaml'
+    if not metric_file.exists():
+        metric_file = mapping_dir / 'metric_library.yaml'
     if metric_file.exists():
         try:
             import yaml
@@ -204,8 +358,19 @@ def _load_mapping_library(topic: str) -> dict[str, Any]:
         except Exception:
             pass
     
+    # Load dimension mappings
+    dimension_file = mapping_dir / 'dimension_mapping.yaml'
+    if dimension_file.exists():
+        try:
+            import yaml
+            library['dimensions'] = yaml.safe_load(dimension_file.read_text(encoding='utf-8')) or {}
+        except Exception:
+            pass
+
     # Load SQL patterns
-    pattern_file = mapping_dir / 'sql_patterns.yaml'
+    pattern_file = mapping_dir / 'sql_pattern_library.yaml'
+    if not pattern_file.exists():
+        pattern_file = mapping_dir / 'sql_patterns.yaml'
     if pattern_file.exists():
         try:
             import yaml
@@ -213,6 +378,13 @@ def _load_mapping_library(topic: str) -> dict[str, Any]:
         except Exception:
             pass
     
+    MAPPING_CACHE[cache_key] = {
+        'library': library,
+        'loaded_at': now_ts,
+        'expires_at': now_ts + MAPPING_CACHE_TTL_SECONDS,
+        'hits': 0,
+        'source': str(mapping_dir),
+    }
     return library
 
 
@@ -2509,6 +2681,177 @@ def cleanup_url_temp_files(max_age_hours: int = 24) -> dict[str, Any]:
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Cleanup failed: {e}')
+
+
+class CacheRefreshReq(BaseModel):
+    """Refresh mapping cache for one or more topics."""
+    topics: list[str] = Field(default_factory=list)
+    force: bool = True
+
+
+@app.get('/v1/ops/slo')
+def get_slo_snapshot() -> dict[str, Any]:
+    """
+    Return lightweight SLO snapshot derived from request metrics.
+    """
+    latencies = sorted(OBS_LATENCY_SAMPLES_MS)
+    p50_ms = _percentile(latencies, 0.50)
+    p95_ms = _percentile(latencies, 0.95)
+    p99_ms = _percentile(latencies, 0.99)
+    error_rate = (OBS_TOTAL_ERRORS / OBS_TOTAL_REQUESTS) if OBS_TOTAL_REQUESTS else 0.0
+    current = {
+        'availability_error_rate': round(error_rate, 6),
+        'latency_ms_p50': round(p50_ms, 2),
+        'latency_ms_p95': round(p95_ms, 2),
+        'latency_ms_p99': round(p99_ms, 2),
+    }
+    targets = _load_slo_targets()
+    slo_targets = targets.get('slo', {}) if isinstance(targets, dict) else {}
+    checks = []
+    if slo_targets:
+        max_err = float(slo_targets.get('availability_error_rate_max', 1.0))
+        max_p95 = float(slo_targets.get('latency_ms_p95_max', 1e12))
+        max_p99 = float(slo_targets.get('latency_ms_p99_max', 1e12))
+        checks = [
+            {
+                'name': 'availability_error_rate',
+                'current': current['availability_error_rate'],
+                'target': max_err,
+                'operator': '<=',
+                'passed': current['availability_error_rate'] <= max_err,
+            },
+            {
+                'name': 'latency_ms_p95',
+                'current': current['latency_ms_p95'],
+                'target': max_p95,
+                'operator': '<=',
+                'passed': current['latency_ms_p95'] <= max_p95,
+            },
+            {
+                'name': 'latency_ms_p99',
+                'current': current['latency_ms_p99'],
+                'target': max_p99,
+                'operator': '<=',
+                'passed': current['latency_ms_p99'] <= max_p99,
+            },
+        ]
+
+    return {
+        'status': 'ok',
+        'window': {
+            'sample_size': len(latencies),
+            'since': OBS_STARTED_AT.isoformat(),
+        },
+        'slo': current,
+        'targets': slo_targets,
+        'checks': checks,
+        'overall_passed': all(c.get('passed') for c in checks) if checks else None,
+        'counters': {
+            'requests_total': OBS_TOTAL_REQUESTS,
+            'errors_total': OBS_TOTAL_ERRORS,
+        },
+    }
+
+
+@app.get('/v1/ops/slo/targets')
+def get_slo_targets() -> dict[str, Any]:
+    """Return loaded SLO target configuration."""
+    return {
+        'status': 'ok',
+        'path': str(SLO_TARGETS_FILE),
+        'targets': _load_slo_targets(),
+    }
+
+
+@app.post('/v1/ops/slo/reload')
+def reload_slo_targets() -> dict[str, Any]:
+    """Reload SLO targets from config file."""
+    global SLO_TARGETS_CACHE
+    SLO_TARGETS_CACHE = None
+    return {
+        'status': 'ok',
+        'path': str(SLO_TARGETS_FILE),
+        'targets': _load_slo_targets(),
+    }
+
+
+@app.get('/v1/ops/cache/stats')
+def get_cache_stats() -> dict[str, Any]:
+    """Get mapping cache status."""
+    now_ts = time.time()
+    items = []
+    for topic, entry in sorted(MAPPING_CACHE.items()):
+        expires_at = float(entry.get('expires_at', 0))
+        items.append({
+            'topic': topic,
+            'hits': int(entry.get('hits', 0)),
+            'source': entry.get('source', ''),
+            'expired': expires_at <= now_ts,
+            'ttl_seconds_remaining': max(0, int(expires_at - now_ts)),
+        })
+    return {
+        'status': 'ok',
+        'ttl_seconds': MAPPING_CACHE_TTL_SECONDS,
+        'size': len(items),
+        'items': items,
+    }
+
+
+@app.post('/v1/ops/cache/refresh')
+def refresh_cache(req: CacheRefreshReq) -> dict[str, Any]:
+    """Refresh mapping cache for topics."""
+    topics = req.topics
+    if not topics:
+        topics = [p.name for p in MIDDLE_LAYER_ROOT.iterdir() if p.is_dir()] if MIDDLE_LAYER_ROOT.exists() else []
+
+    refreshed = []
+    failed = []
+    for topic in topics:
+        try:
+            _load_mapping_library(topic, force_refresh=req.force)
+            refreshed.append(_slugify(topic))
+        except Exception as e:
+            failed.append({'topic': _slugify(topic), 'error': str(e)})
+
+    return {
+        'status': 'ok',
+        'refreshed_count': len(refreshed),
+        'failed_count': len(failed),
+        'refreshed_topics': refreshed,
+        'failed_topics': failed,
+    }
+
+
+@app.get('/metrics')
+def metrics() -> PlainTextResponse:
+    """
+    Prometheus-compatible metrics endpoint.
+    """
+    lines = [
+        '# HELP aof_requests_total Total HTTP requests served.',
+        '# TYPE aof_requests_total counter',
+        f'aof_requests_total {OBS_TOTAL_REQUESTS}',
+        '# HELP aof_request_errors_total Total HTTP 5xx responses.',
+        '# TYPE aof_request_errors_total counter',
+        f'aof_request_errors_total {OBS_TOTAL_ERRORS}',
+        '# HELP aof_request_error_rate_ratio HTTP 5xx ratio.',
+        '# TYPE aof_request_error_rate_ratio gauge',
+        f'aof_request_error_rate_ratio {((OBS_TOTAL_ERRORS / OBS_TOTAL_REQUESTS) if OBS_TOTAL_REQUESTS else 0.0):.6f}',
+    ]
+
+    for path, stats in sorted(OBS_PATH_STATS.items()):
+        path_safe = path.replace('\\', '_').replace('"', '\\"')
+        reqs = int(stats.get('requests', 0))
+        errs = int(stats.get('errors', 0))
+        lat_sum = float(stats.get('latency_ms_sum', 0.0))
+        lat_max = float(stats.get('latency_ms_max', 0.0))
+        lat_avg = (lat_sum / reqs) if reqs else 0.0
+        lines.append(f'aof_path_requests_total{{path="{path_safe}"}} {reqs}')
+        lines.append(f'aof_path_errors_total{{path="{path_safe}"}} {errs}')
+        lines.append(f'aof_path_latency_ms_avg{{path="{path_safe}"}} {lat_avg:.3f}')
+        lines.append(f'aof_path_latency_ms_max{{path="{path_safe}"}} {lat_max:.3f}')
+
+    return PlainTextResponse('\n'.join(lines) + '\n')
 
 
 @app.get('/healthz')

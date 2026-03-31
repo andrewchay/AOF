@@ -1,0 +1,11 @@
+route:
+  receiver: 'default'
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 30m
+
+receivers:
+  - name: 'default'
+    # Placeholder receiver for local/dev.
+    # Replace with webhook/email/slack in production.

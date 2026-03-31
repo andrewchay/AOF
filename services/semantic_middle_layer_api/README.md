@@ -112,6 +112,26 @@ docker-compose build --build-arg COGNEE_PIP_SPEC="cognee==0.1.45"
 curl http://localhost:8787/healthz
 ```
 
+### 指标与 SLO
+
+```bash
+# Prometheus 指标
+curl http://localhost:8787/metrics
+
+# SLO 快照（p50/p95/p99 与 error rate）
+curl http://localhost:8787/v1/ops/slo
+
+# SLO 目标配置
+curl http://localhost:8787/v1/ops/slo/targets
+```
+
+默认 SLO 配置文件：
+- `/Users/chaihao/LLM/AOF/config/observability/slo_targets.yaml`
+
+可通过环境变量覆盖：
+- `AOF_SLO_TARGETS_FILE=/path/to/slo_targets.yaml`
+- `AOF_OTEL_CONSOLE_EXPORTER=1`（开发环境打印 tracing span）
+
 ### 查看日志
 
 ```bash
@@ -127,6 +147,26 @@ docker-compose logs -f
 ```bash
 docker-compose ps
 docker stats
+```
+
+### 可观测性本地联调（Prometheus + Alertmanager + Jaeger）
+
+```bash
+cd /Users/chaihao/LLM/AOF/services/semantic_middle_layer_api
+docker-compose -f docker-compose.observability.yml up -d --build
+```
+
+访问入口：
+- API: `http://localhost:8787`
+- Prometheus: `http://localhost:9090`
+- Alertmanager: `http://localhost:9093`
+- Jaeger: `http://localhost:16686`
+
+SLO 周报导出：
+
+```bash
+cd /Users/chaihao/LLM/AOF
+python tools/observability/export_slo_report.py --base-url http://127.0.0.1:8787
 ```
 
 ## 目录结构

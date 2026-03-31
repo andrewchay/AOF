@@ -1,100 +1,88 @@
-# AOF 桥接层设计
+# AOF 桥接层设计（2026-03-31）
+
+主入口与术语表：[/Users/chaihao/LLM/AOF/docs/architecture/README.md](/Users/chaihao/LLM/AOF/docs/architecture/README.md)
 
 ## 设计目标
 
-在 AOF spec 与外部执行引擎（cognee）之间建立最薄的适配层，确保：
-1. AOF 保持配置驱动的简洁接口
-2. 业务逻辑由执行引擎承载
-3. 桥接层只做参数映射与调用编排
+桥接层（`bridge/`）负责把 AOF 的任务配置与业务语义，映射到 Cognee 能力与中间层流水线，同时保持：
 
-## 架构边界
+1. 上层调用接口稳定（CLI/API 对桥接细节无感）
+2. 业务逻辑尽量集中在可测试模块
+3. 运行时错误可定位、可追溯
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         AOF 层                              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────────────┐  │
-│  │ aof_run  │  │ aof_add  │  │ build_testdata_ontology  │  │
-│  └────┬─────┘  └────┬─────┘  └───────────┬──────────────┘  │
-│       │             │                    │                 │
-│       └─────────────┴────────────────────┘                 │
-│                       │                                     │
-│                  ┌────┴────┐                               │
-│                  │ bridge/ │  ← 本层                       │
-│                  └────┬────┘                               │
-└───────────────────────┼─────────────────────────────────────┘
-                        │
-┌───────────────────────┼─────────────────────────────────────┐
-│                       │         Cognee 层                   │
-│                  ┌────┴────┐                                │
-│                  │ cognee  │  ← 外部引擎                    │
-│                  │  .add() │                                │
-│                  │.cognify()│                                │
-│                  └─────────┘                                │
-└─────────────────────────────────────────────────────────────┘
+## 分层与边界
+
+```text
+AOF CLI/API
+  ├─ aof_add.py / aof_run.py / aof_doctor.py
+  └─ services/semantic_middle_layer_api/app.py
+            │
+            ▼
+        bridge/
+  ├─ 规格映射: spec_mapper, ontology_adapter
+  ├─ 摄取同步: incremental/url/s3/batch/data_sync
+  ├─ 检索反馈: enhanced_search/cypher/memify
+  ├─ 数据管理: dataset_manager
+  ├─ 图能力: graph_visualizer/graph_analytics
+  ├─ 运行保障: preflight/quality_gate/errors
+  └─ 执行入口: cognee_runner/cognee_add_runner
+            │
+            ▼
+         Cognee 引擎
 ```
 
-## 核心模块
+## 模块总览
 
-### spec_mapper
-- **文件**: `bridge/spec_mapper/mapper.py`
-- **职责**: 将 AOF spec JSON 映射为 cognee 参数
-- **输入**: AOF spec (dataset, runtime, ontology)
-- **输出**: cognee.cognify() 关键字参数
+| 模块 | 职责 | 上游入口 |
+|---|---|---|
+| `spec_mapper/` | AOF spec -> cognify 参数映射 | `aof_run.py` |
+| `ontology_adapter/` | ontology 配置适配 | `aof_run.py` |
+| `cognee_runner.py` | 统一执行 cognify | CLI/API |
+| `cognee_add_runner.py` | 统一执行 add | CLI/API |
+| `incremental_loader.py` | 增量文件变更检测与摄取 | `/v1/ingest/incremental*` |
+| `url_ingestion.py` | URL 摄取与历史记录 | `/v1/ingest/url*` |
+| `s3_ingestion.py` | S3 文件/前缀摄取与同步 | `/v1/ingest/s3*` |
+| `batch_ingestion.py` | 目录发现与批量摄取 | `/v1/ingest/batch*` |
+| `data_sync.py` | 同步任务与调度 | `/v1/sync*` |
+| `enhanced_search.py` | 检索增强与类型选择 | `/v1/semantic/search/*` |
+| `cypher_query.py` | 图查询执行封装 | `/v1/semantic/search/execute` |
+| `memify_feedback_loop.py` | 反馈采集与改进建议 | `/v1/feedback/search` |
+| `dataset_manager.py` | 数据集列表/状态/删除 | `/v1/datasets*` |
+| `graph_visualizer.py` | 图谱 HTML 生成与管理 | `/v1/visualize*` |
+| `graph_analytics.py` | 图分析指标计算 | `/v1/analytics*` |
+| `preflight.py` | 执行前依赖与环境检查 | CLI |
+| `quality_gate/` | 质量门命令编排 | CLI/E2E |
+| `errors.py` | 桥接层错误统一封装 | 全链路 |
 
-### ontology_adapter
-- **文件**: `bridge/ontology_adapter/adapter.py`
-- **职责**: 构建 cognee 兼容的本体配置
-- **输入**: ontology file path, matching cutoff
-- **输出**: cognee Config 对象
+## 关键设计原则
 
-### preflight
-- **文件**: `bridge/preflight.py`
-- **职责**: 执行前检查（路径、依赖、API key）
+1. 薄适配，不重复实现引擎能力  
+2. 输入输出结构化（便于日志和回归）  
+3. 失败可诊断（error surface 保留根因）  
+4. 模块职责单一（便于替换和扩展）
 
-### quality_gate
-- **文件**: `bridge/quality_gate/gate.py`
-- **职责**: 质量门脚本调用（lint_text_integrity, lint_markdown）
+## 与 API 层的关系
 
-## 配置契约
+`services/semantic_middle_layer_api/app.py` 作为编排器，桥接层作为能力实现。  
+截至 2026-03-31，业务端点覆盖：
 
-### AOF Spec 结构
-```json
-{
-  "project_root": "...",
-  "dataset": "dataset_name",
-  "runtime": {
-    "run_in_background": false,
-    "incremental_loading": true,
-    "data_per_batch": 20,
-    "retries": 2,
-    "backoff_seconds": 1.0
-  },
-  "ontology": {
-    "file": ".../ontology.owl",
-    "matching_cutoff": 0.8
-  },
-  "cognee": {
-    "root": ".../cognee"
-  }
-}
-```
+- ingest: 20
+- sync: 5
+- analytics: 6
+- semantic: 6
+- datasets: 4
+- visualize: 3
+- export: 3
+- build/artifacts/feedback/health: 4
 
-### 运行时环境变量
-- `LLM_API_KEY`: LLM 服务密钥
-- `LLM_PROVIDER`: `openai` / `custom`
-- `LLM_MODEL`: 模型名称
-- `LLM_ENDPOINT`: 自定义端点（provider=custom 时）
+## 当前架构风险
 
-## 设计原则
+1. 鉴权和租户隔离尚未内建（生产多租户风险）
+2. 可观测性以日志为主，缺统一指标/告警
+3. 复杂流程依赖外部环境变量，配置治理仍需加强
 
-1. **最薄原则**: 桥接代码行数最小化，无重复业务逻辑
-2. **可追溯**: 每个桥接点可追溯到 cognee 对应模块
-3. **错误透明**: 上游错误原样传递，不吞没异常信息
-4. **配置外化**: 所有可变参数通过 spec 文件配置，不硬编码
+## 演进建议
 
-## 扩展指南
-
-如需支持新的执行引擎：
-1. 在 `bridge/` 下新增 `{engine}_runner.py`
-2. 实现相同的 spec 解析接口
-3. 在 `aof_run.py` 中通过配置切换引擎
+1. 引入 API 鉴权中间件与 topic 级别访问控制
+2. 增加统一 metrics/tracing 接口，完善 SLO
+3. 固化桥接层契约测试，防止模块升级引入回归

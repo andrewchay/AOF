@@ -559,6 +559,8 @@ python tools/quality_gate/lint_l3_data_integrity.py
 - [架构总览](docs/architecture/README.md) - 主架构图与术语表
 - [架构设计](docs/architecture/bridge-design.md) - 桥接层技术架构
 - [产品蓝图](docs/product/AOF_产品蓝图_v1.md) - 跨行业 AI-Native 转型路线
+- [90天落地执行手册](docs/product/AOF_90天落地执行手册_v1.md) - 里程碑与执行清单
+- [生产化缺口落地计划](docs/product/AOF_生产化缺口落地计划_v1.md) - 可观测性/治理/实时/SDK 专项
 - [企业管理层汇报](docs/product/AOF_企业管理层汇报_v1.md) - 内部汇报版本（不含融资内容）
 - [通用本体抽提 SOP](docs/AOF-通用本体抽提SOP.md) - 操作手册
 - [生产发布清单](docs/生产发布清单.md) - 部署检查

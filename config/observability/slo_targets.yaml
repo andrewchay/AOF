@@ -1,0 +1,6 @@
+service: aof-semantic-middle-layer
+window: 5m
+slo:
+  availability_error_rate_max: 0.01
+  latency_ms_p95_max: 800
+  latency_ms_p99_max: 1500

@@ -1,293 +1,102 @@
-# Cognee 核心能力 vs AOF 实现状态 - 差距分析
+# Cognee 能力与 AOF 实现状态（2026-03-31 快照）
 
-## 📊 总体概览
+主入口与术语表：[/Users/chaihao/LLM/AOF/docs/architecture/README.md](/Users/chaihao/LLM/AOF/docs/architecture/README.md)
 
-| 能力类别 | Cognee 功能数 | AOF 已实现 | 实现率 |
-|---------|-------------|-----------|-------|
-| 数据摄取 | 5 | 2 | 40% |
-| 知识图谱构建 | 4 | 2 | 50% |
-| 搜索查询 | 9+ | 3 | 33% |
-| 数据管理 | 6 | 1 | 17% |
-| 可视化 | 3 | 0 | 0% |
-| 高级功能 | 5 | 1 | 20% |
-| **总计** | **32** | **9** | **28%** |
+> 本文档用于记录**当前真实实现状态**与剩余差距。  
+> 统计口径基于仓库代码与 API 路由（`services/semantic_middle_layer_api/app.py`）。
 
----
+## 1. 总体状态
 
-## ✅ 已实现功能
+- API 路由总数：`55`（含 `/docs`、`/openapi.json` 等系统路由）
+- 业务路由总数：`51`
+- Bridge 模块数：`11+`（含摄取、同步、搜索、分析、可视化、反馈）
+- 自动化测试：`65 passed`（本地 `run_tests.sh`）
 
-### 1. 基础数据摄取 (Basic Ingestion)
+## 2. 能力覆盖矩阵（现状）
 
-| 功能 | Cognee API | AOF 实现 | 状态 |
-|-----|-----------|---------|------|
-| 文本数据添加 | `cognee.add()` | `aof_add.py` + `cognee_add_runner.py` | ✅ |
-| 文件摄取 | `cognee.add()` | `aof_add.py --data-path` | ✅ |
+| 能力类别 | 关键能力 | AOF 状态 | 说明 |
+|---|---|---|---|
+| 数据摄取 | 本地、批量目录、URL、S3、增量 | ✅ 已实现 | 对应 `/v1/ingest/*` 20 个端点 |
+| 知识图谱构建 | add/cognify + 本体构建链路 | ✅ 已实现 | CLI 与 API 均可触发 |
+| 搜索查询 | 语义检索、增强检索、编译、评估 | ✅ 已实现 | `/v1/semantic/*` + `/v1/feedback/search` |
+| 数据管理 | 数据集列表/状态/数据/清理 | ✅ 已实现 | `/v1/datasets*` |
+| 可视化 | 生成、列表、打开 HTML 图谱 | ✅ 已实现 | `/v1/visualize/*` |
+| 图分析 | metrics/pagerank/community/centrality/path/statistics | ✅ 已实现 | `/v1/analytics/*` |
+| 同步更新 | 手动同步 + 定时同步 + 状态 | ✅ 已实现 | `/v1/sync/*` |
+| 导出 | owl/mapping/regression | ✅ 已实现 | `/v1/export/*` |
+| 多用户权限 | 用户、租户、细粒度 ACL | ❌ 未实现 | 当前是单租户工程模式 |
+| 可观测性 | 指标、追踪、告警、SLO | ⚠️ 部分实现 | 有日志与健康检查，无完整观测体系 |
 
-### 2. 知识图谱构建 (Knowledge Graph Construction)
+## 3. 已实现能力（按模块）
 
-| 功能 | Cognee API | AOF 实现 | 状态 |
-|-----|-----------|---------|------|
-| 基础 Cognify | `cognee.cognify()` | `aof_run.py` + `cognee_runner.py` | ✅ |
-| 本体对齐 | 内置 | `build_testdata_ontology_factory.py` | ✅ |
+### 3.1 摄取与同步
 
-### 3. 搜索 (Search)
+- `bridge/incremental_loader.py`
+- `bridge/url_ingestion.py`
+- `bridge/s3_ingestion.py`
+- `bridge/batch_ingestion.py`
+- `bridge/data_sync.py`
 
-| 功能 | Cognee API | AOF 实现 | 状态 |
-|-----|-----------|---------|------|
-| 基础搜索 | `cognee.search()` | `aof_run.py` | ✅ |
-| Graph Completion | `SearchType.GRAPH_COMPLETION` | `bridge/enhanced_search.py` | ✅ |
-| RAG Completion | `SearchType.RAG_COMPLETION` | `bridge/enhanced_search.py` | ✅ |
+### 3.2 搜索与反馈
 
-### 4. 数据库集成 (Database Integration)
+- `bridge/enhanced_search.py`
+- `bridge/cypher_query.py`
+- `bridge/memify_feedback_loop.py`
 
-| 功能 | Cognee API | AOF 实现 | 状态 |
-|-----|-----------|---------|------|
-| Schema 提取 | `extract_schema()` | `bridge/database_schema_extractor.py` | ✅ |
-| Schema 到本体 | `migrate_relational_database()` | `bridge/database_schema_extractor.py` | ✅ |
+### 3.3 数据管理与可视化
 
-### 5. 文档处理 (Document Processing)
+- `bridge/dataset_manager.py`
+- `bridge/graph_visualizer.py`
+- `bridge/graph_analytics.py`
 
-| 功能 | Cognee API | AOF 实现 | 状态 |
-|-----|-----------|---------|------|
-| Jupyter Notebook | 内置 | `mixed_document_parser.py` | ✅ |
-| Markdown | 内置 | `mixed_document_parser.py` | ✅ |
-| XML 标注 | - | `mixed_document_parser.py` | ✅ |
-| YAML 标注 | - | `mixed_document_parser.py` | ✅ |
+### 3.4 本体与质量门
 
-### 6. 反馈闭环 (Feedback Loop)
+- `bridge/spec_mapper/*`
+- `bridge/ontology_adapter/*`
+- `bridge/quality_gate/*`
+- `bridge/preflight.py`
 
-| 功能 | Cognee API | AOF 实现 | 状态 |
-|-----|-----------|---------|------|
-| 反馈收集 | `save_interaction()` | `bridge/memify_feedback_loop.py` | ✅ |
-| 反馈分析 | `extract_feedback_qas()` | `bridge/memify_feedback_loop.py` | ✅ |
+## 4. 当前差距（真正未完成）
 
----
+### 4.1 多租户与权限控制（高优先级）
 
-## ❌ 未实现功能（差距分析）
+当前 API 没有鉴权中间件与租户隔离策略，适合内网/单团队，不适合多团队共享生产环境。
 
-### 1. 数据摄取 - 未实现 ⚠️
+### 4.2 可观测性与告警（高优先级）
 
-| 功能 | Cognee API | 说明 | 优先级 |
-|-----|-----------|------|-------|
-| **目录批量摄取** | `cognee.datasets.discover_datasets()` | 自动发现目录中的数据集 | 高 |
-| **URL/网络数据** | `cognee.add()` 支持 URL | 从 URL 摄取网络资源 | 中 |
-| **S3 存储** | `cognee.add()` 支持 S3 | 从 AWS S3 摄取数据 | 低 |
-| **数据库数据迁移** | `migrate_relational_database()` (full data) | 迁移表数据而不仅是 Schema | 中 |
+目前具备健康检查与运行日志，但缺少：
 
-**AOF 现状**: 当前只支持单个文件或文本，不支持目录批量处理
+- 指标标准化（QPS、p95、错误率、构建成功率）
+- Trace 链路追踪
+- 告警规则与值班流程
 
-```python
-# Cognee 能力
-datasets = cognee.datasets.discover_datasets("/path/to/data")
-for dataset in datasets:
-    await cognee.add(dataset)
-```
+### 4.3 CI/CD 门禁深度（中优先级）
 
-### 2. 搜索 - 未完全利用 ⚠️
+已具备基础 CI（lint/test），建议补齐：
 
-| 功能 | Cognee API | 说明 | 优先级 |
-|-----|-----------|------|-------|
-| **Chain-of-Thought** | `GRAPH_COMPLETION_COT` | 推理链搜索 | 中 |
-| **上下文扩展** | `GRAPH_COMPLETION_CONTEXT_EXTENSION` | 扩展上下文搜索 | 中 |
-| **时序搜索** | `TEMPORAL` | 时间序列数据搜索 | 高 |
-| **代码搜索** | `CODING_RULES` | 代码规则搜索 | 中 |
-| **Cypher 查询** | `CYPHER` | 原生图查询 | 低 |
-| **Feeling Lucky** | `FEELING_LUCKY` | 智能选择 | 低 |
-| **摘要搜索** | `SUMMARIES` | 分层摘要 | 中 |
+- API smoke test（启动服务后真实调用）
+- 中间层最小闭环集成测试（ingest -> build -> artifacts）
+- Docker 构建与镜像扫描
 
-**AOF 现状**: `bridge/enhanced_search.py` 已封装但未在 API 中完全暴露
+### 4.4 数据治理规范化（中优先级）
 
-### 3. 数据管理 - 未实现 ❌
+建议补齐 mapping/regression 的版本标记与发布清单自动校验，减少“人工判断是否可发布”。
 
-| 功能 | Cognee API | 说明 | 优先级 |
-|-----|-----------|------|-------|
-| **数据集列表** | `cognee.datasets.list_datasets()` | 列出所有数据集 | 高 |
-| **数据状态检查** | `cognee.datasets.get_status()` | 检查 cognify 状态 | 高 |
-| **数据删除** | `cognee.datasets.delete_data()` | 删除特定数据 | 中 |
-| **数据集清空** | `cognee.datasets.empty_dataset()` | 清空数据集 | 中 |
-| **数据发现** | `cognee.datasets.has_data()` | 检查数据存在 | 低 |
-| **Prune 全部** | `cognee.prune.prune_data()` | 清空所有数据 | 中 |
+## 5. 下一阶段路线图（建议）
 
-**AOF 现状**: 无数据管理功能，用户无法查看或删除已添加的数据
+### Phase A（1-2 周）
 
-### 4. 可视化 - 未实现 ❌
+1. 增加 API 鉴权（服务内 token 或网关签名）
+2. 增加可观测性最小集（Prometheus 指标 + 5xx 告警）
+3. 将 smoke test 纳入 CI 阻断门禁
 
-| 功能 | Cognee API | 说明 | 优先级 |
-|-----|-----------|------|-------|
-| **图谱可视化** | `cognee.visualize_graph()` | 生成 HTML 可视化 | 高 |
-| **多用户图谱** | `visualize_multi_user_graph()` | 多用户图谱聚合 | 低 |
-| **交互式 UI** | `cognee api.v1.ui` | 启动交互式 UI | 中 |
+### Phase B（2-4 周）
 
-**AOF 现状**: 无可视化能力，用户无法直观查看知识图谱
+1. 推进多租户隔离（topic 命名空间与访问边界）
+2. 建立发布流水线（构建、扫描、部署、回滚）
+3. 建立中间层产物版本化规范（manifest 与 mapping 关联版本）
 
-```python
-# Cognee 能力
-await cognee.visualize_graph("graph.html")
-```
+## 6. 备注
 
-### 5. 同步与更新 - 未实现 ❌
-
-| 功能 | Cognee API | 说明 | 优先级 |
-|-----|-----------|------|-------|
-| **数据同步** | `cognee.sync()` | 同步外部数据源 | 低 |
-| **数据更新** | `cognee.update()` | 更新已有数据 | 中 |
-| **增量摄取** | `incremental_loading` | 增量数据加载 | 中 |
-
-**AOF 现状**: 只支持全量重新摄取
-
-### 6. 权限与多用户 - 未实现 ❌
-
-| 功能 | Cognee API | 说明 | 优先级 |
-|-----|-----------|------|-------|
-| **用户管理** | `cognee.users` | 多用户支持 | 低 |
-| **权限控制** | `cognee.permissions` | 数据集级权限 | 低 |
-| **访问控制** | `enable_backend_access_control` | 后端访问控制 | 低 |
-
-**AOF 现状**: 单用户模式，无权限控制
-
-### 7. 高级功能 - 部分实现 ⚠️
-
-| 功能 | Cognee API | 说明 | 优先级 |
-|-----|-----------|------|-------|
-| **Metrics 监控** | `cognee.modules.metrics` | 管道运行指标 | 低 |
-| **Observability** | `cognee.modules.observability` | 可观测性追踪 | 低 |
-| **Cloud 集成** | `cognee.cloud` | 云服务集成 | 低 |
-| **Settings 管理** | `cognee.settings` | 配置管理 | 中 |
-
----
-
-## 🎯 建议优先级路线图
-
-### Phase 1: 高优先级（1-2 周）
-
-1. **数据管理功能**
-   - 实现数据集列表查看
-   - 实现数据删除功能
-   - 添加 cognify 状态检查
-
-2. **可视化集成**
-   - 集成 `visualize_graph()`
-   - 添加 API 端点生成可视化
-   - 支持下载 HTML 文件
-
-3. **目录批量摄取**
-   - 支持 `--data-dir` 参数
-   - 自动发现目录中的数据文件
-
-### Phase 2: 中优先级（2-4 周）
-
-4. **搜索类型完整暴露**
-   - 在 API 中支持所有搜索类型
-   - 实现意图自动选择
-
-5. **时序搜索支持**
-   - 针对时间序列数据的专门处理
-
-6. **数据更新与同步**
-   - 增量数据更新
-   - 外部数据源同步
-
-### Phase 3: 低优先级（可选）
-
-7. **多用户与权限**
-   - 用户管理
-   - 数据集权限控制
-
-8. **高级监控**
-   - Metrics 收集
-   - 可观测性集成
-
----
-
-## 📋 详细实现建议
-
-### 1. 数据管理功能
-
-```python
-# 新增: bridge/dataset_manager.py
-
-class DatasetManager:
-    """数据集管理器。"""
-    
-    async def list_datasets(self) -> list[dict]:
-        """列出所有数据集。"""
-        import cognee
-        return await cognee.datasets.list_datasets()
-    
-    async def get_dataset_status(self, dataset_id: str) -> dict:
-        """获取数据集处理状态。"""
-        import cognee
-        return await cognee.datasets.get_status([dataset_id])
-    
-    async def delete_dataset(self, dataset_id: str) -> bool:
-        """删除数据集。"""
-        import cognee
-        await cognee.datasets.empty_dataset(dataset_id)
-        return True
-```
-
-### 2. 可视化功能
-
-```python
-# 新增: bridge/visualization.py
-
-async def generate_graph_visualization(
-    output_path: Path,
-    topic: str,
-) -> Path:
-    """生成知识图谱可视化。"""
-    import cognee
-    
-    # 生成可视化 HTML
-    await cognee.visualize_graph(str(output_path))
-    
-    return output_path
-```
-
-### 3. 目录摄取
-
-```python
-# 扩展: aof_add.py
-
-async def add_directory(
-    spec: dict,
-    directory_path: Path,
-    recursive: bool = True,
-) -> dict:
-    """批量添加目录中的文件。"""
-    import cognee
-    
-    # 发现数据集
-    datasets = cognee.datasets.discover_datasets(str(directory_path))
-    
-    results = []
-    for dataset_name, files in datasets.items():
-        for file_path in files:
-            result = await run_add_from_spec(spec, file_path)
-            results.append(result)
-    
-    return {"added": len(results), "datasets": list(datasets.keys())}
-```
-
----
-
-## 📊 结论
-
-### 已实现（28%）
-- ✅ 基础数据摄取和图谱构建
-- ✅ 数据库 Schema 提取
-- ✅ 文档处理（Jupyter, Markdown, YAML, XML）
-- ✅ 基础搜索和部分高级搜索封装
-- ✅ 反馈闭环框架
-
-### 关键差距（72%）
-- ❌ **数据管理**: 无法查看、删除或管理数据集
-- ❌ **可视化**: 无法直观查看知识图谱
-- ❌ **批量摄取**: 不支持目录批量处理
-- ❌ **完整搜索**: API 未暴露所有搜索类型
-- ❌ **时序支持**: 无时间序列数据特殊处理
-
-### 建议下一步
-1. **立即**: 实现数据管理功能（列表、删除、状态检查）
-2. **短期**: 集成可视化功能
-3. **中期**: 完善搜索 API 和批量摄取
+- 历史版本中“数据管理/可视化/批量摄取未实现”的结论已过时。  
+- 本文档用于替代旧版差距结论，作为后续架构评审基线。
