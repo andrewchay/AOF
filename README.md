@@ -556,7 +556,10 @@ python tools/quality_gate/lint_l3_data_integrity.py
 - [API 参考](docs/internal/api_reference.md) - 完整 API 文档
 - [模块文档](docs/internal/bridge_modules.md) - Bridge 层详解
 - [方法论体系](docs/internal/methodology/) - AOF 方法规范
-- [架构设计](docs/architecture/bridge-design.md) - 技术架构
+- [架构总览](docs/architecture/README.md) - 主架构图与术语表
+- [架构设计](docs/architecture/bridge-design.md) - 桥接层技术架构
+- [产品蓝图](docs/product/AOF_产品蓝图_v1.md) - 跨行业 AI-Native 转型路线
+- [企业管理层汇报](docs/product/AOF_企业管理层汇报_v1.md) - 内部汇报版本（不含融资内容）
 - [通用本体抽提 SOP](docs/AOF-通用本体抽提SOP.md) - 操作手册
 - [生产发布清单](docs/生产发布清单.md) - 部署检查
 
