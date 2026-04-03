@@ -1,5 +1,8 @@
 # AOF 新增功能总结
 
+> 阶段性文档（历史）：当前请优先阅读架构主入口  
+> [/Users/chaihao/LLM/AOF/docs/architecture/README.md](/Users/chaihao/LLM/AOF/docs/architecture/README.md)
+
 ## 本次实现的高优先级功能
 
 ### 1. 数据集管理模块 (Dataset Manager)

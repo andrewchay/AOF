@@ -1,0 +1,192 @@
+# NebulaGraph 部署配置
+# 注意：生产环境建议使用官方 Helm Chart 或托管服务
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nebula-metad
+  namespace: aof
+spec:
+  serviceName: nebula-metad
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nebula-metad
+  template:
+    metadata:
+      labels:
+        app: nebula-metad
+    spec:
+      containers:
+      - name: metad
+        image: vesoft/nebula-metad:v3.8.0
+        ports:
+        - containerPort: 9559
+          name: thrift
+        - containerPort: 19559
+          name: http
+        - containerPort: 19560
+          name: http2
+        volumeMounts:
+        - name: data
+          mountPath: /usr/local/nebula/data
+        command:
+        - /bin/sh
+        - -c
+        - |
+          /usr/local/nebula/bin/nebula-metad \
+            --meta_server_addrs=nebula-metad-0.nebula-metad:9559,nebula-metad-1.nebula-metad:9559,nebula-metad-2.nebula-metad:9559 \
+            --local_ip=$(hostname).nebula-metad \
+            --ws_ip=0.0.0.0 \
+            --port=9559 \
+            --ws_http_port=19559 \
+            --data_path=/usr/local/nebula/data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nebula-metad
+  namespace: aof
+  labels:
+    app: nebula-metad
+spec:
+  clusterIP: None
+  selector:
+    app: nebula-metad
+  ports:
+  - port: 9559
+    name: thrift
+  - port: 19559
+    name: http
+  - port: 19560
+    name: http2
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nebula-storaged
+  namespace: aof
+spec:
+  serviceName: nebula-storaged
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nebula-storaged
+  template:
+    metadata:
+      labels:
+        app: nebula-storaged
+    spec:
+      containers:
+      - name: storaged
+        image: vesoft/nebula-storaged:v3.8.0
+        ports:
+        - containerPort: 9779
+          name: thrift
+        - containerPort: 19779
+          name: http
+        - containerPort: 19780
+          name: http2
+        volumeMounts:
+        - name: data
+          mountPath: /usr/local/nebula/data
+        command:
+        - /bin/sh
+        - -c
+        - |
+          /usr/local/nebula/bin/nebula-storaged \
+            --meta_server_addrs=nebula-metad-0.nebula-metad:9559,nebula-metad-1.nebula-metad:9559,nebula-metad-2.nebula-metad:9559 \
+            --local_ip=$(hostname).nebula-storaged \
+            --ws_ip=0.0.0.0 \
+            --port=9779 \
+            --ws_http_port=19779 \
+            --data_path=/usr/local/nebula/data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nebula-storaged
+  namespace: aof
+  labels:
+    app: nebula-storaged
+spec:
+  clusterIP: None
+  selector:
+    app: nebula-storaged
+  ports:
+  - port: 9779
+    name: thrift
+  - port: 19779
+    name: http
+  - port: 19780
+    name: http2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nebula-graphd
+  namespace: aof
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nebula-graphd
+  template:
+    metadata:
+      labels:
+        app: nebula-graphd
+    spec:
+      containers:
+      - name: graphd
+        image: vesoft/nebula-graphd:v3.8.0
+        ports:
+        - containerPort: 9669
+          name: thrift
+        - containerPort: 19669
+          name: http
+        - containerPort: 19670
+          name: http2
+        command:
+        - /bin/sh
+        - -c
+        - |
+          /usr/local/nebula/bin/nebula-graphd \
+            --meta_server_addrs=nebula-metad-0.nebula-metad:9559,nebula-metad-1.nebula-metad:9559,nebula-metad-2.nebula-metad:9559 \
+            --ws_ip=0.0.0.0 \
+            --port=9669 \
+            --ws_http_port=19669 \
+            --enable_authorize=false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nebula-graphd
+  namespace: aof
+  labels:
+    app: nebula-graphd
+spec:
+  selector:
+    app: nebula-graphd
+  ports:
+  - port: 9669
+    targetPort: 9669
+    name: thrift
+  - port: 19669
+    targetPort: 19669
+    name: http

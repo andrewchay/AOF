@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+import importlib.util
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -115,11 +116,7 @@ class CypherQueryExecutor:
     
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
     
     async def execute(
         self,

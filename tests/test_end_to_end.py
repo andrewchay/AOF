@@ -6,9 +6,8 @@ import json
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -53,7 +52,13 @@ class TestAOFRunPipeline:
             "cognee": {"root": "/tmp/cognee"},
         }), encoding="utf-8")
         
-        mock_asyncio_run.return_value = {"dry_run": True}
+        def _consume_coroutine(coro: Any) -> dict[str, Any]:
+            # main() passes a coroutine to asyncio.run; close it in tests to avoid un-awaited warnings.
+            if hasattr(coro, "close"):
+                coro.close()
+            return {"dry_run": True}
+
+        mock_asyncio_run.side_effect = _consume_coroutine
         
         import sys
         original_argv = sys.argv
@@ -81,7 +86,12 @@ class TestAOFAddPipeline:
             "cognee": {"root": "/tmp/cognee"},
         }), encoding="utf-8")
         
-        mock_asyncio_run.return_value = {"add": {"status": "ok"}}
+        def _consume_coroutine(coro: Any) -> dict[str, Any]:
+            if hasattr(coro, "close"):
+                coro.close()
+            return {"add": {"status": "ok"}}
+
+        mock_asyncio_run.side_effect = _consume_coroutine
         
         import sys
         original_argv = sys.argv
@@ -113,7 +123,12 @@ class TestAOFAddPipeline:
             "cognee": {"root": "/tmp/cognee"},
         }), encoding="utf-8")
         
-        mock_asyncio_run.return_value = {"add": {"status": "ok"}}
+        def _consume_coroutine(coro: Any) -> dict[str, Any]:
+            if hasattr(coro, "close"):
+                coro.close()
+            return {"add": {"status": "ok"}}
+
+        mock_asyncio_run.side_effect = _consume_coroutine
         
         import sys
         original_argv = sys.argv

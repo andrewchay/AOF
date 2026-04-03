@@ -110,9 +110,6 @@ def check_ontology_data(owl_path: Path) -> list[dict[str, Any]]:
                 if 'owl#Class' in type_resource:
                     classes.append(desc)
         
-        individuals = root.findall('.//owl:NamedIndividual', ns)
-        properties = root.findall('.//owl:ObjectProperty', ns)
-        
         # 检查是否有核心类（至少8个核心类）
         if len(classes) < 8:
             errors.append({
@@ -153,7 +150,7 @@ def main() -> int:
                 errors.append(f"{spec_file.name}.{err['field']}: {err['error']}")
                 print(f"    ✗ {err['field']}: {err['error']}")
         else:
-            print(f"    ✓ 通过")
+            print("    ✓ 通过")
     
     # 2. 检查本体文件
     print("\n[2/2] 检查本体文件数据完整性...")

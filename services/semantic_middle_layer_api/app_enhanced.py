@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 # Configuration
@@ -344,7 +343,7 @@ def semantic_retrieve(req: RetrieveReq) -> dict[str, Any]:
     - Performs semantic matching on terms, metrics, and dimensions
     - Returns ranked results with relevance scores
     """
-    mf = _load_latest_manifest(req.topic)
+    _load_latest_manifest(req.topic)
     library = _load_mapping_library(req.topic)
     
     query_lower = req.query.lower().strip()

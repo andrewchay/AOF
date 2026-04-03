@@ -1,0 +1,29 @@
+groups:
+  - name: aof-semantic-api-alerts
+    rules:
+      - alert: AOFHighErrorRate
+        expr: aof_request_error_rate_ratio > 0.02
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AOF API error rate is high"
+          description: "HTTP 5xx ratio exceeded 2% for 5 minutes."
+
+      - alert: AOFHighLatencyP95
+        expr: max_over_time(aof_path_latency_ms_avg[5m]) > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AOF API latency increased"
+          description: "Average endpoint latency exceeded 1000ms for 10 minutes."
+
+      - alert: AOFNoTraffic
+        expr: increase(aof_requests_total[15m]) == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AOF API no traffic"
+          description: "No requests observed for 15 minutes."

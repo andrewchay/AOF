@@ -259,7 +259,7 @@ class MixedDocumentParser:
         try:
             tree = ET.parse(self.path)
             root = tree.getroot()
-        except ET.ParseError as e:
+        except ET.ParseError:
             # 回退到正则解析
             return self._parse_xml_regex()
 
@@ -518,16 +518,12 @@ class MixedDocumentParser:
 
         # 根据语言选择注释模式
         if ext == ".py":
-            comment_pattern = r'"""(.*?)"""|\'\'\'(.*?)\'\'\'|#(.*)$'
             lang = "python"
         elif ext in (".js", ".ts", ".java", ".go"):
-            comment_pattern = r'/\*\*(.*?)\*/|//(.*)$'
             lang = ext.lstrip(".")
         elif ext == ".sql":
-            comment_pattern = r'/\*(.*?)\*/|--(.*)$'
             lang = "sql"
         else:
-            comment_pattern = r'/\*(.*?)\*/|//(.*)$|#(.*)$'
             lang = "unknown"
 
         records = []

@@ -23,8 +23,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import mimetypes
+import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -89,11 +89,7 @@ class BatchIngestor:
     
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
     
     def discover_datasets(
         self,

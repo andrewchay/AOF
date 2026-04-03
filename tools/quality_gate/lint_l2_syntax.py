@@ -12,7 +12,6 @@ import ast
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
 
 def check_json_file(file_path: Path) -> tuple[bool, str]:

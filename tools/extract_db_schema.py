@@ -41,13 +41,6 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))
 
-from bridge.database_schema_extractor import (
-    DatabaseSchemaExtractor,
-    MergeMode,
-    extract_db_schema_to_ontology,
-)
-
-
 def print_result(result) -> None:
     """打印提取结果。"""
     print("\n" + "=" * 60)
@@ -87,6 +80,8 @@ def print_result(result) -> None:
 
 async def main() -> int:
     """主函数。"""
+    from bridge.database_schema_extractor import extract_db_schema_to_ontology
+
     parser = argparse.ArgumentParser(
         description="从数据库提取 Schema 并生成 OWL 本体",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -168,14 +163,14 @@ async def main() -> int:
         if args.dry_run:
             print("[试运行模式] 将执行以下操作:")
             print(f"  1. 连接到 {args.provider} 数据库")
-            print(f"  2. 提取数据库 Schema（表、列、关系）")
-            print(f"  3. 转换为 OWL 本体格式")
+            print("  2. 提取数据库 Schema（表、列、关系）")
+            print("  3. 转换为 OWL 本体格式")
             if args.mode == "diff":
-                print(f"  4. 生成与现有本体的差异报告")
+                print("  4. 生成与现有本体的差异报告")
             elif args.mode == "merge":
-                print(f"  4. 合并新内容到现有本体（如有）")
+                print("  4. 合并新内容到现有本体（如有）")
             else:
-                print(f"  4. 替换现有本体")
+                print("  4. 替换现有本体")
             print(f"  5. 输出到: {output_path}")
             print("\n[试运行] 未实际执行")
             return 0

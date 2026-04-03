@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  aof-semantic-api:
+    build:
+      context: ../..
+      dockerfile: services/semantic_middle_layer_api/Dockerfile
+      args:
+        INSTALL_COGNEE: "1"
+        COGNEE_PIP_SPEC: "cognee"
+    image: aof-semantic-api:observability
+    container_name: aof-semantic-api-obs
+    ports:
+      - "8787:8787"
+    environment:
+      - AOF_ROOT=/app/AOF
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-custom}
+      - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-chat}
+      - LLM_ENDPOINT=${LLM_ENDPOINT:-https://api.deepseek.com/v1}
+      - PYTHONUNBUFFERED=1
+      - AOF_OTEL_CONSOLE_EXPORTER=0
+      - AOF_OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - AOF_SLO_TARGETS_FILE=/app/AOF/config/observability/slo_targets.yaml
+    volumes:
+      - ../../data:/app/AOF/data
+      - ../../logs:/app/AOF/logs
+      - ../../ontologies:/app/AOF/ontologies
+      - ../../config:/app/AOF/config:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: aof-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../config/observability/prometheus_alert_rules.yaml:/etc/prometheus/prometheus_alert_rules.yaml:ro
+    depends_on:
+      - aof-semantic-api
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: aof-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    container_name: aof-jaeger
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
