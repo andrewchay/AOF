@@ -22,10 +22,9 @@
 
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass, field
+import importlib.util
+from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Optional
 from uuid import UUID
 
@@ -70,11 +69,7 @@ class DatasetManager:
     
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
     
     async def list_datasets(self, user: Optional[Any] = None) -> list[DatasetInfo]:
         """
@@ -89,7 +84,6 @@ class DatasetManager:
         if not self._cognee_available:
             raise RuntimeError("Cognee 未安装")
         
-        import cognee
         from cognee.modules.users.methods import get_default_user
         
         if user is None:
@@ -155,7 +149,6 @@ class DatasetManager:
         if not self._cognee_available:
             raise RuntimeError("Cognee 未安装")
         
-        import cognee
         
         try:
             # 转换 ID
@@ -201,7 +194,6 @@ class DatasetManager:
         if not self._cognee_available:
             raise RuntimeError("Cognee 未安装")
         
-        import cognee
         from cognee.modules.users.methods import get_default_user
         from cognee.modules.data.methods import get_authorized_dataset, get_dataset_data
         
@@ -255,7 +247,6 @@ class DatasetManager:
         if not self._cognee_available:
             raise RuntimeError("Cognee 未安装")
         
-        import cognee
         from cognee.modules.users.methods import get_default_user
         from cognee.modules.data.methods import delete_data
         

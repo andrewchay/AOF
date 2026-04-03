@@ -6,11 +6,11 @@
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from bridge.storage.base import Node, Edge, Triple, Path, GraphBackend, BatchInserter
+from bridge.storage.base import Node, Edge, Triple, Path, BatchInserter
 from bridge.storage.factory import StorageFactory, StorageConfig
-from bridge.storage.ngql_builder import nGQLBuilder, F, match, go, insert_vertex
+from bridge.storage.ngql_builder import nGQLBuilder, F, go, insert_vertex
 from bridge.storage.cypher_to_ngql import CypherToNGQL, convert_get_neighbors
 
 

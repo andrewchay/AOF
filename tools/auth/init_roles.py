@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """初始化 RBAC 系统角色和权限
 
 用法:
@@ -21,6 +22,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from typing import Optional
 
 # 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent
@@ -30,7 +32,6 @@ from bridge.auth import (
     RBACManager,
     RoleType,
     ResourceType,
-    Action,
     create_system_role,
     SYSTEM_ROLE_PERMISSIONS,
 )
@@ -111,8 +112,7 @@ async def create_admin_user(
         # 分配 ADMIN 角色
         admin_role_id = "system_admin" if tenant_id is None else f"{tenant_id}_admin"
         
-        from bridge.auth import Resource
-        assignment = await rbac.grant_role(
+        await rbac.grant_role(
             user_id=user.id,
             role_id=admin_role_id,
             resource_type=ResourceType.SYSTEM,
@@ -230,5 +230,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    from typing import Optional
     asyncio.run(main())

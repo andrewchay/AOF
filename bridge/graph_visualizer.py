@@ -23,12 +23,11 @@
 
 from __future__ import annotations
 
-import shutil
+import importlib.util
 import webbrowser
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
-from uuid import UUID
 
 
 @dataclass
@@ -50,11 +49,7 @@ class GraphVisualizer:
     
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
     
     async def visualize(
         self,
@@ -86,7 +81,7 @@ class GraphVisualizer:
         
         try:
             # 调用 Cognee 生成可视化
-            result = await cognee.visualize_graph(str(output_path))
+            await cognee.visualize_graph(str(output_path))
             
             # 获取文件大小
             file_size = output_path.stat().st_size if output_path.exists() else 0

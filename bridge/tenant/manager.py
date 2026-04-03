@@ -17,7 +17,7 @@ from typing import Optional, Dict, Any, List
 from enum import Enum
 import logging
 
-from bridge.auth import RBACManager, create_system_role, RoleType
+from bridge.auth import RBACManager
 
 logger = logging.getLogger(__name__)
 
@@ -392,7 +392,6 @@ class TenantManager:
             return False
         
         try:
-            from nebula3.gclient.net import Session
             
             session = self.nebula_pool.get_session("root", "nebula")
             

@@ -69,7 +69,7 @@ class CogneeBackend(GraphBackend):
         try:
             # 简单的健康检查
             return True
-        except:
+        except Exception:
             return False
     
     async def add_node(self, node: Node) -> bool:

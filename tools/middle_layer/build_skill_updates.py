@@ -52,7 +52,6 @@ def main() -> int:
     out_md.parent.mkdir(parents=True, exist_ok=True)
 
     map_terms = [r for r in feedback if str(r.get("action", "")) == "map_term"]
-    add_classes = [r for r in feedback if str(r.get("action", "")) == "add_class"]
 
     lines = [
         f"# Skills 更新建议：{args.topic}",

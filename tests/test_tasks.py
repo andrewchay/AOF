@@ -6,7 +6,6 @@
 """
 
 import pytest
-import asyncio
 from datetime import datetime
 
 from bridge.tasks.models import Task, TaskStatus, TaskPriority, TaskResult

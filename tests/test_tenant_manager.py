@@ -6,7 +6,6 @@
 """
 
 import pytest
-from datetime import datetime
 
 from bridge.tenant.manager import (
     TenantManager, Tenant, TenantConfig, TenantStatus

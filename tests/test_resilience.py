@@ -84,7 +84,7 @@ class TestSlidingWindow:
     async def test_allow_within_limit(self, window):
         """测试在限制内允许"""
         for i in range(3):
-            allowed, info = await window.allow(f"key")
+            allowed, info = await window.allow("key")
             assert allowed is True, f"Request {i+1} should be allowed"
             assert info["remaining"] == 2 - i
     

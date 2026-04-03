@@ -11,14 +11,12 @@
 """
 
 from datetime import datetime
-from typing import Optional, List
 
 from sqlalchemy import (
     Column, String, DateTime, Boolean, Text, 
     ForeignKey, Table, Index, JSON
 )
 from sqlalchemy.orm import relationship, declarative_base
-from sqlalchemy.sql import func
 
 Base = declarative_base()
 
@@ -228,8 +226,6 @@ class SQLAlchemyRBACAdapter:
     
     async def _persist_user(self, user):
         """保存用户"""
-        from sqlalchemy.ext.asyncio import AsyncSession
-        
         async with self.session_factory() as session:
             db_user = DBUser(
                 id=user.id,

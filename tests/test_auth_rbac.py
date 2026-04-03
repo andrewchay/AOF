@@ -10,11 +10,11 @@ from datetime import datetime, timedelta
 
 # 导入被测试模块
 from bridge.auth.models import (
-    User, Role, Permission, Resource, UserRoleAssignment,
+    User, Permission, Resource, UserRoleAssignment,
     RoleType, ResourceType, Action,
-    create_system_role, SYSTEM_ROLE_PERMISSIONS,
+    create_system_role,
 )
-from bridge.auth.rbac import RBACManager, PermissionDenied
+from bridge.auth.rbac import RBACManager
 
 
 class TestModels:

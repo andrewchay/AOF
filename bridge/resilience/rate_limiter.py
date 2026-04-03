@@ -16,7 +16,6 @@ import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
-from enum import Enum
 import logging
 
 try:

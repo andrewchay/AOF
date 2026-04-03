@@ -13,12 +13,13 @@ import uuid
 import json
 import logging
 import asyncio
+from functools import wraps
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any, List, Callable
+from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field, asdict
 from collections import deque
-import copy
+from fastapi import Request
 
 # 配置
 logger = logging.getLogger(__name__)
@@ -401,8 +402,6 @@ class AuditLogger:
 
 # ========== 与 FastAPI 集成 ==========
 
-from fastapi import Request
-
 class AuditMiddleware:
     """审计中间件（用于 FastAPI）
     
@@ -443,7 +442,7 @@ class AuditMiddleware:
                     async def receive():
                         return {"type": "http.request", "body": body_bytes}
                     request._receive = receive
-                except:
+                except Exception:
                     pass
         
         # 执行请求

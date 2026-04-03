@@ -25,6 +25,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -175,11 +176,7 @@ class GraphAnalytics:
     
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
     
     async def _load_graph(self) -> Optional[Any]:
         """从 Cognee 加载图谱为 NetworkX 格式。"""
@@ -200,8 +197,6 @@ class GraphAnalytics:
             
             # 尝试从 Cognee 获取数据
             try:
-                import cognee
-                
                 # 获取图谱数据（这里需要根据实际 Cognee API 调整）
                 # 暂时创建一个示例结构
                 nodes = await self._get_nodes_from_cognee()

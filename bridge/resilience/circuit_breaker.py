@@ -172,7 +172,7 @@ class CircuitBreaker:
             result = await func(*args, **kwargs)
             await self.record_success()
             return result
-        except Exception as e:
+        except Exception:
             await self.record_failure()
             if fallback is not None:
                 return fallback

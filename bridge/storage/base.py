@@ -7,8 +7,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, AsyncIterator
-from enum import Enum
+from typing import Optional, List, Dict, Any
 
 
 @dataclass

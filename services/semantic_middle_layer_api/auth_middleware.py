@@ -14,14 +14,14 @@ from __future__ import annotations
 import jwt
 import hashlib
 import hmac
-import time
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, Callable, List
 from functools import wraps
 
-from fastapi import Request, HTTPException, Depends, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyHeader
+from fastapi import Request, HTTPException, Depends, APIRouter
+from fastapi.security import HTTPBearer, APIKeyHeader
+from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
@@ -341,7 +341,6 @@ def require_permission(
             # 获取 request 对象
             request = kwargs.get('request')
             if not request and args:
-                from fastapi import Request
                 for arg in args:
                     if isinstance(arg, Request):
                         request = arg
@@ -448,9 +447,6 @@ def setup_auth(app: ASGIApp, rbac_manager: Optional[RBACManager] = None) -> None
 
 
 # ========== 认证端点（示例）==========
-
-from fastapi import APIRouter
-from pydantic import BaseModel
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 

@@ -36,7 +36,8 @@ __all__ = [
 
 # NebulaGraph 后端（可选导入）
 try:
-    from .nebula_backend import NebulaBackend
+    from .nebula_backend import NebulaBackend as _NebulaBackend
+    NebulaBackend = _NebulaBackend
     __all__.append("NebulaBackend")
 except ImportError:
     pass

@@ -12,7 +12,7 @@ from __future__ import annotations
 import threading
 import time
 from collections import OrderedDict
-from typing import Optional, Any, Callable, Dict
+from typing import Optional, Any, Dict
 from dataclasses import dataclass
 import logging
 

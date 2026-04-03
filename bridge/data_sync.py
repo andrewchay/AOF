@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import importlib.util
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -153,11 +154,7 @@ class DataSync:
     
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
     
     def _get_state_file(self) -> Path:
         """获取状态文件路径。"""
@@ -329,7 +326,6 @@ class DataSync:
         export_path.mkdir(parents=True, exist_ok=True)
         
         try:
-            import cognee
             
             # 获取数据集信息
             # 注意：这里假设 Cognee 提供导出功能
@@ -640,11 +636,11 @@ class SyncScheduler:
                     sync = DataSync(task.dataset_name, task.strategy)
                     
                     if task.direction == SyncDirection.TO_COGNEE:
-                        result = await sync.sync_to_cognee(task.local_path)
+                        await sync.sync_to_cognee(task.local_path)
                     elif task.direction == SyncDirection.FROM_COGNEE:
-                        result = await sync.export_from_cognee(task.local_path)
+                        await sync.export_from_cognee(task.local_path)
                     else:
-                        result = await sync.sync_bidirectional(task.local_path)
+                        await sync.sync_bidirectional(task.local_path)
                     
                     # 更新任务状态
                     task.last_sync = datetime.now()

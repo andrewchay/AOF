@@ -14,7 +14,6 @@
 import re
 import sys
 from pathlib import Path
-from collections import defaultdict
 
 
 class MarkdownLinter:
@@ -63,7 +62,7 @@ class MarkdownLinter:
                 # 检查单个@符号（应该成对出现）
                 single_at = re.findall(r'(?<![^@])@(?![^@])', self.content)
                 if single_at:
-                    self.errors.append(f"发现未闭合的人名标注 '@'")
+                    self.errors.append("发现未闭合的人名标注 '@'")
 
             # 检查嵌套标注和空标注
             matches = list(re.finditer(pattern, self.content))

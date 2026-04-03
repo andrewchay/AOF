@@ -10,7 +10,7 @@ from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from .context import set_current_tenant, clear_current_tenant, get_current_tenant_id
+from .context import set_current_tenant, clear_current_tenant
 from .manager import TenantManager, TenantStatus
 
 
@@ -109,7 +109,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             
         except HTTPException:
             raise
-        except Exception as e:
+        except Exception:
             # 清理上下文
             clear_current_tenant()
             raise
@@ -172,7 +172,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             # 不验证签名，只解码
             payload = jwt.decode(token, options={"verify_signature": False})
             return payload.get("tenant_id")
-        except:
+        except Exception:
             return None
     
     def _extract_from_subdomain(self, request: Request) -> Optional[str]:

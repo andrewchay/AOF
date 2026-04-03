@@ -30,6 +30,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -79,11 +80,7 @@ class MemifyFeedbackLoop:
     
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
     
     async def capture_interaction(
         self,

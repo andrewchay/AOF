@@ -23,13 +23,12 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Callable
 from functools import wraps
-import asyncio
 import logging
 
 from .models import (
     User, Role, Resource, Permission, UserRoleAssignment,
     RoleType, ResourceType, Action,
-    create_system_role, SYSTEM_ROLE_PERMISSIONS
+    create_system_role
 )
 
 logger = logging.getLogger(__name__)
@@ -340,7 +339,6 @@ class RBACManager:
         
         try:
             # 使用 admin 会话创建用户
-            from nebula3.gclient.net import Session
             
             session = self.nebula_pool.get_session("root", "nebula")
             

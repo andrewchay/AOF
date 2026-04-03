@@ -7,7 +7,6 @@
 
 import pytest
 import json
-from datetime import datetime, timedelta
 
 from bridge.audit.logger import (
     AuditEvent, AuditLevel, AuditLogger, DataMasker

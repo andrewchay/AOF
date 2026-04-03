@@ -22,8 +22,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
+import importlib.util
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -198,11 +198,7 @@ class IncrementalLoader:
     
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
     
     def _get_state_file(self) -> Path:
         """获取状态文件路径。"""
@@ -265,7 +261,7 @@ class IncrementalLoader:
             
             return hash_obj.hexdigest()
             
-        except Exception as e:
+        except Exception:
             # 如果失败，使用 mtime + size 作为备选
             stat = file_path.stat()
             return hashlib.md5(f"{stat.st_mtime}:{stat.st_size}".encode()).hexdigest()

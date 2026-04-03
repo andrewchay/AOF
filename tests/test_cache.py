@@ -8,10 +8,9 @@
 import pytest
 import time
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
 
 from bridge.cache.local_cache import LocalCache
-from bridge.cache.manager import CacheManager, CacheStrategy, CacheConfig
+from bridge.cache.manager import CacheManager, CacheConfig
 
 
 class TestLocalCache:

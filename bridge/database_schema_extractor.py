@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -188,11 +189,7 @@ class DatabaseSchemaExtractor:
 
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
 
     async def extract_schema(
         self,
@@ -423,7 +420,7 @@ class DatabaseSchemaExtractor:
         self,
         existing_file: Path,
         new_ontology: Ontology,
-    ) -> "MergeResult":
+    ) -> Any:
         """合并本体。"""
         from dataclasses import dataclass
 

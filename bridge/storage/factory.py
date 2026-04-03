@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, Type
+from typing import Optional, Dict, Type
 import logging
 
 from .base import GraphBackend

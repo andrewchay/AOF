@@ -19,7 +19,7 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-from .models import Task, TaskResult, TaskStatus, TaskPriority, TaskQuery, TaskStats
+from .models import Task, TaskResult, TaskStatus, TaskQuery, TaskStats
 
 logger = logging.getLogger(__name__)
 

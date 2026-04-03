@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, Tuple
 from dataclasses import dataclass
 
 

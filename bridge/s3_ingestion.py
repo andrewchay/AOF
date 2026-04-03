@@ -27,13 +27,13 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import mimetypes
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import urlparse
 
 
 @dataclass
@@ -158,11 +158,7 @@ class S3Ingester:
     
     def _check_cognee(self) -> bool:
         """检查 Cognee 是否可用。"""
-        try:
-            import cognee
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("cognee") is not None
     
     def _get_s3_client(self):
         """获取 S3 客户端（延迟初始化）。"""

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any
 
 try:
     from nebula3.gclient.net import ConnectionPool
@@ -118,7 +118,7 @@ class NebulaBackend(GraphBackend):
             result = session.execute("SHOW HOSTS")
             session.release()
             return result.is_succeeded()
-        except:
+        except Exception:
             return False
     
     def _get_session(self):
@@ -492,7 +492,7 @@ class NebulaBackend(GraphBackend):
             if result.is_succeeded() and result.rows():
                 return result.rows()[0].values[0].get_iVal()
             return 0
-        except:
+        except Exception:
             return 0
     
     async def count_edges(self, relation_type: Optional[str] = None) -> int:
@@ -503,7 +503,7 @@ class NebulaBackend(GraphBackend):
             if result.is_succeeded() and result.rows():
                 return result.rows()[0].values[0].get_iVal()
             return 0
-        except:
+        except Exception:
             return 0
     
     # ========== 查询执行 ==========

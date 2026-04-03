@@ -15,9 +15,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum, auto
-from typing import Any, Optional, List, Dict, Set
-import json
+from enum import Enum
+from typing import Any, Optional, List, Dict
 
 
 class RoleType(str, Enum):

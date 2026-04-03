@@ -6,9 +6,8 @@ import json
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
