@@ -1,6 +1,6 @@
-# Agentic Ontology Factory (AOF)
+# Agentic Ontology Factory (AOF) v2.0
 
-AOF 是一个**企业级知识工程平台**，支持从多源数据中自动构建、管理和分析知识图谱。基于 Cognee 知识图谱引擎，提供完整的数据摄取、本体构建、智能搜索和图谱分析能力。
+AOF 是一个**企业级知识工程平台**，支持从多源数据中自动构建、管理和分析知识图谱。基于 Cognee 知识图谱引擎，提供完整的数据摄取、本体构建、智能搜索、图谱分析和**企业级安全**能力。
 
 ---
 
@@ -32,36 +32,107 @@ AOF 是一个**企业级知识工程平台**，支持从多源数据中自动构
 探索搜索:    feeling_lucky, natural_language, triplet_completion
 ```
 
-### 企业级功能
-- ✅ **5 层质量门** - L1 文本 → L2 语法 → L3 数据 → L4 逻辑 → L5 对齐
-- 📊 **语义中间层** - 统一处理文档、元数据和反馈
-- 🔄 **反馈闭环** - Memify 用户反馈分析，自动生成本体改进建议
-- 📈 **可视化** - 交互式 HTML 图谱可视化
+---
+
+## 🔐 企业级功能（v2.0 新增）
+
+### 身份与访问管理（IAM）
+- **RBAC 权限模型** - 4 级角色（admin/owner/editor/viewer）
+- **资源级授权** - 支持 dataset/ontology/system/audit 细粒度控制
+- **JWT + API Key** 双认证模式
+- **请求签名验证** - HMAC-SHA256 防篡改
+
+### 多租户隔离
+- **租户级数据隔离** - GraphSpace 级别隔离（NebulaGraph）
+- **资源配额管理** - 数据集数量、图谱节点数、并发查询限制
+- **租户状态管理** - active/suspended/deleted 生命周期
+
+### 审计与合规
+- **全链路审计日志** - 5 级日志级别（DEBUG/INFO/WARNING/ERROR/CRITICAL）
+- **敏感数据脱敏** - 自动识别 password/token/api_key 并脱敏
+- **审计报告生成** - 支持 JSON/CSV/HTML/PDF 格式导出
+- **异常行为检测** - 登录异常、高频失败操作监控
 
 ---
 
-## 🏗️ 架构
+## ⚡ 性能与高可用（v2.0 新增）
+
+### 多级缓存体系
+| 层级 | 实现 | 适用场景 |
+|------|------|----------|
+| L1 | 进程内 LRU | 热数据、单机部署 |
+| L2 | Redis | 分布式共享、跨进程 |
+| L3 | 物化视图 | 预计算结果（PageRank/社区统计） |
+
+### 弹性保护机制
+- **限流** - 令牌桶（允许突发）/ 滑动窗口（精确计数）
+- **熔断器** - CLOSED/OPEN/HALF_OPEN 三态自动切换
+- **重试策略** - 指数退避 + 抖动，支持条件重试
+
+### 异步任务队列
+- **优先级队列** - 4 级优先级（CRITICAL/HIGH/NORMAL/LOW）
+- **状态追踪** - pending/queued/running/success/failure/cancelled
+- **进度回调** - 实时进度更新（0-100%）
+- **自动重试** - 失败任务自动重试（可配置次数）
+
+---
+
+## 🏗️ 架构演进
+
+### 整体架构（v2.0）
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         API 层 (51 端点)                         │
+│                        API Gateway 层                            │
+│  Auth (JWT/API Key) → Rate Limit → Circuit Breaker → Router      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────────┐
+│                        API 层 (51 端点)                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  Ingest  │  Sync  │  Analytics  │  Search  │  Visualize  │ ... │
-│  (20)    │  (5)   │   (6)       │   (6)    │    (3)      │     │
+│  Ingest │ Sync │ Analytics │ Search │ Visualize │ Tasks │ Audit │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────────┐
+│                      Bridge 层（模块化）                          │
 ├─────────────────────────────────────────────────────────────────┤
-│                      Bridge 层 (11 模块)                         │
-├──────────────┬──────────────┬──────────────┬────────────────────┤
-│ incremental_ │   s3_        │   data_      │  graph_            │
-│ loader.py    │ ingestion.py │ sync.py      │  analytics.py      │
-├──────────────┼──────────────┼──────────────┼────────────────────┤
-│ url_         │   batch_     │   enhanced_  │  graph_            │
-│ ingestion.py │ ingestion.py │ search.py    │  visualizer.py     │
-├──────────────┴──────────────┴──────────────┴────────────────────┤
-│                      Cognee 知识图谱引擎                         │
+│  auth/          RBAC 权限、租户管理                               │
+│  audit/         审计日志、合规报告                                │
+│  cache/         L1/L2 缓存、物化视图                              │
+│  resilience/    限流、熔断、重试                                  │
+│  storage/       存储抽象层（Cognee/NebulaGraph）                  │
+│  tasks/         异步任务队列                                      │
+│  tenant/        多租户隔离                                        │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────────┐
+│                      存储后端（可插拔）                           │
+├─────────────────────────────────────────────────────────────────┤
+│  Cognee (默认)  │  NebulaGraph (分布式)                          │
+│  - 单机/轻量    │  - 水平扩展                                     │
+│  - 快速原型     │  - 亿级节点支持                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 模块清单
+### 存储层抽象
+
+```python
+from bridge.storage import StorageFactory, StorageConfig
+
+# 切换存储后端
+config = StorageConfig(backend_type="nebula")  # 或 "cognee"
+backend = StorageFactory.create(config)
+
+# 统一接口
+await backend.add_triples(triples)
+result = await backend.pagerank(top_k=100)
+```
+
+---
+
+## 📦 模块清单
+
+### 核心模块
 
 | 模块 | 功能 | 状态 |
 |------|------|------|
@@ -76,6 +147,31 @@ AOF 是一个**企业级知识工程平台**，支持从多源数据中自动构
 | `batch_ingestion.py` | 批量目录摄取 | ✅ |
 | `memify_feedback_loop.py` | 用户反馈分析 | ✅ |
 | `database_schema_extractor.py` | 数据库 Schema 提取 | ✅ |
+
+### 企业级模块（v2.0）
+
+| 模块 | 功能 | 状态 |
+|------|------|------|
+| `auth/rbac.py` | RBAC 权限管理 | ✅ |
+| `auth/models.py` | 用户/角色/权限模型 | ✅ |
+| `audit/logger.py` | 审计日志记录 | ✅ |
+| `audit/query.py` | 审计查询与报告 | ✅ |
+| `tenant/manager.py` | 租户管理 | ✅ |
+| `tenant/context.py` | 租户上下文 | ✅ |
+| `tenant/middleware.py` | 租户识别中间件 | ✅ |
+| `cache/local_cache.py` | L1 LRU 缓存 | ✅ |
+| `cache/redis_cache.py` | L2 Redis 缓存 | ✅ |
+| `cache/manager.py` | 多级缓存管理 | ✅ |
+| `cache/materialized_view.py` | 物化视图 | ✅ |
+| `resilience/rate_limiter.py` | 限流器 | ✅ |
+| `resilience/circuit_breaker.py` | 熔断器 | ✅ |
+| `resilience/retry.py` | 重试策略 | ✅ |
+| `storage/base.py` | 存储抽象接口 | ✅ |
+| `storage/factory.py` | 存储工厂 | ✅ |
+| `storage/nebula_backend.py` | NebulaGraph 后端 | ✅ |
+| `storage/ngql_builder.py` | nGQL 构建器 | ✅ |
+| `tasks/queue.py` | 异步任务队列 | ✅ |
+| `tasks/models.py` | 任务数据模型 | ✅ |
 
 ---
 
@@ -94,6 +190,7 @@ uv pip install -e /path/to/cognee
 uv pip install boto3        # S3 支持（可选）
 uv pip install networkx     # 图谱分析（可选）
 uv pip install aiohttp      # URL 摄取（可选）
+uv pip install redis        # 缓存支持（可选）
 
 # 环境检查
 python aof_doctor.py --spec aof_spec.example.json
@@ -108,468 +205,227 @@ export LLM_PROVIDER="custom"
 export LLM_MODEL="deepseek/deepseek-chat"
 export LLM_ENDPOINT="https://api.deepseek.com/v1"
 
-# S3 配置（可选）
-export AWS_ACCESS_KEY_ID="..."
-export AWS_SECRET_ACCESS_KEY="..."
-export AWS_REGION="us-east-1"
-export S3_ENDPOINT_URL="https://minio.example.com"  # S3-compatible
+# 存储后端切换（可选，默认 Cognee）
+export STORAGE_BACKEND="nebula"
+export NEBULA_HOST="127.0.0.1"
+export NEBULA_PORT="9669"
+export NEBULA_USER="root"
+export NEBULA_PASSWORD="nebula"
+export NEBULA_SPACE="aof_default"
+
+# Redis 缓存（可选）
+export REDIS_URL="redis://localhost:6379/0"
+```
+
+### 3. 启动服务
+
+```bash
+# 开发模式
+services/semantic_middle_layer_api/run_api.sh
+
+# 生产模式（Docker）
+docker build -t aof:latest .
+docker run -p 8787:8787 aof:latest
+
+# Kubernetes 部署
+kubectl apply -f k8s/
 ```
 
 ---
 
 ## 📖 使用指南
 
-### CLI 工具
-
-#### 1. 数据摄取
-
-```bash
-# 增量摄取本地文档
-python aof_add.py \
-  --spec aof_spec.example.json \
-  --data-path /path/to/docs \
-  --skip-preflight
-
-# 批量摄取目录
-python -c "
-import asyncio
-from bridge.batch_ingestion import BatchIngestor
-
-async def main():
-    ingestor = BatchIngestor()
-    result = await ingestor.ingest_directory('/data/docs', 'my_dataset')
-    print(f'Ingested: {result.success_count}/{result.total_files}')
-
-asyncio.run(main())
-"
-```
-
-#### 2. 本体构建
-
-```bash
-# 从 SQL 生成本体
-export LLM_API_KEY="your-key"
-
-python tools/ontology_factory/build_testdata_ontology_factory.py \
-  --input tools/data_adapter/samples/inventory.sql \
-  --topic inventory \
-  --max-iterations 4
-
-# 从数据库提取 Schema
-export DATABASE_URL="postgresql://user:pass@localhost/mydb"
-
-python tools/extract_db_schema.py \
-  --db-url "$DATABASE_URL" \
-  --output ontologies/db_schema.owl \
-  --mode merge
-```
-
-#### 3. 构建知识图谱
-
-```bash
-# 执行 cognify（构建图谱）
-python aof_run.py \
-  --spec aof_spec.example.json \
-  --run-cognify \
-  --skip-preflight
-
-# 质量检查
-python aof_run.py \
-  --spec aof_spec.example.json \
-  --run-quality
-```
-
----
-
-### API 服务
-
-启动 FastAPI 服务：
-
-```bash
-services/semantic_middle_layer_api/run_api.sh
-
-# 或使用 uvicorn 直接启动
-uvicorn services.semantic_middle_layer_api.app:app \
-  --host 0.0.0.0 \
-  --port 8787 \
-  --reload
-```
-
-访问文档：`http://127.0.0.1:8787/docs`
-
----
-
-## 🔌 API 参考
-
-### 数据摄取（20 端点）
-
-```bash
-# 增量摄取
-POST /v1/ingest/incremental
-{
-  "directory": "/data/docs",
-  "dataset_name": "my_docs",
-  "recursive": true,
-  "dry_run": false
-}
-
-# S3 摄取
-POST /v1/ingest/s3/prefix
-{
-  "bucket": "my-bucket",
-  "prefix": "data/2024/",
-  "pattern": "*.json",
-  "dataset_name": "json_data"
-}
-
-# URL 摄取
-POST /v1/ingest/url
-{
-  "url": "https://example.com/doc.html",
-  "dataset_name": "web_docs"
-}
-```
-
-### 数据同步（5 端点）
-
-```bash
-# 执行同步
-POST /v1/sync
-{
-  "local_path": "/data/docs",
-  "dataset_name": "my_docs",
-  "direction": "to_cognee",
-  "strategy": "merge",
-  "incremental": true
-}
-
-# 定时同步
-POST /v1/sync/scheduled
-{
-  "local_path": "/data/docs",
-  "dataset_name": "my_docs",
-  "interval_minutes": 60
-}
-```
-
-### 图谱分析（6 端点）
-
-```bash
-# 完整分析
-POST /v1/analytics/metrics
-{"dataset_name": "my_docs"}
-
-# PageRank
-POST /v1/analytics/pagerank
-{
-  "dataset_name": "my_docs",
-  "top_k": 20
-}
-
-# 社区检测
-POST /v1/analytics/communities
-{
-  "dataset_name": "my_docs",
-  "algorithm": "louvain"
-}
-
-# 最短路径
-POST /v1/analytics/shortest_path
-{
-  "dataset_name": "my_docs",
-  "source": "node_a",
-  "target": "node_z"
-}
-```
-
-### 智能搜索（6 端点）
-
-```bash
-# 执行搜索
-POST /v1/semantic/search/execute
-{
-  "topic": "my_topic",
-  "query": "主要概念是什么？",
-  "search_type": "auto",
-  "user_intent": "analytics",
-  "top_k": 10
-}
-
-# 语义检索
-POST /v1/semantic/retrieve
-{
-  "topic": "my_topic",
-  "query": "revenue by quarter",
-  "top_k": 10
-}
-```
-
-**完整 API 文档**: [docs/internal/api_reference.md](docs/internal/api_reference.md)
-
----
-
-## 📚 使用案例
-
-### 案例 1：企业知识库构建
+### 认证示例
 
 ```python
-import asyncio
-from bridge.incremental_loader import IncrementalLoader
-from bridge.s3_ingestion import S3Ingester
-from bridge.data_sync import DataSync
+from bridge.auth import RBACManager, RoleType
 
-async def build_knowledge_base():
-    # 1. 从 S3 摄取历史文档
-    s3 = S3Ingester()
-    await s3.ingest_prefix(
-        bucket="company-docs",
-        prefix="knowledge-base/",
-        dataset_name="enterprise_kb"
+# 初始化 RBAC
+rbac = RBACManager(db_session)
+
+# 创建用户
+user = await rbac.create_user(
+    username="john",
+    email="john@example.com",
+    tenant_id="acme_corp"
+)
+
+# 授权角色
+await rbac.grant_role(
+    user_id=user.id,
+    role_id=f"{tenant_id}_admin",
+    resource_type=ResourceType.DATASET,
+    resource_id="dataset_123"
+)
+
+# 检查权限
+has_access = await rbac.check_permission(
+    user_id=user.id,
+    resource_type=ResourceType.DATASET,
+    action=Action.READ,
+    resource_id="dataset_123"
+)
+```
+
+### 缓存使用
+
+```python
+from bridge.cache import CacheManager
+
+# 创建缓存管理器
+cache = CacheManager(
+    l1_cache=LocalCache(max_size=10000),
+    l2_cache=await RedisCache.from_url("redis://localhost")
+)
+
+# 读取或计算
+result = await cache.get_or_compute(
+    key="pagerank:dataset_123",
+    compute_func=lambda: compute_pagerank(dataset),
+    l1_ttl=300,   # L1 缓存 5 分钟
+    l2_ttl=1800   # L2 缓存 30 分钟
+)
+```
+
+### 异步任务
+
+```python
+from bridge.tasks import TaskQueue, Task, TaskPriority
+
+# 启动队列
+queue = TaskQueue()
+await queue.start()
+
+# 提交任务
+task = Task(
+    task_type="pagerank",
+    dataset_name="my_graph",
+    priority=TaskPriority.HIGH,
+    parameters={"top_k": 100}
+)
+task_id = await queue.submit(task)
+
+# 查询状态
+status = await queue.get_status(task_id)
+
+# 获取结果
+result = await queue.get_result(task_id)
+```
+
+### 限流与熔断
+
+```python
+from bridge.resilience import RateLimiter, CircuitBreaker
+
+# 限流 - 每分钟 100 次
+limiter = RateLimiter(rate=100, per=60)
+if await limiter.allow("user_123"):
+    # 处理请求
+    pass
+
+# 熔断器
+breaker = CircuitBreaker(
+    failure_threshold=5,
+    recovery_timeout=30.0
+)
+
+try:
+    result = await breaker.call(
+        fetch_external_api,
+        fallback=default_value
     )
-    
-    # 2. 增量更新本地文档
-    loader = IncrementalLoader("enterprise_kb")
-    result = await loader.ingest_incremental("/data/local-docs")
-    print(f"Changes: +{len(result.change_set.added)} ~{len(result.change_set.modified)}")
-    
-    # 3. 设置定时同步
-    sync = DataSync("enterprise_kb")
-    # 每小时同步一次
-
-asyncio.run(build_knowledge_base())
+except CircuitBreakerOpen:
+    # 熔断中，使用降级逻辑
+    pass
 ```
 
-### 案例 2：智能问答系统
+---
 
-```python
-import asyncio
-from bridge.enhanced_search import search_with_intent
-
-async def qa_system():
-    # 用户问题
-    query = "过去30天最活跃的5个用户是谁？"
-    
-    # 自动选择搜索类型
-    result = await search_with_intent(
-        query=query,
-        user_intent="analytics",  # analytics/debugging/temporal/code
-        top_k=5
-    )
-    
-    print(f"Search type: {result.search_type_used}")
-    for item in result.results:
-        print(f"- {item}")
-
-asyncio.run(qa_system())
-```
-
-### 案例 3：图谱分析与可视化
-
-```python
-import asyncio
-from bridge.graph_analytics import GraphAnalytics
-from bridge.graph_visualizer import GraphVisualizer
-
-async def analyze_graph():
-    # 1. 分析图谱
-    analyzer = GraphAnalytics("my_dataset")
-    metrics = await analyzer.compute_all_metrics()
-    
-    print(f"Nodes: {metrics.statistics.node_count}")
-    print(f"Communities: {len(metrics.communities)}")
-    
-    # Top 重要节点
-    for node in metrics.top_nodes[:5]:
-        print(f"  {node.label}: PR={node.pagerank:.4f}")
-    
-    # 2. 生成可视化
-    viz = GraphVisualizer()
-    result = await viz.visualize_for_topic("my_dataset")
-    print(f"Visualization: {result.html_path}")
-
-asyncio.run(analyze_graph())
-```
-
-### 案例 4：数据管道自动化
+## 🧪 测试
 
 ```bash
-#!/bin/bash
-# 自动化数据管道
-
-DATASET="sales_data"
-LOCAL_DIR="/data/sales"
-S3_BUCKET="company-sales"
-
-# 1. 从 S3 同步新数据
-curl -X POST http://localhost:8787/v1/ingest/s3/sync \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"bucket\": \"$S3_BUCKET\",
-    \"prefix\": \"2024/\",
-    \"dataset_name\": \"$DATASET\",
-    \"incremental\": true
-  }"
-
-# 2. 同步本地补充数据
-curl -X POST http://localhost:8787/v1/sync \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"local_path\": \"$LOCAL_DIR\",
-    \"dataset_name\": \"$DATASET\",
-    \"direction\": \"to_cognee\",
-    \"incremental\": true
-  }"
-
-# 3. 执行分析
-curl -X POST http://localhost:8787/v1/analytics/metrics \
-  -H "Content-Type: application/json" \
-  -d "{\"dataset_name\": \"$DATASET\"}"
-
-# 4. 生成可视化
-curl -X POST http://localhost:8787/v1/visualize/generate \
-  -H "Content-Type: application/json" \
-  -d "{\"topic\": \"$DATASET\"}"
-```
-
----
-
-## ⚙️ 配置详解
-
-### Spec 文件
-
-```json
-{
-  "project_root": "/path/to/AOF",
-  "dataset": "my_dataset",
-  "runtime": {
-    "run_in_background": false,
-    "incremental_loading": true,
-    "data_per_batch": 20,
-    "retries": 2
-  },
-  "ontology": {
-    "file": "/path/to/ontology.owl",
-    "matching_cutoff": 0.8
-  },
-  "cognee": {
-    "root": "/path/to/cognee"
-  }
-}
-```
-
-### 环境变量
-
-| 变量 | 说明 | 必需 |
-|------|------|------|
-| `LLM_API_KEY` | LLM 服务 API 密钥 | ✅ 执行时 |
-| `LLM_PROVIDER` | `openai` / `custom` | ✅ 执行时 |
-| `LLM_MODEL` | 模型名称 | ✅ 执行时 |
-| `LLM_ENDPOINT` | 自定义端点 | provider=custom 时 |
-| `AWS_ACCESS_KEY_ID` | AWS 访问密钥 | S3 时 |
-| `AWS_SECRET_ACCESS_KEY` | AWS 密钥 | S3 时 |
-| `AWS_REGION` | AWS 区域 | S3 时 |
-| `S3_ENDPOINT_URL` | S3 兼容端点 | MinIO 等 |
-
----
-
-## 📁 项目结构
-
-```
-AOF/
-├── bridge/                    # Bridge 层（11 模块）
-│   ├── enhanced_search.py     # 增强搜索
-│   ├── incremental_loader.py  # 增量加载
-│   ├── url_ingestion.py       # URL 摄取
-│   ├── s3_ingestion.py        # S3 摄取
-│   ├── data_sync.py           # 数据同步
-│   ├── graph_analytics.py     # 图谱分析
-│   ├── dataset_manager.py     # 数据集管理
-│   ├── graph_visualizer.py    # 图谱可视化
-│   ├── batch_ingestion.py     # 批量摄取
-│   ├── memify_feedback_loop.py # 反馈循环
-│   └── database_schema_extractor.py # 数据库提取
-├── docs/
-│   ├── internal/
-│   │   ├── api_reference.md   # API 完整文档
-│   │   └── bridge_modules.md  # 模块文档
-│   └── ...
-├── services/
-│   └── semantic_middle_layer_api/  # FastAPI 服务
-│       └── app.py             # 51 端点
-├── tools/
-│   ├── ontology_factory/      # 本体工厂
-│   ├── data_adapter/          # 数据适配
-│   ├── quality_gate/          # 质量门 L1-L5
-│   └── middle_layer/          # 语义中间层
-├── tests/                     # 测试套件
-├── ontologies/                # 生成的本体
-└── logs/                      # 运行日志
-```
-
----
-
-## 🧪 开发
-
-### 运行测试
-
-```bash
-# 全部测试
+# 运行所有测试
 python -m pytest tests/ -v
 
-# 特定测试
-python -m pytest tests/test_api_integration.py -v
+# 运行特定模块测试
+python -m pytest tests/test_auth_rbac.py -v
+python -m pytest tests/test_cache.py -v
+python -m pytest tests/test_resilience.py -v
+python -m pytest tests/test_storage.py -v
+python -m pytest tests/test_tasks.py -v
 
-# 覆盖率
+# 覆盖率报告
 python -m pytest tests/ --cov=bridge --cov-report=html
 ```
 
-### 代码质量
-
-```bash
-# 运行质量门
-python tools/quality_gate/run_all_lints.py
-
-# L1-L5 检查
-python tools/quality_gate/lint_l1_text_integrity.py
-python tools/quality_gate/lint_l2_syntax.py
-python tools/quality_gate/lint_l3_data_integrity.py
-```
+**当前测试状态**: 203 tests ✅ 全部通过
 
 ---
 
-## 📈 性能指标
+## 📊 性能指标
 
 | 指标 | 数值 |
 |------|------|
 | API 端点 | 51 |
-| Bridge 模块 | 11 |
+| Bridge 模块 | 20+ |
 | 搜索类型 | 14 |
 | 社区算法 | 3 |
 | 中心性类型 | 5 |
 | 质量层级 | L1-L5 |
-| 测试覆盖率 | 65/65 (100%) |
+| 测试覆盖率 | 203 tests |
+| 支持存储后端 | 2 (Cognee/NebulaGraph) |
+| 缓存层级 | 3 (L1/L2/物化视图) |
 
 ---
 
-## 📖 更多文档
+## 🏭 生产部署
+
+### Docker Compose
+
+```yaml
+version: '3.8'
+services:
+  aof-api:
+    image: aof:latest
+    ports:
+      - "8787:8787"
+    environment:
+      - STORAGE_BACKEND=nebula
+      - NEBULA_HOST=nebula-graphd
+    depends_on:
+      - nebula-graphd
+      - redis
+  
+  nebula-graphd:
+    image: vesoft/nebula-graphd:v3.8.0
+    # ...
+  
+  redis:
+    image: redis:7-alpine
+```
+
+### Kubernetes
+
+```bash
+# 一键部署
+kubectl apply -f k8s/
+
+# 查看状态
+kubectl get pods -n aof
+kubectl get svc -n aof
+
+# 水平扩缩容
+kubectl scale deployment aof-api --replicas=5 -n aof
+```
+
+---
+
+## 📚 更多文档
 
 - [API 参考](docs/internal/api_reference.md) - 完整 API 文档
 - [模块文档](docs/internal/bridge_modules.md) - Bridge 层详解
-- [方法论体系](docs/internal/methodology/) - AOF 方法规范
-- [架构总览](docs/architecture/README.md) - 主架构图与术语表
 - [架构设计](docs/architecture/bridge-design.md) - 桥接层技术架构
-- [产品蓝图](docs/product/AOF_产品蓝图_v1.md) - 跨行业 AI-Native 转型路线
-- [90天落地执行手册](docs/product/AOF_90天落地执行手册_v1.md) - 里程碑与执行清单
-- [生产化缺口落地计划](docs/product/AOF_生产化缺口落地计划_v1.md) - 可观测性/治理/实时/SDK 专项
-- [企业管理层汇报](docs/product/AOF_企业管理层汇报_v1.md) - 内部汇报版本（不含融资内容）
-- [通用本体抽提 SOP](docs/AOF-通用本体抽提SOP.md) - 操作手册
-- [生产发布清单](docs/生产发布清单.md) - 部署检查
-
----
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 PR！
+- [部署指南](k8s/README.md) - K8s 部署说明
 
 ---
 
@@ -582,5 +438,6 @@ python tools/quality_gate/lint_l3_data_integrity.py
 ## 🙏 致谢
 
 - 知识图谱引擎：[cognee](https://github.com/topoteretes/cognee) (Apache-2.0)
+- 分布式图数据库：[NebulaGraph](https://github.com/vesoft-inc/nebula)
 - 图谱分析：[NetworkX](https://networkx.org/)
 - 搜索与 LLM 集成：OpenAI / DeepSeek

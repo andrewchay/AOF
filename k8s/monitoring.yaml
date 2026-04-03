@@ -1,0 +1,62 @@
+# Prometheus ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aof-api
+  namespace: aof
+  labels:
+    app: aof-api
+spec:
+  selector:
+    matchLabels:
+      app: aof-api
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+---
+# PrometheusRule for alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: aof-alerts
+  namespace: aof
+spec:
+  groups:
+  - name: aof
+    rules:
+    - alert: AOFHighErrorRate
+      expr: rate(aof_api_errors_total[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "AOF API high error rate"
+        description: "Error rate is {{ $value }} errors per second"
+    
+    - alert: AOFHighLatency
+      expr: histogram_quantile(0.95, rate(aof_api_request_duration_seconds_bucket[5m])) > 2
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "AOF API high latency"
+        description: "P95 latency is {{ $value }}s"
+    
+    - alert: AOFPodCrashLooping
+      expr: rate(kube_pod_container_status_restarts_total{namespace="aof"}[15m]) > 0
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "AOF pod crash looping"
+        description: "Pod {{ $labels.pod }} is restarting frequently"
+    
+    - alert: NebulaGraphDown
+      expr: up{job="nebula-graphd"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "NebulaGraph is down"
+        description: "NebulaGraph graphd is not responding"
