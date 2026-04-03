@@ -343,6 +343,7 @@ def semantic_retrieve(req: RetrieveReq) -> dict[str, Any]:
     - Performs semantic matching on terms, metrics, and dimensions
     - Returns ranked results with relevance scores
     """
+    _load_latest_manifest(req.topic)
     library = _load_mapping_library(req.topic)
     
     query_lower = req.query.lower().strip()
