@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import importlib.util
+import shutil
 import webbrowser
 from dataclasses import dataclass
 from pathlib import Path
@@ -132,6 +133,49 @@ class GraphVisualizer:
         
         result.topic = topic
         return result
+
+    def create_template_visualization(
+        self,
+        topic: str,
+        template_name: str = "kg_vis_aof_template.html",
+        output_dir: Optional[Path] = None,
+        open_browser: bool = False,
+    ) -> VisualizationResult:
+        """
+        基于前端模板创建可视化页面（不依赖 Cognee）。
+
+        Args:
+            topic: 主题名称
+            template_name: 模板文件名（位于 visualization/ 目录）
+            output_dir: 输出目录（默认 visualizations/）
+            open_browser: 是否自动打开浏览器
+
+        Returns:
+            可视化结果
+        """
+        output_dir = Path(output_dir or self.default_output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        safe_topic = self._slugify(topic)
+        timestamp = __import__("datetime").datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = output_dir / f"{safe_topic}_template_{timestamp}.html"
+
+        template_path = Path("visualization") / template_name
+        if not template_path.exists():
+            raise FileNotFoundError(f"Template not found: {template_path}")
+
+        shutil.copyfile(template_path, output_path)
+        file_size = output_path.stat().st_size if output_path.exists() else 0
+
+        if open_browser and output_path.exists():
+            webbrowser.open(f"file://{output_path.absolute()}")
+
+        return VisualizationResult(
+            html_path=output_path,
+            topic=topic,
+            file_size_bytes=file_size,
+            preview_url=f"file://{output_path.absolute()}",
+        )
     
     async def visualize_multi_user(
         self,

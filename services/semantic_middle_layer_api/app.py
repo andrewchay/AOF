@@ -22,8 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Query
+from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field
 
 # Configuration
@@ -1276,6 +1276,7 @@ class VisualizeReq(BaseModel):
     """可视化请求。"""
     topic: str
     open_browser: bool = False
+    style: str = "cognee"  # cognee | template
 
 
 @app.post('/v1/visualize/generate')
@@ -1298,19 +1299,26 @@ def generate_visualization(req: VisualizeReq) -> dict[str, Any]:
         import asyncio
         visualizer = GraphVisualizer()
         
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(visualizer.visualize_for_topic(
+        if req.style == "template":
+            result = visualizer.create_template_visualization(
                 topic=req.topic,
                 open_browser=req.open_browser,
-            ))
-        finally:
-            loop.close()
+            )
+        else:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(visualizer.visualize_for_topic(
+                    topic=req.topic,
+                    open_browser=req.open_browser,
+                ))
+            finally:
+                loop.close()
         
         return {
             'status': 'success',
             'topic': _slugify(req.topic),
+            'style': req.style,
             'html_path': str(result.html_path),
             'file_size_bytes': result.file_size_bytes,
             'file_size_human': _format_bytes(result.file_size_bytes),
@@ -1358,6 +1366,24 @@ def list_visualizations(topic: Optional[str] = None) -> dict[str, Any]:
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Failed to list visualizations: {e}')
+
+
+@app.get('/v1/visualize/template')
+def get_visualization_template() -> FileResponse:
+    """
+    获取 AOF 通用图谱展示模板页面。
+
+    可直接通过 URL 参数传入数据源：
+    - nodes=/path/to/nodes.json
+    - edges=/path/to/edges.json
+    - apiBase=http://localhost:8787
+    - dataset=default
+    - autoload=1
+    """
+    template_path = AOF_ROOT / 'visualization' / 'kg_vis_aof_template.html'
+    if not template_path.exists():
+        raise HTTPException(status_code=404, detail='Visualization template not found')
+    return FileResponse(path=template_path, media_type='text/html')
 
 
 @app.get('/v1/visualize/open/{filename}')
@@ -2863,6 +2889,531 @@ def healthz() -> dict[str, Any]:
         'version': '0.2.0',
         'llm_configured': 'yes' if LLM_API_KEY else 'no'
     }
+
+
+# ==================== Graph API Endpoints (v1) ====================
+# 专用知识图谱可视化API，支持高性能查询和实时交互
+
+class GraphQueryReq(BaseModel):
+    """图查询请求。"""
+    query: str
+    parameters: Optional[dict[str, Any]] = None
+    dataset: str = 'default'
+
+
+class GraphSearchReq(BaseModel):
+    """图搜索请求。"""
+    query: str
+    limit: int = Field(default=20, ge=1, le=100)
+    fuzzy: bool = True
+    dataset: str = 'default'
+
+
+class GraphNeighborReq(BaseModel):
+    """邻居查询请求。"""
+    depth: int = Field(default=1, ge=1, le=3)
+    limit: int = Field(default=50, ge=1, le=200)
+    direction: str = Field(default='both', pattern='^(in|out|both)$')
+
+
+def _get_graph_backend(dataset_name: str = 'default'):
+    """获取图存储后端实例。"""
+    import sys
+    sys.path.insert(0, str(AOF_ROOT))
+    from bridge.storage import StorageFactory, StorageConfig
+    
+    config = StorageConfig(
+        backend_type=os.environ.get('STORAGE_BACKEND', 'cognee'),
+        default_dataset=dataset_name
+    )
+    backend = StorageFactory.create(config)
+    # 尝试连接
+    if hasattr(backend, 'connect'):
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.create_task(backend.connect())
+            else:
+                loop.run_until_complete(backend.connect())
+        except Exception:
+            pass
+    return backend
+
+
+@app.get('/v1/graph/health')
+async def graph_health_check() -> dict[str, Any]:
+    """
+    Graph API 健康检查。
+    
+    Returns:
+        Graph API 状态和配置信息
+    """
+    try:
+        backend = _get_graph_backend()
+        connected = await backend.health_check() if hasattr(backend, 'health_check') else True
+        
+        return {
+            'status': 'healthy' if connected else 'degraded',
+            'api_version': '1.0.0',
+            'backend_type': backend.__class__.__name__,
+            'features': [
+                'nodes_query',
+                'edges_query', 
+                'neighbors_query',
+                'search',
+                'statistics',
+                'cypher_query'
+            ]
+        }
+    except Exception as e:
+        return {
+            'status': 'unavailable',
+            'error': str(e)
+        }
+
+
+@app.get('/v1/graph/nodes')
+async def get_graph_nodes(
+    dataset: str = 'default',
+    limit: int = Query(default=1000, ge=1, le=10000),
+    offset: int = Query(default=0, ge=0),
+    categories: Optional[str] = None,
+    include_properties: bool = Query(default=True)
+) -> dict[str, Any]:
+    """
+    获取知识图谱节点列表。
+    
+    Args:
+        dataset: 数据集名称
+        limit: 返回节点数量上限
+        offset: 分页偏移量
+        categories: 分类过滤（逗号分隔）
+        include_properties: 是否包含节点属性
+        
+    Returns:
+        节点列表和分页信息
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        # 获取所有节点（后端需要实现分页）
+        # 这里使用 execute_cypher 作为通用查询方式
+        category_filter = ''
+        if categories:
+            cat_list = categories.split(',')
+            cat_conditions = ' OR '.join([f'n:`{c}`' for c in cat_list])
+            category_filter = f'WHERE {cat_conditions}'
+        
+        cypher = f'''
+            MATCH (n)
+            {category_filter}
+            RETURN n
+            SKIP {offset}
+            LIMIT {limit}
+        '''
+        
+        nodes = await backend.execute_cypher(cypher)
+        
+        # 格式化节点数据
+        formatted_nodes = []
+        for record in nodes:
+            node = record.get('n', record)
+            formatted_nodes.append({
+                'id': str(node.get('id', node.get('node_id', ''))),
+                'labels': node.get('labels', node.get('type', ['Node'])),
+                'properties': node if include_properties else {}
+            })
+        
+        # 获取总数
+        count_result = await backend.execute_cypher('MATCH (n) RETURN count(n) as total')
+        total = count_result[0].get('total', 0) if count_result else 0
+        
+        return {
+            'status': 'success',
+            'dataset': dataset,
+            'nodes': formatted_nodes,
+            'pagination': {
+                'total': total,
+                'limit': limit,
+                'offset': offset,
+                'has_more': offset + len(formatted_nodes) < total
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to fetch nodes: {e}')
+
+
+@app.get('/v1/graph/edges')
+async def get_graph_edges(
+    dataset: str = 'default',
+    limit: int = Query(default=2000, ge=1, le=50000),
+    offset: int = Query(default=0, ge=0),
+    source_id: Optional[str] = None,
+    target_id: Optional[str] = None,
+    relation_type: Optional[str] = None
+) -> dict[str, Any]:
+    """
+    获取知识图谱边/关系列表。
+    
+    Args:
+        dataset: 数据集名称
+        limit: 返回边数量上限
+        offset: 分页偏移量
+        source_id: 源节点ID过滤
+        target_id: 目标节点ID过滤
+        relation_type: 关系类型过滤
+        
+    Returns:
+        边列表和分页信息
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        # 构建查询条件
+        conditions = []
+        if source_id:
+            conditions.append(f'startNode(r).id = "{source_id}"')
+        if target_id:
+            conditions.append(f'endNode(r).id = "{target_id}"')
+        if relation_type:
+            conditions.append(f'type(r) = "{relation_type}"')
+        
+        where_clause = f'WHERE {" AND ".join(conditions)}' if conditions else ''
+        
+        cypher = f'''
+            MATCH (a)-[r]->(b)
+            {where_clause}
+            RETURN a.id as source_id, b.id as target_id, 
+                   type(r) as relation_type, r as properties
+            SKIP {offset}
+            LIMIT {limit}
+        '''
+        
+        edges = await backend.execute_cypher(cypher)
+        
+        formatted_edges = []
+        for record in edges:
+            formatted_edges.append({
+                'source_id': str(record.get('source_id', '')),
+                'target_id': str(record.get('target_id', '')),
+                'relation_type': record.get('relation_type', 'RELATED'),
+                'properties': record.get('properties', {})
+            })
+        
+        return {
+            'status': 'success',
+            'dataset': dataset,
+            'edges': formatted_edges,
+            'pagination': {
+                'limit': limit,
+                'offset': offset,
+                'count': len(formatted_edges)
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to fetch edges: {e}')
+
+
+@app.get('/v1/graph/nodes/{node_id}')
+async def get_node_by_id(
+    node_id: str,
+    dataset: str = 'default',
+    include_neighbors: bool = Query(default=False)
+) -> dict[str, Any]:
+    """
+    根据ID获取单个节点详情。
+    
+    Args:
+        node_id: 节点ID
+        dataset: 数据集名称
+        include_neighbors: 是否包含邻居信息
+        
+    Returns:
+        节点详情
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        node = await backend.get_node(node_id)
+        if not node:
+            raise HTTPException(status_code=404, detail=f'Node {node_id} not found')
+        
+        result = {
+            'id': str(node.id),
+            'labels': node.labels,
+            'properties': node.properties
+        }
+        
+        if include_neighbors:
+            neighbors = await backend.get_neighbors(node_id, limit=20)
+            result['neighbors'] = [
+                {'id': str(n.id), 'labels': n.labels, 'name': n.properties.get('name', '')}
+                for n in neighbors
+            ]
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to fetch node: {e}')
+
+
+@app.get('/v1/graph/nodes/{node_id}/neighbors')
+async def get_node_neighbors(
+    node_id: str,
+    dataset: str = 'default',
+    depth: int = Query(default=1, ge=1, le=3),
+    limit: int = Query(default=50, ge=1, le=200),
+    direction: str = Query(default='both', pattern='^(in|out|both)$')
+) -> dict[str, Any]:
+    """
+    获取节点的邻居子图。
+    
+    Args:
+        node_id: 中心节点ID
+        dataset: 数据集名称
+        depth: 搜索深度（1-3）
+        limit: 最大返回节点数
+        direction: 方向 (in/out/both)
+        
+    Returns:
+        邻居节点和连接边
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        # 检查节点是否存在
+        node = await backend.get_node(node_id)
+        if not node:
+            raise HTTPException(status_code=404, detail=f'Node {node_id} not found')
+        
+        # 获取邻居
+        neighbors = await backend.get_neighbors(
+            node_id=node_id,
+            direction=direction,
+            limit=limit
+        )
+        
+        # 获取相关边
+        edges = await backend.get_edges(source_id=node_id)
+        edges += await backend.get_edges(target_id=node_id)
+        
+        # 去重
+        seen_edges = set()
+        unique_edges = []
+        for e in edges:
+            edge_key = (e.source_id, e.target_id, e.relation_type)
+            if edge_key not in seen_edges:
+                seen_edges.add(edge_key)
+                unique_edges.append(e)
+        
+        return {
+            'status': 'success',
+            'center_node': {
+                'id': str(node.id),
+                'labels': node.labels,
+                'properties': node.properties
+            },
+            'nodes': [
+                {
+                    'id': str(n.id),
+                    'labels': n.labels,
+                    'properties': n.properties
+                }
+                for n in neighbors
+            ],
+            'edges': [
+                {
+                    'source_id': str(e.source_id),
+                    'target_id': str(e.target_id),
+                    'relation_type': e.relation_type,
+                    'properties': e.properties
+                }
+                for e in unique_edges[:limit]
+            ]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to fetch neighbors: {e}')
+
+
+@app.post('/v1/graph/search')
+async def search_graph_nodes(req: GraphSearchReq) -> dict[str, Any]:
+    """
+    搜索知识图谱节点。
+    
+    Args:
+        query: 搜索关键词
+        limit: 返回结果数量上限
+        fuzzy: 是否模糊匹配
+        dataset: 数据集名称
+        
+    Returns:
+        匹配的节点列表
+    """
+    try:
+        backend = _get_graph_backend(req.dataset)
+        
+        # 使用属性搜索
+        if req.fuzzy:
+            cypher = f'''
+                MATCH (n)
+                WHERE n.name CONTAINS "{req.query}" 
+                   OR n.title CONTAINS "{req.query}"
+                   OR n.description CONTAINS "{req.query}"
+                RETURN n
+                LIMIT {req.limit}
+            '''
+        else:
+            cypher = f'''
+                MATCH (n)
+                WHERE n.name = "{req.query}" 
+                   OR n.title = "{req.query}"
+                RETURN n
+                LIMIT {req.limit}
+            '''
+        
+        results = await backend.execute_cypher(cypher)
+        
+        nodes = []
+        for record in results:
+            node = record.get('n', record)
+            nodes.append({
+                'id': str(node.get('id', '')),
+                'name': node.get('name', node.get('title', '')),
+                'labels': node.get('labels', []),
+                'properties': node
+            })
+        
+        return {
+            'status': 'success',
+            'query': req.query,
+            'count': len(nodes),
+            'nodes': nodes
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Search failed: {e}')
+
+
+@app.post('/v1/graph/query')
+async def execute_graph_query(req: GraphQueryReq) -> dict[str, Any]:
+    """
+    执行自定义 Cypher/nGQL 查询。
+    
+    Args:
+        query: Cypher 或 nGQL 查询语句
+        parameters: 查询参数
+        dataset: 数据集名称
+        
+    Returns:
+        查询结果
+    """
+    try:
+        backend = _get_graph_backend(req.dataset)
+        
+        results = await backend.execute_cypher(req.query, req.parameters or {})
+        
+        return {
+            'status': 'success',
+            'query': req.query,
+            'count': len(results),
+            'results': results
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Query execution failed: {e}')
+
+
+@app.get('/v1/graph/statistics')
+async def get_graph_viz_statistics(dataset: str = 'default') -> dict[str, Any]:
+    """
+    获取知识图谱统计信息（可视化专用）。
+    
+    Args:
+        dataset: 数据集名称
+        
+    Returns:
+        图谱统计信息
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        stats = await backend.get_statistics()
+        
+        # 获取分类统计
+        cat_cypher = '''
+            MATCH (n)
+            UNWIND labels(n) as label
+            RETURN label, count(*) as count
+            ORDER BY count DESC
+        '''
+        cat_results = await backend.execute_cypher(cat_cypher)
+        
+        categories = {}
+        for r in cat_results:
+            label = r.get('label', 'Unknown')
+            count = r.get('count', 0)
+            categories[label] = count
+        
+        return {
+            'status': 'success',
+            'dataset': dataset,
+            'node_count': stats.node_count,
+            'edge_count': stats.edge_count,
+            'categories': categories,
+            'density': stats.node_count / (stats.edge_count + 1) if stats.edge_count > 0 else 0
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to get statistics: {e}')
+
+
+@app.get('/v1/graph/categories')
+async def get_graph_categories(dataset: str = 'default') -> dict[str, Any]:
+    """
+    获取所有节点分类/标签列表。
+    
+    Args:
+        dataset: 数据集名称
+        
+    Returns:
+        分类列表
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        cypher = '''
+            MATCH (n)
+            UNWIND labels(n) as label
+            RETURN label, count(*) as count
+            ORDER BY count DESC
+        '''
+        
+        results = await backend.execute_cypher(cypher)
+        
+        categories = []
+        for r in results:
+            categories.append({
+                'name': r.get('label', 'Unknown'),
+                'count': r.get('count', 0)
+            })
+        
+        return {
+            'status': 'success',
+            'dataset': dataset,
+            'count': len(categories),
+            'categories': categories
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to get categories: {e}')
 
 
 if __name__ == '__main__':

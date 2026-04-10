@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AOF Knowledge Graph Showcase</title>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    :root {
+      --bg0: #f9fbff;
+      --bg1: #eef3fb;
+      --surface: rgba(255,255,255,0.96);
+      --surface-soft: #f6f8fd;
+      --border: rgba(15,23,42,.12);
+      --text: #0f172a;
+      --muted: #667085;
+      --soft: #94a3b8;
+      --accent: #0284c7;
+      --accent2: #2563eb;
+      --warn: #b45309;
+      --shadow: 0 24px 54px rgba(15,23,42,.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: "Space Grotesk", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 14% 8%, rgba(56,189,248,.15), transparent 28%),
+        radial-gradient(circle at 86% 12%, rgba(59,130,246,.14), transparent 30%),
+        linear-gradient(165deg, var(--bg0), var(--bg1));
+      overflow: hidden;
+    }
+
+    #app {
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 360px minmax(0,1fr);
+      gap: 16px;
+      padding: 16px;
+    }
+
+    #left {
+      background: var(--surface);
+      border: 1px solid rgba(15,23,42,.08);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    #left::-webkit-scrollbar { width: 6px; }
+    #left::-webkit-scrollbar-thumb { background: rgba(15,23,42,.16); border-radius: 99px; }
+
+    .hero {
+      border-radius: 16px;
+      border: 1px solid rgba(2,132,199,.22);
+      background: linear-gradient(135deg, rgba(2,132,199,.10), rgba(37,99,235,.12));
+      padding: 12px;
+    }
+    .hero h1 { font-size: 20px; line-height: 1.15; margin-bottom: 5px; }
+    .hero p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    .block {
+      border-radius: 14px;
+      border: 1px solid rgba(15,23,42,.08);
+      background: var(--surface-soft);
+      padding: 10px;
+    }
+    .title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 9px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .row { display: flex; gap: 8px; }
+
+    input[type="text"], input[type="url"] {
+      width: 100%;
+      border: 1px solid rgba(15,23,42,.11);
+      border-radius: 999px;
+      padding: 9px 12px;
+      font-size: 12px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      margin-bottom: 8px;
+    }
+    input[type="text"]:focus, input[type="url"]:focus {
+      border-color: rgba(2,132,199,.45);
+      box-shadow: 0 0 0 3px rgba(2,132,199,.12);
+    }
+
+    .btn {
+      border: 1px solid rgba(15,23,42,.12);
+      background: #fff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); color: var(--text); border-color: rgba(15,23,42,.2); }
+    .btn.primary {
+      border: none;
+      color: #fff;
+      background: linear-gradient(120deg, var(--accent), var(--accent2));
+      box-shadow: 0 10px 18px rgba(37,99,235,.27);
+      font-weight: 600;
+    }
+
+    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .tab { text-align: center; }
+    .tab.active { color: #fff; background: linear-gradient(120deg, var(--accent), var(--accent2)); border-color: transparent; }
+
+    #cats { display: flex; flex-wrap: wrap; gap: 7px; max-height: 240px; overflow: auto; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(15,23,42,.14);
+      background: #fff;
+      padding: 5px 9px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all .18s ease;
+      color: var(--text);
+    }
+    .chip.off { opacity: .4; }
+    .chip .count { font-size: 10px; color: var(--soft); }
+
+    .switch {
+      width: 38px; height: 20px; border-radius: 999px; background: #d6dbe4; position: relative; cursor: pointer;
+    }
+    .switch::after {
+      content: ""; width: 14px; height: 14px; border-radius: 50%; background: #fff; position: absolute; top: 3px; left: 3px;
+      box-shadow: 0 2px 8px rgba(15,23,42,.22); transition: left .15s ease;
+    }
+    .switch.on { background: #0f172a; }
+    .switch.on::after { left: 21px; }
+
+    #right {
+      position: relative;
+      border-radius: 26px;
+      border: 1px solid rgba(15,23,42,.08);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      background: rgba(255,255,255,.86);
+    }
+    #network { width: 100%; height: 100%; }
+
+    #stats {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      min-width: 220px;
+      border-radius: 14px;
+      border: 1px solid rgba(15,23,42,.08);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(6px);
+      padding: 10px 12px;
+      z-index: 10;
+      font-size: 12px;
+      box-shadow: 0 12px 28px rgba(15,23,42,.08);
+    }
+    .stat { display: flex; justify-content: space-between; margin: 4px 0; color: var(--muted); }
+    .v { font-weight: 700; color: var(--accent); }
+
+    #loading {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,.9);
+      display: none;
+      z-index: 20;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #loading.show { display: flex; }
+    .spinner {
+      width: 50px; height: 50px; border-radius: 50%; border: 3px solid rgba(148,163,184,.28); border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hint { font-size: 11px; color: var(--muted); line-height: 1.55; }
+    .warn { color: var(--warn); font-size: 11px; }
+
+    @media (max-width: 1080px) {
+      #app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); }
+      #left { max-height: 46vh; border-radius: 18px; }
+      #right { border-radius: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <aside id="left">
+      <div class="hero">
+        <h1>AOF Knowledge Graph</h1>
+        <p>通用模板：自动适配 AOF 节点/边字段，支持本地文件、URL、API 三种数据输入。</p>
+      </div>
+
+      <div class="block">
+        <div class="title">数据源</div>
+        <div class="tabs" style="margin-bottom:8px;">
+          <button class="btn tab active" data-source="url">URL</button>
+          <button class="btn tab" data-source="file">文件</button>
+          <button class="btn tab" data-source="api">API</button>
+        </div>
+
+        <div id="source-url">
+          <input id="nodes-url" type="url" placeholder="nodes URL" value="scripture_nodes.json">
+          <input id="edges-url" type="url" placeholder="edges URL" value="scripture_edges.json">
+        </div>
+
+        <div id="source-file" style="display:none;">
+          <input id="nodes-file" type="file" accept=".json">
+          <input id="edges-file" type="file" accept=".json" style="margin-top:8px;">
+        </div>
+
+        <div id="source-api" style="display:none;">
+          <input id="api-base" type="url" placeholder="API Base URL" value="http://localhost:8787">
+          <input id="dataset-name" type="text" placeholder="Dataset" value="default">
+          <div class="hint">将调用 <code>/v1/datasets/{dataset}/data</code></div>
+        </div>
+
+        <div class="row" style="margin-top:8px;">
+          <button id="load-btn" class="btn primary" style="flex:1;">加载图谱</button>
+          <button id="fit-btn" class="btn">适配视图</button>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="title">筛选与交互</div>
+        <input id="search" type="text" placeholder="搜索节点名称或分类">
+        <div class="row" style="margin-bottom:8px;">
+          <button class="btn tab active" data-range="300">核心 300</button>
+          <button class="btn tab" data-range="1000">扩展 1000</button>
+          <button class="btn tab" data-range="all">全部</button>
+        </div>
+        <div class="row" style="align-items:center; margin-bottom:10px;">
+          <div id="physics-toggle" class="switch"></div>
+          <span class="hint">开启物理模拟</span>
+        </div>
+        <div class="row" style="margin-bottom:8px;">
+          <button id="cat-all" class="btn">全选分类</button>
+          <button id="cat-none" class="btn">清空分类</button>
+        </div>
+        <div id="cats"></div>
+      </div>
+
+      <div class="hint">提示：双击节点聚焦邻域，双击空白恢复全图。</div>
+      <div class="warn" id="warn"></div>
+    </aside>
+
+    <main id="right">
+      <div id="stats">
+        <div class="stat"><span>节点</span><span id="s-nodes" class="v">0</span></div>
+        <div class="stat"><span>边</span><span id="s-edges" class="v">0</span></div>
+        <div class="stat"><span>分类</span><span id="s-cats" class="v">0</span></div>
+        <div class="stat"><span>耗时</span><span id="s-time" class="v">0s</span></div>
+        <div class="stat" id="s-focus-row" style="display:none;"><span>当前</span><span id="s-focus" class="v">-</span></div>
+      </div>
+      <div id="loading"><div class="spinner"></div><div id="loading-text" class="hint">加载中…</div></div>
+      <div id="network"></div>
+    </main>
+  </div>
+
+  <script>
+    const palette = [
+      '#22c55e', '#3b82f6', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4', '#eab308', '#0ea5e9', '#f97316', '#14b8a6',
+      '#8b5cf6', '#84cc16', '#ec4899', '#6366f1', '#64748b', '#10b981', '#f43f5e', '#9333ea'
+    ];
+
+    const state = {
+      rawNodes: [],
+      rawEdges: [],
+      nodes: [],
+      edges: [],
+      categories: new Map(),
+      activeCategories: new Set(),
+      search: '',
+      range: '300',
+      source: 'url',
+      physics: false,
+      network: null,
+      categoryColor: new Map(),
+    };
+
+    const el = {
+      loadBtn: document.getElementById('load-btn'),
+      fitBtn: document.getElementById('fit-btn'),
+      loading: document.getElementById('loading'),
+      loadingText: document.getElementById('loading-text'),
+      warn: document.getElementById('warn'),
+      search: document.getElementById('search'),
+      cats: document.getElementById('cats'),
+      physicsToggle: document.getElementById('physics-toggle'),
+      sourceTabs: [...document.querySelectorAll('[data-source]')],
+      rangeTabs: [...document.querySelectorAll('[data-range]')],
+      sNodes: document.getElementById('s-nodes'),
+      sEdges: document.getElementById('s-edges'),
+      sCats: document.getElementById('s-cats'),
+      sTime: document.getElementById('s-time'),
+      sFocusRow: document.getElementById('s-focus-row'),
+      sFocus: document.getElementById('s-focus'),
+      sourceUrl: document.getElementById('source-url'),
+      sourceFile: document.getElementById('source-file'),
+      sourceApi: document.getElementById('source-api'),
+      nodesUrl: document.getElementById('nodes-url'),
+      edgesUrl: document.getElementById('edges-url'),
+      nodesFile: document.getElementById('nodes-file'),
+      edgesFile: document.getElementById('edges-file'),
+      apiBase: document.getElementById('api-base'),
+      dataset: document.getElementById('dataset-name')
+    };
+
+    function showLoading(text = '加载中…') {
+      el.loadingText.textContent = text;
+      el.loading.classList.add('show');
+    }
+
+    function hideLoading() {
+      el.loading.classList.remove('show');
+    }
+
+    function getAny(obj, keys, fallback = null) {
+      for (const k of keys) {
+        const parts = k.split('.');
+        let cur = obj;
+        let ok = true;
+        for (const p of parts) {
+          if (cur == null || !(p in cur)) { ok = false; break; }
+          cur = cur[p];
+        }
+        if (ok && cur != null && cur !== '') return cur;
+      }
+      return fallback;
+    }
+
+    function normalizeNode(n, i) {
+      const id = String(getAny(n, ['id', 'uid', '_id', 'node_id'], `n_${i}`));
+      const name = String(getAny(n, ['name', 'title', 'label', 'properties.name', 'properties.title'], id));
+      const category = String(getAny(n, ['category', 'type', 'labels.0', 'properties.category', 'properties.type'], '其他'));
+      const importance = Number(getAny(n, ['importance', 'rank', 'score', 'properties.importance', 'properties.score'], 0.5));
+      return { id, name, category, importance: Number.isFinite(importance) ? importance : 0.5, raw: n };
+    }
+
+    function normalizeEdge(e, i) {
+      const source = getAny(e, ['source', 'source_id', 'from', 'src', 'start', 'subject']);
+      const target = getAny(e, ['target', 'target_id', 'to', 'dst', 'end', 'object']);
+      if (source == null || target == null) return null;
+      const rel = String(getAny(e, ['type', 'relation_type', 'relation', 'predicate', 'label'], '关联'));
+      const weight = Number(getAny(e, ['weight', 'strength', 'properties.weight'], 0.6));
+      return {
+        id: String(getAny(e, ['id', '_id'], `e_${i}`)),
+        source: String(source),
+        target: String(target),
+        rel,
+        weight: Number.isFinite(weight) ? weight : 0.6,
+        raw: e
+      };
+    }
+
+    async function readJsonFile(inputEl) {
+      const file = inputEl.files[0];
+      if (!file) throw new Error('请先选择 JSON 文件');
+      const text = await file.text();
+      return JSON.parse(text);
+    }
+
+    async function loadDataBySource() {
+      if (state.source === 'url') {
+        const [nodesRes, edgesRes] = await Promise.all([
+          fetch(el.nodesUrl.value.trim()),
+          fetch(el.edgesUrl.value.trim())
+        ]);
+        if (!nodesRes.ok || !edgesRes.ok) throw new Error('URL 数据加载失败');
+        return [await nodesRes.json(), await edgesRes.json()];
+      }
+
+      if (state.source === 'file') {
+        const [nodes, edges] = await Promise.all([readJsonFile(el.nodesFile), readJsonFile(el.edgesFile)]);
+        return [nodes, edges];
+      }
+
+      const base = el.apiBase.value.trim().replace(/\/$/, '');
+      const ds = encodeURIComponent(el.dataset.value.trim() || 'default');
+      const r = await fetch(`${base}/v1/datasets/${ds}/data?limit=200000&offset=0`);
+      if (!r.ok) throw new Error(`API 加载失败: ${r.status}`);
+      const j = await r.json();
+      return [j.nodes || j.entities || j.vertices || [], j.edges || j.links || j.relations || []];
+    }
+
+    function recomputeGraph() {
+      const q = state.search.trim().toLowerCase();
+      const activeCats = state.activeCategories;
+
+      const nodesWithScore = state.rawNodes.map(n => {
+        const degree = n._degree || 0;
+        const score = n.importance * 0.7 + Math.log(degree + 1) * 0.6;
+        return { ...n, _score: score };
+      });
+
+      nodesWithScore.sort((a, b) => b._score - a._score);
+      let topN = nodesWithScore.length;
+      if (state.range !== 'all') topN = Math.min(Number(state.range), nodesWithScore.length);
+
+      const picked = new Set();
+      const filteredNodes = [];
+      for (const n of nodesWithScore.slice(0, topN)) {
+        if (!activeCats.has(n.category)) continue;
+        if (q && !(n.name.toLowerCase().includes(q) || n.category.toLowerCase().includes(q))) continue;
+        picked.add(n.id);
+        filteredNodes.push(n);
+      }
+
+      const filteredEdges = state.rawEdges.filter(e => picked.has(e.source) && picked.has(e.target));
+
+      state.nodes = filteredNodes;
+      state.edges = filteredEdges;
+      renderNetwork();
+      updateStats();
+
+      const tooMany = filteredNodes.length > 3000;
+      el.warn.textContent = tooMany ? '当前可见节点过多，建议切换到核心/扩展模式。' : '';
+    }
+
+    function renderCategories() {
+      const items = [...state.categories.entries()].sort((a, b) => b[1] - a[1]);
+      el.cats.innerHTML = items.map(([cat, cnt]) => {
+        const on = state.activeCategories.has(cat);
+        const color = state.categoryColor.get(cat);
+        return `<span class="chip ${on ? '' : 'off'}" data-cat="${cat}" style="border-color:${color};">${cat}<span class="count">(${cnt})</span></span>`;
+      }).join('');
+
+      [...el.cats.querySelectorAll('.chip')].forEach(chip => {
+        chip.addEventListener('click', () => {
+          const cat = chip.dataset.cat;
+          if (state.activeCategories.has(cat)) state.activeCategories.delete(cat);
+          else state.activeCategories.add(cat);
+          chip.classList.toggle('off');
+          recomputeGraph();
+        });
+      });
+    }
+
+    function renderNetwork() {
+      if (state.network) {
+        state.network.destroy();
+        state.network = null;
+      }
+
+      const visNodes = state.nodes.map(n => ({
+        id: n.id,
+        label: n.name,
+        title: `<b>${n.name}</b><br/>分类：${n.category}`,
+        shape: 'dot',
+        size: 8 + Math.max(0, n.importance) * 10,
+        color: {
+          background: state.categoryColor.get(n.category),
+          border: state.categoryColor.get(n.category),
+          highlight: { background: state.categoryColor.get(n.category), border: '#0f172a' }
+        },
+        font: { size: 12, color: '#1f2937', face: 'Space Grotesk' }
+      }));
+
+      const visEdges = state.edges.map(e => ({
+        id: e.id,
+        from: e.source,
+        to: e.target,
+        color: { color: 'rgba(71,85,105,.25)', highlight: '#0284c7' },
+        arrows: { to: { enabled: true, scaleFactor: .35 } },
+        width: 1 + Math.min(2, e.weight),
+        smooth: { type: 'dynamic' }
+      }));
+
+      const data = {
+        nodes: new vis.DataSet(visNodes),
+        edges: new vis.DataSet(visEdges)
+      };
+
+      const options = {
+        nodes: { borderWidth: 1.5, borderWidthSelected: 2.5, shadow: true },
+        edges: { smooth: true, shadow: false },
+        interaction: {
+          hover: true,
+          tooltipDelay: 180,
+          hideEdgesOnDrag: visNodes.length > 600,
+          hoverConnectedEdges: true,
+          multiselect: true
+        },
+        layout: { improvedLayout: true },
+        physics: {
+          enabled: state.physics,
+          stabilization: { enabled: true, iterations: 120, updateInterval: 30 },
+          barnesHut: {
+            gravitationalConstant: -3600,
+            centralGravity: 0.18,
+            springLength: 105,
+            springConstant: 0.04,
+            damping: 0.1,
+            avoidOverlap: 0.22
+          }
+        }
+      };
+
+      state.network = new vis.Network(document.getElementById('network'), data, options);
+      state.network.once('stabilized', () => {
+        state.network.fit({ animation: { duration: 420, easingFunction: 'easeInOutCubic' } });
+      });
+
+      state.network.on('doubleClick', (params) => {
+        if (!params.nodes || params.nodes.length === 0) {
+          state.network.fit({ animation: { duration: 350 } });
+          return;
+        }
+        state.network.focus(params.nodes[0], { scale: 1.2, animation: { duration: 320 } });
+      });
+
+      state.network.on('click', (params) => {
+        if (!params.nodes || params.nodes.length === 0) return;
+        const id = params.nodes[0];
+        const node = state.nodes.find(n => n.id === id);
+        if (!node) return;
+        const near = state.network.getConnectedNodes(id).length;
+        el.sFocusRow.style.display = '';
+        el.sFocus.textContent = `${node.name} (${near})`;
+      });
+    }
+
+    function updateStats(ms = null) {
+      el.sNodes.textContent = state.nodes.length.toLocaleString();
+      el.sEdges.textContent = state.edges.length.toLocaleString();
+      el.sCats.textContent = state.activeCategories.size.toString();
+      if (ms != null) el.sTime.textContent = `${(ms / 1000).toFixed(2)}s`;
+    }
+
+    async function loadAndBuild() {
+      const t0 = performance.now();
+      showLoading('读取数据…');
+      try {
+        const [rawNodes, rawEdges] = await loadDataBySource();
+        showLoading('归一化字段…');
+
+        state.rawNodes = (Array.isArray(rawNodes) ? rawNodes : []).map(normalizeNode);
+        state.rawEdges = (Array.isArray(rawEdges) ? rawEdges : []).map(normalizeEdge).filter(Boolean);
+
+        const nodeIds = new Set(state.rawNodes.map(n => n.id));
+        state.rawEdges = state.rawEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+
+        const degree = new Map();
+        for (const e of state.rawEdges) {
+          degree.set(e.source, (degree.get(e.source) || 0) + 1);
+          degree.set(e.target, (degree.get(e.target) || 0) + 1);
+        }
+        state.rawNodes.forEach(n => { n._degree = degree.get(n.id) || 0; });
+
+        state.categories.clear();
+        state.categoryColor.clear();
+        state.rawNodes.forEach((n) => {
+          state.categories.set(n.category, (state.categories.get(n.category) || 0) + 1);
+        });
+
+        [...state.categories.keys()].forEach((cat, idx) => {
+          state.categoryColor.set(cat, palette[idx % palette.length]);
+        });
+
+        state.activeCategories = new Set(state.categories.keys());
+        renderCategories();
+        recomputeGraph();
+        updateStats(performance.now() - t0);
+      } catch (err) {
+        console.error(err);
+        alert(`加载失败: ${err.message || err}`);
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function setSource(source) {
+      state.source = source;
+      el.sourceTabs.forEach(tab => tab.classList.toggle('active', tab.dataset.source === source));
+      el.sourceUrl.style.display = source === 'url' ? '' : 'none';
+      el.sourceFile.style.display = source === 'file' ? '' : 'none';
+      el.sourceApi.style.display = source === 'api' ? '' : 'none';
+    }
+
+    function setupEvents() {
+      el.loadBtn.addEventListener('click', loadAndBuild);
+      el.fitBtn.addEventListener('click', () => {
+        if (state.network) state.network.fit({ animation: { duration: 280 } });
+      });
+
+      el.sourceTabs.forEach(tab => tab.addEventListener('click', () => setSource(tab.dataset.source)));
+
+      el.rangeTabs.forEach(tab => tab.addEventListener('click', () => {
+        state.range = tab.dataset.range;
+        el.rangeTabs.forEach(t => t.classList.toggle('active', t === tab));
+        recomputeGraph();
+      }));
+
+      el.search.addEventListener('input', () => {
+        state.search = el.search.value;
+        recomputeGraph();
+      });
+
+      document.getElementById('cat-all').addEventListener('click', () => {
+        state.activeCategories = new Set(state.categories.keys());
+        renderCategories();
+        recomputeGraph();
+      });
+
+      document.getElementById('cat-none').addEventListener('click', () => {
+        state.activeCategories.clear();
+        renderCategories();
+        recomputeGraph();
+      });
+
+      el.physicsToggle.addEventListener('click', () => {
+        state.physics = !state.physics;
+        el.physicsToggle.classList.toggle('on', state.physics);
+        if (state.network) state.network.setOptions({ physics: { enabled: state.physics } });
+      });
+    }
+
+    function applyUrlParams() {
+      const p = new URLSearchParams(location.search);
+      const n = p.get('nodes');
+      const e = p.get('edges');
+      const base = p.get('apiBase');
+      const ds = p.get('dataset');
+
+      if (n && e) {
+        setSource('url');
+        el.nodesUrl.value = n;
+        el.edgesUrl.value = e;
+      }
+      if (base || ds) {
+        setSource('api');
+        if (base) el.apiBase.value = base;
+        if (ds) el.dataset.value = ds;
+      }
+
+      if (p.get('autoload') === '1') loadAndBuild();
+    }
+
+    setupEvents();
+    applyUrlParams();
+  </script>
+</body>
+</html>
