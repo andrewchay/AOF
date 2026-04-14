@@ -39,6 +39,14 @@
 │  └──────────┴──────────┴──────────┴──────────┴──────────┴──────────┘        │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                         导出层 (Exporters)                           │    │
+│  │  ┌──────────┐                                                       │    │
+│  │  │ Markdown │  将图数据导出为人类可读的 compiled_truth + timeline    │    │
+│  │  │ Exporter │  支持 graph 模式和 dataset 模式双回退                   │    │
+│  │  └──────────┘                                                       │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │                         企业级能力层                                  │    │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐    │    │
 │  │  │   Auth   │  │  Tenant  │  │  Cache   │  │   Resilience     │    │    │
@@ -69,6 +77,17 @@
 ---
 
 ## 系统分层
+
+### 0. Agent 技能层 (Skills Layer)
+
+位于最顶层的纯 Markdown 操作手册，无代码逻辑。Agent 在执行任务前先读取对应 skill，
+确保操作规范化和结果一致性。
+
+**组件：**
+- `SKILL_INGEST.md` - 数据摄取协议
+- `SKILL_QUERY.md` - 查询检索策略
+- `SKILL_ANALYTICS.md` - 图谱分析指南
+- `SKILL_MAINTAIN.md` - 维护治理规范
 
 ### 1. 接入层 (Access Layer)
 
@@ -159,6 +178,25 @@
 └─────────────────────────────────────────┘
 ```
 
+### 5. 导出层 (Exporter Layer)
+
+将内部图谱数据转换为外部可读格式，打破"黑盒"问题。
+
+**组件：**
+- **MarkdownExporter** - 导出为 GBrain 风格的 Markdown 页面
+  - `compiled_truth`：当前最佳理解的汇总
+  - `timeline`：追加-only 的事件轨迹
+  - `frontmatter`：YAML 格式的元数据
+- **导出模式**
+  - `graph_mode`：从 Cognee 底层图数据导出（优先）
+  - `dataset_mode`：从 dataset 原始数据回退导出
+
+**使用场景：**
+- 业务方验收和人工审阅
+- 版本控制（Git 管理）
+- 知识库备份和迁移
+- 将机器抽取结果反馈给人类专家修正
+
 ### 4. 存储抽象层 (Storage Layer)
 
 提供统一的存储接口，支持多种后端。
@@ -177,6 +215,40 @@
 ---
 
 ## 核心模块详解
+
+### Markdown 导出器 (MarkdownExporter)
+
+```python
+from exporters.markdown_exporter import MarkdownExporter, export_dataset_to_markdown
+
+exporter = MarkdownExporter()
+result = await exporter.export(
+    dataset_id="my_dataset",
+    output_dir="./brain_mirror/",
+)
+```
+
+**核心设计：**
+- **双模式回退**：优先尝试 `graph_mode`（从 Cognee 图引擎获取节点/边），失败时自动回退到 `dataset_mode`（从原始 dataset 数据生成）
+- **GBrain 风格输出**：每个实体生成一个 Markdown 文件，包含 YAML frontmatter、`compiled_truth` 和 `timeline`
+- **MECE 目录结构**：按节点类型（person/company/concept/...）自动分目录
+- **冲突处理**：同名节点自动添加 `_1`、`_2` 后缀
+
+### Agent Skills
+
+AOF 借鉴 GBrain 的 "Fat Skills, Thin Harness" 哲学，将 Agent 操作规范以纯 Markdown 形式存放在 `skills/` 目录：
+
+| Skill | 用途 | 关键内容 |
+|-------|------|----------|
+| `SKILL_INGEST.md` | 数据摄取 | add→cognify 流程、幂等性、增量同步 |
+| `SKILL_QUERY.md` | 查询检索 | 14 种搜索类型选择、Cypher 查询、3 层策略 |
+| `SKILL_ANALYTICS.md` | 图谱分析 | PageRank/社区检测/中心性分析的场景化解读 |
+| `SKILL_MAINTAIN.md` | 维护治理 | 健康检查、数据清理、审计日志、备份 |
+
+**设计原则：**
+- 零代码：Skills 不依赖任何二进制逻辑
+- 工具无关：既可用于 REST API 调用，也可用于 CLI / SDK 场景
+- 持续迭代：随着 AOF 功能演进，Skills 作为文档同步更新
 
 ### 存储层 (Storage)
 

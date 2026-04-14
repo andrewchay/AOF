@@ -1,0 +1,406 @@
+{
+  "total_nodes": 31100,
+  "total_edges": 344607,
+  "books": [
+    {
+      "name": "psalms",
+      "count": 2461,
+      "color": "#f59e0b",
+      "icon": "🎵"
+    },
+    {
+      "name": "genesis",
+      "count": 1533,
+      "color": "#22c55e",
+      "icon": "🌍"
+    },
+    {
+      "name": "jeremiah",
+      "count": 1364,
+      "color": "#8b5cf6",
+      "icon": "😢"
+    },
+    {
+      "name": "isaiah",
+      "count": 1292,
+      "color": "#8b5cf6",
+      "icon": "🔮"
+    },
+    {
+      "name": "numbers",
+      "count": 1288,
+      "color": "#22c55e",
+      "icon": "🔢"
+    },
+    {
+      "name": "ezekiel",
+      "count": 1273,
+      "color": "#8b5cf6",
+      "icon": "👁️"
+    },
+    {
+      "name": "exodus",
+      "count": 1213,
+      "color": "#22c55e",
+      "icon": "⛺"
+    },
+    {
+      "name": "luke",
+      "count": 1151,
+      "color": "#ef4444",
+      "icon": "🩺"
+    },
+    {
+      "name": "job",
+      "count": 1070,
+      "color": "#f59e0b",
+      "icon": "🤔"
+    },
+    {
+      "name": "matthew",
+      "count": 1068,
+      "color": "#ef4444",
+      "icon": "👑"
+    },
+    {
+      "name": "acts",
+      "count": 1007,
+      "color": "#06b6d4",
+      "icon": "🕊️"
+    },
+    {
+      "name": "deuteronomy",
+      "count": 959,
+      "color": "#22c55e",
+      "icon": "📜"
+    },
+    {
+      "name": "1chronicles",
+      "count": 942,
+      "color": "#3b82f6",
+      "icon": "📋"
+    },
+    {
+      "name": "proverbs",
+      "count": 915,
+      "color": "#f59e0b",
+      "icon": "🦉"
+    },
+    {
+      "name": "john",
+      "count": 879,
+      "color": "#ef4444",
+      "icon": "🦅"
+    },
+    {
+      "name": "leviticus",
+      "count": 859,
+      "color": "#22c55e",
+      "icon": "🕯️"
+    },
+    {
+      "name": "2chronicles",
+      "count": 822,
+      "color": "#3b82f6",
+      "icon": "📋"
+    },
+    {
+      "name": "1kings",
+      "count": 817,
+      "color": "#3b82f6",
+      "icon": "👑"
+    },
+    {
+      "name": "1samuel",
+      "count": 811,
+      "color": "#3b82f6",
+      "icon": "👑"
+    },
+    {
+      "name": "2kings",
+      "count": 719,
+      "color": "#3b82f6",
+      "icon": "👑"
+    },
+    {
+      "name": "2samuel",
+      "count": 695,
+      "color": "#3b82f6",
+      "icon": "👑"
+    },
+    {
+      "name": "mark",
+      "count": 675,
+      "color": "#ef4444",
+      "icon": "🦁"
+    },
+    {
+      "name": "joshua",
+      "count": 658,
+      "color": "#3b82f6",
+      "icon": "⚔️"
+    },
+    {
+      "name": "judges",
+      "count": 618,
+      "color": "#3b82f6",
+      "icon": "👨‍⚖️"
+    },
+    {
+      "name": "1corinthians",
+      "count": 437,
+      "color": "#f97316",
+      "icon": "🎁"
+    },
+    {
+      "name": "romans",
+      "count": 433,
+      "color": "#f97316",
+      "icon": "⚖️"
+    },
+    {
+      "name": "nehemiah",
+      "count": 406,
+      "color": "#3b82f6",
+      "icon": "🏗️"
+    },
+    {
+      "name": "revelation",
+      "count": 405,
+      "color": "#6366f1",
+      "icon": "👁️"
+    },
+    {
+      "name": "daniel",
+      "count": 357,
+      "color": "#8b5cf6",
+      "icon": "🦁"
+    },
+    {
+      "name": "hebrews",
+      "count": 303,
+      "color": "#f97316",
+      "icon": "✝️"
+    },
+    {
+      "name": "ezra",
+      "count": 280,
+      "color": "#3b82f6",
+      "icon": "🏗️"
+    },
+    {
+      "name": "2corinthians",
+      "count": 257,
+      "color": "#f97316",
+      "icon": "😢"
+    },
+    {
+      "name": "ecclesiastes",
+      "count": 222,
+      "color": "#f59e0b",
+      "icon": "⏳"
+    },
+    {
+      "name": "zechariah",
+      "count": 211,
+      "color": "#8b5cf6",
+      "icon": "🐎"
+    },
+    {
+      "name": "hosea",
+      "count": 197,
+      "color": "#8b5cf6",
+      "icon": "💔"
+    },
+    {
+      "name": "esther",
+      "count": 167,
+      "color": "#3b82f6",
+      "icon": "👸"
+    },
+    {
+      "name": "ephesians",
+      "count": 155,
+      "color": "#f97316",
+      "icon": "🛡️"
+    },
+    {
+      "name": "lamentations",
+      "count": 154,
+      "color": "#8b5cf6",
+      "icon": "😭"
+    },
+    {
+      "name": "galatians",
+      "count": 149,
+      "color": "#f97316",
+      "icon": "🗽"
+    },
+    {
+      "name": "amos",
+      "count": 146,
+      "color": "#8b5cf6",
+      "icon": "🐑"
+    },
+    {
+      "name": "song-of-solomon",
+      "count": 117,
+      "color": "#84cc16",
+      "icon": "📖"
+    },
+    {
+      "name": "1timothy",
+      "count": 113,
+      "color": "#f97316",
+      "icon": "📖"
+    },
+    {
+      "name": "james",
+      "count": 108,
+      "color": "#f97316",
+      "icon": "🤲"
+    },
+    {
+      "name": "1john",
+      "count": 105,
+      "color": "#f97316",
+      "icon": "❤️"
+    },
+    {
+      "name": "1peter",
+      "count": 105,
+      "color": "#f97316",
+      "icon": "🪨"
+    },
+    {
+      "name": "micah",
+      "count": 105,
+      "color": "#8b5cf6",
+      "icon": "⚖️"
+    },
+    {
+      "name": "philippians",
+      "count": 104,
+      "color": "#f97316",
+      "icon": "😊"
+    },
+    {
+      "name": "colossians",
+      "count": 95,
+      "color": "#f97316",
+      "icon": "👑"
+    },
+    {
+      "name": "1thessalonians",
+      "count": 89,
+      "color": "#f97316",
+      "icon": "🎺"
+    },
+    {
+      "name": "ruth",
+      "count": 85,
+      "color": "#3b82f6",
+      "icon": "🌾"
+    },
+    {
+      "name": "2timothy",
+      "count": 83,
+      "color": "#f97316",
+      "icon": "📖"
+    },
+    {
+      "name": "joel",
+      "count": 73,
+      "color": "#8b5cf6",
+      "icon": "🦗"
+    },
+    {
+      "name": "2peter",
+      "count": 61,
+      "color": "#f97316",
+      "icon": "🪨"
+    },
+    {
+      "name": "habakkuk",
+      "count": 56,
+      "color": "#8b5cf6",
+      "icon": "🌅"
+    },
+    {
+      "name": "malachi",
+      "count": 55,
+      "color": "#8b5cf6",
+      "icon": "🔥"
+    },
+    {
+      "name": "zephaniah",
+      "count": 53,
+      "color": "#8b5cf6",
+      "icon": "📯"
+    },
+    {
+      "name": "jonah",
+      "count": 48,
+      "color": "#8b5cf6",
+      "icon": "🐋"
+    },
+    {
+      "name": "2thessalonians",
+      "count": 47,
+      "color": "#f97316",
+      "icon": "🎺"
+    },
+    {
+      "name": "nahum",
+      "count": 47,
+      "color": "#8b5cf6",
+      "icon": "⚡"
+    },
+    {
+      "name": "titus",
+      "count": 46,
+      "color": "#f97316",
+      "icon": "📖"
+    },
+    {
+      "name": "haggai",
+      "count": 38,
+      "color": "#8b5cf6",
+      "icon": "🏛️"
+    },
+    {
+      "name": "jude",
+      "count": 25,
+      "color": "#f97316",
+      "icon": "⚔️"
+    },
+    {
+      "name": "philemon",
+      "count": 25,
+      "color": "#f97316",
+      "icon": "⛓️"
+    },
+    {
+      "name": "obadiah",
+      "count": 21,
+      "color": "#8b5cf6",
+      "icon": "🏔️"
+    },
+    {
+      "name": "3john",
+      "count": 15,
+      "color": "#f97316",
+      "icon": "❤️"
+    },
+    {
+      "name": "2john",
+      "count": 13,
+      "color": "#f97316",
+      "icon": "❤️"
+    }
+  ],
+  "testament_distribution": {
+    "OT": 23147,
+    "NT": 7953
+  }
+}

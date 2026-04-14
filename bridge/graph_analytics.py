@@ -232,14 +232,57 @@ class GraphAnalytics:
     
     async def _get_nodes_from_cognee(self) -> list[dict[str, Any]]:
         """从 Cognee 获取节点。"""
-        # 这里需要根据 Cognee 实际 API 实现
-        # 返回示例数据
-        return []
+        nodes: list[dict[str, Any]] = []
+        try:
+            from cognee.infrastructure.databases.graph import get_graph_engine
+            graph_engine = await get_graph_engine()
+
+            if hasattr(graph_engine, "query"):
+                result = await graph_engine.query("MATCH (n) RETURN n LIMIT 10000")
+                if result:
+                    for record in result:
+                        node_dict = record[0] if isinstance(record, (list, tuple)) else record.get("n", record)
+                        if not isinstance(node_dict, dict):
+                            continue
+                        node_id = str(node_dict.get("id", ""))
+                        if not node_id:
+                            continue
+                        nodes.append({
+                            "id": node_id,
+                            "label": node_dict.get("name") or node_id,
+                            "type": node_dict.get("type") or "unknown",
+                        })
+        except Exception:
+            pass
+        return nodes
     
     async def _get_edges_from_cognee(self) -> list[dict[str, Any]]:
         """从 Cognee 获取边。"""
-        # 这里需要根据 Cognee 实际 API 实现
-        return []
+        edges: list[dict[str, Any]] = []
+        try:
+            from cognee.infrastructure.databases.graph import get_graph_engine
+            graph_engine = await get_graph_engine()
+
+            if hasattr(graph_engine, "query"):
+                result = await graph_engine.query("MATCH (a)-[r]->(b) RETURN a.id AS source, b.id AS target LIMIT 10000")
+                if result:
+                    for record in result:
+                        if isinstance(record, (list, tuple)) and len(record) >= 2:
+                            source, target = record[0], record[1]
+                        elif isinstance(record, dict):
+                            source = record.get("source")
+                            target = record.get("target")
+                        else:
+                            continue
+                        if source and target:
+                            edges.append({
+                                "source": str(source),
+                                "target": str(target),
+                                "relation": "related_to",
+                            })
+        except Exception:
+            pass
+        return edges
     
     async def compute_statistics(self) -> GraphStatistics:
         """

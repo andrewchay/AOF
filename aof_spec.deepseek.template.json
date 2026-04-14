@@ -1,5 +1,6 @@
 {
   "project_root": "/Users/chaihao/LLM/AOF",
+  "knowledge_repo": "/Users/chaihao/LLM/AOF/data",
   "dataset": "REPLACE_WITH_UNIQUE_DATASET_NAME",
   "runtime": {
     "run_in_background": false,

@@ -1,5 +1,6 @@
 {
   "project_root": "/Users/chaihao/LLM/AOF",
+  "knowledge_repo": "/Users/chaihao/LLM/AOF/data",
   "dataset": "deepseek_test_dataset",
   "runtime": {
     "run_in_background": false,

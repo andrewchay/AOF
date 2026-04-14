@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from bridge.errors import PreflightError
+from bridge.path_resolver import resolve_data_path
 
 
 def _check_cognee_root(spec: dict, issues: list[str]) -> str | None:
@@ -81,9 +82,9 @@ def preflight_checks_for_add(
     _check_cognee_importable(cognee_root, issues)
 
     for p in data_paths or []:
-        pp = Path(p)
-        if not pp.exists():
-            issues.append(f"数据路径不存在: {p}")
+        resolved = resolve_data_path(p, spec)
+        if not resolved.exists():
+            issues.append(f"数据路径不存在: {p} (解析后: {resolved})")
 
     if require_api_key and not os.environ.get("LLM_API_KEY"):
         issues.append("缺少环境变量 LLM_API_KEY")

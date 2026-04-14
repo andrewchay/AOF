@@ -162,15 +162,23 @@ class DatasetManager:
             status_dict = await get_pipeline_status([dataset_id], pipeline_name=pipeline_name)
             
             # 解析状态
-            status_info = status_dict.get(str(dataset_id), {})
+            status_value = status_dict.get(str(dataset_id))
+            
+            # Handle PipelineRunStatus enum or dict
+            if hasattr(status_value, "value"):
+                status_str = status_value.value.lower()
+            elif isinstance(status_value, dict):
+                status_str = status_value.get("status", "unknown")
+            else:
+                status_str = str(status_value).lower() if status_value else "unknown"
             
             return DatasetStatus(
                 dataset_id=str(dataset_id),
                 pipeline_name=pipeline_name,
-                status=status_info.get("status", "unknown"),
-                progress=status_info.get("progress", 0.0),
-                message=status_info.get("message"),
-                last_updated=status_info.get("last_updated"),
+                status=status_str,
+                progress=100.0 if "completed" in status_str else (0.0 if status_str == "unknown" else 50.0),
+                message=None,
+                last_updated=None,
             )
             
         except Exception as e:

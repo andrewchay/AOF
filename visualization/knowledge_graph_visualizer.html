@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识图谱可视化 - AOF</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="data_adapter.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            --bg-hover: #252535;
+            --border-color: #2a2a3a;
+            --text-primary: #e8e8f0;
+            --text-secondary: #9090a0;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-primary);
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text-primary);
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            gap: 1px;
+            background: var(--border-color);
+        }
+
+        /* 左侧控制面板 */
+        .control-panel {
+            width: 340px;
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .visibility-counter {
+            padding: 10px 16px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .visibility-counter .count {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* 滚动条样式 */
+        .panel-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .panel-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .panel-content::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .panel-content::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* 搜索框 */
+        .search-section {
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px 12px 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 14px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .search-box input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        /* 展示范围 */
+        .range-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .range-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .range-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-tertiary);
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .range-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+        }
+
+        .range-btn.active {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .range-btn .count {
+            font-size: 11px;
+            opacity: 0.8;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .warning-text {
+            font-size: 11px;
+            color: var(--warning);
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 分类筛选 */
+        .filter-section {
+            margin-bottom: 20px;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .filter-action-btn {
+            padding: 6px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-action-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .category-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            background: var(--bg-tertiary);
+        }
+
+        .category-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-color);
+        }
+
+        .category-item.active {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 1px var(--accent-primary);
+        }
+
+        .category-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0;
+            box-shadow: 0 0 6px currentColor;
+        }
+
+        .category-icon {
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .category-name {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .category-count {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* 统计信息 */
+        .stats-section {
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 8px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* 物理模拟开关 */
+        .physics-section {
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .physics-section .section-title {
+            margin-bottom: 12px;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            display: none;
+        }
+
+        .toggle-slider {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: var(--border-color);
+            border-radius: 26px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(22px);
+            background: white;
+        }
+
+        .toggle-label {
+            font-size: 13px;
+            color: var(--text-primary);
+            user-select: none;
+        }
+
+        /* 操作说明 */
+        .help-section {
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            margin-top: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .help-section .section-title {
+            margin-bottom: 10px;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .help-text .shortcut {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--accent-primary);
+            margin: 0 2px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* 右侧图表区域 */
+        .graph-container {
+            flex: 1;
+            background: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #graph-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .tool-btn {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tool-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        /* 节点详情面板 */
+        .detail-panel {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            width: 300px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            display: none;
+            z-index: 100;
+            max-height: 450px;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .detail-panel.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .detail-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .detail-close {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .detail-close:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        .detail-content {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .detail-section {
+            margin-bottom: 12px;
+        }
+
+        .detail-section-title {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        /* 图例 */
+        .legend {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            z-index: 100;
+            max-width: 280px;
+        }
+
+        .legend-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            box-shadow: 0 0 4px currentColor;
+        }
+
+        /* 加载动画 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 200;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* 提示框 */
+        .tooltip {
+            position: absolute;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            max-width: 280px;
+            word-wrap: break-word;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .tooltip.show {
+            display: block;
+        }
+
+        /* 通知 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 10000;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 1; transform: translateX(-50%) translateY(0); }
+            to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .control-panel {
+                width: 100%;
+                height: 40%;
+            }
+            
+            .graph-container {
+                height: 60%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧控制面板 -->
+        <aside class="control-panel">
+            <div class="panel-header">
+                <h1>🔮 知识图谱浏览器</h1>
+                <p>探索实体关系与知识连接</p>
+            </div>
+            
+            <div class="visibility-counter">
+                <span id="visibleCount">0</span> / <span id="totalCount">0</span> 节点可见
+            </div>
+            
+            <div class="panel-content">
+                <!-- 搜索框 -->
+                <div class="search-section">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="搜索节点...">
+                    </div>
+                </div>
+
+                <!-- 展示范围 -->
+                <div class="range-section">
+                    <div class="section-title">📊 展示范围</div>
+                    <div class="range-buttons">
+                        <button class="range-btn" data-range="core">
+                            核心
+                            <span class="count" id="coreCount">-</span>
+                        </button>
+                        <button class="range-btn" data-range="extended">
+                            扩展
+                            <span class="count" id="extendedCount">-</span>
+                        </button>
+                        <button class="range-btn active" data-range="all">
+                            全部
+                            <span class="count" id="allCount">-</span>
+                        </button>
+                    </div>
+                    <div class="warning-text" id="rangeWarning" style="display: none;">
+                        ⚠️ 全部节点较多，交互可能变慢
+                    </div>
+                </div>
+
+                <!-- 分类筛选 -->
+                <div class="filter-section">
+                    <div class="section-title">
+                        🏷️ 分类筛选
+                    </div>
+                    <div class="filter-actions">
+                        <button class="filter-action-btn" onclick="selectAllCategories()">全选</button>
+                        <button class="filter-action-btn" onclick="clearAllCategories()">清空</button>
+                        <button class="filter-action-btn" onclick="invertCategories()">反选</button>
+                    </div>
+                    <div class="category-list" id="categoryList">
+                        <!-- 动态生成分类列表 -->
+                    </div>
+                </div>
+
+                <!-- 统计信息 -->
+                <div class="stats-section">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="statNodes">0</div>
+                            <div class="stat-label">节点</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statEdges">0</div>
+                            <div class="stat-label">关系</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statCategories">0</div>
+                            <div class="stat-label">分类</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statDensity">0%</div>
+                            <div class="stat-label">密度</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 物理模拟开关 -->
+                <div class="physics-section">
+                    <div class="section-title">⚙️ 物理模拟</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="physicsToggle" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">开启物理</span>
+                    </label>
+                </div>
+
+                <!-- 操作说明 -->
+                <div class="help-section">
+                    <div class="section-title">🖱️ 操作</div>
+                    <div class="help-text">
+                        <span class="shortcut">点分类</span> → 筛选<br>
+                        <span class="shortcut">双击节点</span> → 聚焦邻居<br>
+                        <span class="shortcut">双击空白</span> → 恢复<br>
+                        <span class="shortcut">滚轮</span> → 缩放<br>
+                        <span class="shortcut">拖拽</span> → 平移/移动节点
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 右侧图表区域 -->
+        <main class="graph-container">
+            <!-- 加载动画 -->
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">正在加载知识图谱...</div>
+            </div>
+
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <button class="tool-btn" onclick="toggleLayout()" title="切换布局" id="layoutBtn">⭕</button>
+                <button class="tool-btn" onclick="zoomIn()" title="放大">+</button>
+                <button class="tool-btn" onclick="zoomOut()" title="缩小">-</button>
+                <button class="tool-btn" onclick="resetZoom()" title="重置">⟲</button>
+                <button class="tool-btn" onclick="togglePhysics()" title="暂停/恢复" id="physicsBtn">⏸</button>
+            </div>
+
+            <!-- 节点详情面板 -->
+            <div class="detail-panel" id="detailPanel">
+                <div class="detail-header">
+                    <div class="detail-color" id="detailColor"></div>
+                    <div class="detail-title" id="detailTitle">节点名称</div>
+                    <button class="detail-close" onclick="closeDetail()">✕</button>
+                </div>
+                <div class="detail-content" id="detailContent"></div>
+            </div>
+
+            <!-- 图例 -->
+            <div class="legend" id="legend">
+                <div class="legend-title">图例</div>
+                <div class="legend-items" id="legendItems"></div>
+            </div>
+
+            <!-- D3 图表容器 -->
+            <svg id="graph-svg"></svg>
+            
+            <!-- 提示框 -->
+            <div class="tooltip" id="tooltip"></div>
+        </main>
+    </div>
+
+    <script>
+        // ==================== 配置与状态 ====================
+        const config = {
+            colors: [
+                '#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444',
+                '#06b6d4', '#84cc16', '#f97316', '#6366f1', '#ec4899',
+                '#14b8a6', '#eab308', '#a855f7', '#f43f5e', '#10b981'
+            ],
+            forces: {
+                core: { charge: -500, distance: 100 },
+                extended: { charge: -300, distance: 80 },
+                all: { charge: -150, distance: 50 }
+            }
+        };
+
+        let state = {
+            nodes: [],
+            links: [],
+            categories: new Map(),
+            selectedCategories: new Set(),
+            currentRange: 'all',
+            searchQuery: '',
+            selectedNode: null,
+            physicsEnabled: true,
+            simulation: null,
+            transform: d3.zoomIdentity,
+            datasetName: 'default',
+            layoutMode: 'force',  // 'force' 或 'circular'
+            circularRadius: 300
+        };
+
+        // ==================== 数据加载 ====================
+        async function initWithRealData() {
+            // 先尝试加载圣经图谱数据
+            try {
+                console.log('📚 正在加载圣经知识图谱...');
+                const response = await fetch('scripture_nodes.json');
+                if (response.ok) {
+                    const nodes = await response.json();
+                    const edgesResponse = await fetch('scripture_edges.json');
+                    const edges = edgesResponse.ok ? await edgesResponse.json() : [];
+                    const metaResponse = await fetch('scripture_meta.json');
+                    const meta = metaResponse.ok ? await metaResponse.json() : { books: [] };
+                    
+                    // 转换数据格式
+                    state.nodes = nodes.map(n => ({
+                        ...n,
+                        radius: 5 + Math.random() * 4
+                    }));
+                    state.links = edges.map(e => ({
+                        source: e.source,
+                        target: e.target,
+                        type: e.type,
+                        strength: e.properties?.confidence || 0.5
+                    }));
+                    state.datasetName = 'scripture';
+                    
+                    // 从元数据构建分类
+                    state.categories.clear();
+                    meta.books.forEach(book => {
+                        state.categories.set(book.name, {
+                            name: book.name,
+                            icon: book.icon,
+                            color: book.color,
+                            count: book.count
+                        });
+                        state.selectedCategories.add(book.name);
+                    });
+                    
+                    updateStats();
+                    initUI();
+                    initPhysicsToggle();
+                    
+                    setTimeout(() => initVisualization(), 100);
+                    
+                    console.log('✅ 圣经图谱加载完成:', state.nodes.length, '节点');
+                    showNotification(`📖 已加载圣经图谱 (${meta.total_nodes.toLocaleString()} 节点)`);
+                    return;
+                }
+            } catch (e) {
+                console.log('圣经图谱不可用，尝试 AOF 后端...');
+            }
+            
+            // 回退到 AOF 后端
+            try {
+                const adapter = createAdapter('auto', 'http://localhost:8787');
+                adapter.setDataset('default');
+                
+                console.log('正在连接 AOF 后端...');
+                const data = await adapter.fetchGraphData();
+                
+                state.nodes = data.nodes;
+                state.links = data.links;
+                state.datasetName = 'default';
+                
+                state.categories.clear();
+                data.categories.forEach(cat => {
+                    state.categories.set(cat.name, cat);
+                    state.selectedCategories.add(cat.name);
+                });
+                
+                updateStats();
+                initUI();
+                initPhysicsToggle();
+                
+                setTimeout(() => initVisualization(), 100);
+                
+                console.log('✅ 成功加载数据，节点数:', data.nodes.length);
+                showNotification(`已连接 AOF (${adapter.detectedType === 'graph_api' ? '高性能' : '兼容'}模式)`);
+                
+            } catch (error) {
+                console.warn('使用模拟数据:', error.message);
+                await initWithMockData();
+            }
+        }
+
+        async function initWithMockData() {
+            const data = generateMockData();
+            state.nodes = data.nodes;
+            state.links = data.links;
+            
+            initUI();
+            initPhysicsToggle();
+            updateStats();
+            
+            setTimeout(() => initVisualization(), 100);
+        }
+
+        function generateMockData() {
+            const categories = [
+                { name: '游戏内容_任务', icon: '📜', count: 257 },
+                { name: '游戏内容_版本', icon: '📅', count: 183 },
+                { name: '概念', icon: '💡', count: 142 },
+                { name: '分析技能', icon: '🧠', count: 139 },
+                { name: '游戏内容_道具养成', icon: '💎', count: 109 },
+                { name: '增长分析_指标', icon: '📊', count: 101 },
+                { name: '其他', icon: '📌', count: 77 },
+                { name: '游戏内容_副本', icon: '⚔️', count: 76 },
+                { name: '游戏内容_角色', icon: '🎭', count: 75 },
+                { name: '文档', icon: '📄', count: 33 },
+                { name: '数据源', icon: '🗄️', count: 33 },
+                { name: '游戏内容_活动', icon: '🎁', count: 32 },
+                { name: '增长分析_策略', icon: '🎯', count: 30 },
+                { name: '平台', icon: '🖥️', count: 19 },
+                { name: '分析技能_方法', icon: '🔧', count: 19 },
+                { name: '分析技能_原则', icon: '📐', count: 16 },
+                { name: '分析技能_框架', icon: '📋', count: 13 },
+                { name: '分析技能_标准', icon: '📏', count: 8 },
+                { name: '增长分析_风险', icon: '⚠️', count: 8 },
+                { name: '游戏内容_游戏', icon: '🎮', count: 7 }
+            ];
+
+            categories.forEach((cat, i) => {
+                cat.color = config.colors[i % config.colors.length];
+                state.categories.set(cat.name, cat);
+                state.selectedCategories.add(cat.name);
+            });
+
+            const nodes = [];
+            let nodeId = 0;
+            categories.forEach(cat => {
+                for (let i = 0; i < cat.count; i++) {
+                    nodes.push({
+                        id: `node_${nodeId++}`,
+                        name: `${cat.name}_${i + 1}`,
+                        category: cat.name,
+                        color: cat.color,
+                        icon: cat.icon,
+                        radius: Math.random() * 4 + 4,
+                        properties: {
+                            description: `${cat.name} 类型的节点`,
+                            created: new Date(Date.now() - Math.random() * 10000000000).toLocaleDateString(),
+                            importance: Math.random().toFixed(2)
+                        }
+                    });
+                }
+            });
+
+            const links = [];
+            const linkCount = Math.floor(nodes.length * 1.5);
+            for (let i = 0; i < linkCount; i++) {
+                const source = nodes[Math.floor(Math.random() * nodes.length)];
+                const target = nodes[Math.floor(Math.random() * nodes.length)];
+                if (source.id !== target.id) {
+                    links.push({
+                        source: source.id,
+                        target: target.id,
+                        type: ['相关', '包含', '引用', '依赖'][Math.floor(Math.random() * 4)],
+                        strength: Math.random()
+                    });
+                }
+            }
+
+            return { nodes, links };
+        }
+
+        // ==================== UI 初始化 ====================
+        function initUI() {
+            const categoryList = document.getElementById('categoryList');
+            categoryList.innerHTML = '';
+            
+            state.categories.forEach((cat, name) => {
+                const item = document.createElement('div');
+                item.className = 'category-item active';
+                item.dataset.category = name;
+                item.innerHTML = `
+                    <div class="category-color" style="background: ${cat.color}"></div>
+                    <span class="category-icon">${cat.icon}</span>
+                    <span class="category-name">${name}</span>
+                    <span class="category-count">(${cat.count})</span>
+                `;
+                item.onclick = () => toggleCategory(name);
+                categoryList.appendChild(item);
+            });
+
+            const legendItems = document.getElementById('legendItems');
+            legendItems.innerHTML = '';
+            state.categories.forEach((cat, name) => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `
+                    <div class="legend-color" style="background: ${cat.color}"></div>
+                    <span>${cat.icon} ${name}</span>
+                `;
+                legendItems.appendChild(item);
+            });
+
+            document.querySelectorAll('.range-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.currentRange = btn.dataset.range;
+                    updateVisualization();
+                });
+            });
+
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                state.searchQuery = e.target.value.toLowerCase();
+                highlightSearch();
+            });
+
+            updateVisibilityCounter();
+        }
+
+        function updateStats() {
+            document.getElementById('statNodes').textContent = state.nodes.length;
+            document.getElementById('statEdges').textContent = state.links.length;
+            document.getElementById('statCategories').textContent = state.categories.size;
+            
+            const density = state.nodes.length > 1 
+                ? (2 * state.links.length / (state.nodes.length * (state.nodes.length - 1)) * 100).toFixed(1)
+                : 0;
+            document.getElementById('statDensity').textContent = density + '%';
+            
+            updateVisibilityCounter();
+            updateRangeCounts();
+        }
+
+        function updateRangeCounts() {
+            const total = state.nodes.length;
+            const coreCount = Math.min(Math.ceil(total * 0.05), 250);  // 5% 或最多 250
+            const extendedCount = Math.min(Math.ceil(total * 0.15), 1000);  // 15% 或最多 1000
+            
+            document.getElementById('coreCount').textContent = coreCount.toLocaleString();
+            document.getElementById('extendedCount').textContent = extendedCount.toLocaleString();
+            document.getElementById('allCount').textContent = total.toLocaleString();
+            
+            // 如果全部节点超过 3000，显示性能警告
+            const warning = document.getElementById('rangeWarning');
+            if (total > 3000) {
+                warning.style.display = 'flex';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        function updateVisibilityCounter() {
+            const visibleNodes = state.nodes.filter(n => state.selectedCategories.has(n.category)).length;
+            document.getElementById('visibleCount').textContent = visibleNodes;
+            document.getElementById('totalCount').textContent = state.nodes.length;
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideUp 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // ==================== 分类筛选 ====================
+        function toggleCategory(name) {
+            const item = document.querySelector(`[data-category="${name}"]`);
+            if (state.selectedCategories.has(name)) {
+                state.selectedCategories.delete(name);
+                item.classList.remove('active');
+                item.style.opacity = '0.4';
+            } else {
+                state.selectedCategories.add(name);
+                item.classList.add('active');
+                item.style.opacity = '1';
+            }
+            updateVisibilityCounter();
+            updateVisualization();
+        }
+
+        function selectAllCategories() {
+            state.categories.forEach((_, name) => state.selectedCategories.add(name));
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.add('active');
+                item.style.opacity = '1';
+            });
+            updateVisibilityCounter();
+            updateVisualization();
+        }
+
+        function clearAllCategories() {
+            state.selectedCategories.clear();
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('active');
+                item.style.opacity = '0.4';
+            });
+            updateVisibilityCounter();
+            updateVisualization();
+        }
+
+        function invertCategories() {
+            state.categories.forEach((_, name) => {
+                if (state.selectedCategories.has(name)) {
+                    state.selectedCategories.delete(name);
+                } else {
+                    state.selectedCategories.add(name);
+                }
+            });
+            document.querySelectorAll('.category-item').forEach(item => {
+                const name = item.dataset.category;
+                if (state.selectedCategories.has(name)) {
+                    item.classList.add('active');
+                    item.style.opacity = '1';
+                } else {
+                    item.classList.remove('active');
+                    item.style.opacity = '0.4';
+                }
+            });
+            updateVisibilityCounter();
+            updateVisualization();
+        }
+
+        // ==================== 环形布局计算 ====================
+        function calculateCircularLayout(nodes, width, height) {
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // 按分类分组
+            const groups = new Map();
+            nodes.forEach(node => {
+                const cat = node.category || '其他';
+                if (!groups.has(cat)) groups.set(cat, []);
+                groups.get(cat).push(node);
+            });
+            
+            // 计算每个分类的半径（按节点数排序，大的在外圈）
+            const sortedGroups = Array.from(groups.entries())
+                .sort((a, b) => b[1].length - a[1].length);
+            
+            const maxRadius = Math.min(width, height) * 0.4;
+            const minRadius = maxRadius * 0.2;
+            const radiusStep = (maxRadius - minRadius) / Math.max(sortedGroups.length - 1, 1);
+            
+            sortedGroups.forEach(([category, groupNodes], groupIndex) => {
+                const radius = minRadius + groupIndex * radiusStep;
+                const angleStep = (2 * Math.PI) / groupNodes.length;
+                
+                groupNodes.forEach((node, nodeIndex) => {
+                    const angle = nodeIndex * angleStep - Math.PI / 2; // 从顶部开始
+                    node.x = centerX + radius * Math.cos(angle);
+                    node.y = centerY + radius * Math.sin(angle);
+                    node.fx = node.x; // 固定位置
+                    node.fy = node.y;
+                    node.circularRadius = radius;
+                    node.circularAngle = angle;
+                });
+            });
+            
+            return nodes;
+        }
+
+        // ==================== D3 可视化 ====================
+        function initVisualization() {
+            const svg = d3.select('#graph-svg');
+            const container = document.querySelector('.graph-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            svg.selectAll('*').remove();
+
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => {
+                    state.transform = event.transform;
+                    g.attr('transform', event.transform);
+                });
+
+            svg.call(zoom);
+
+            const g = svg.append('g');
+
+            // 筛选数据
+            let filteredNodes = state.nodes.filter(n => state.selectedCategories.has(n.category));
+            let nodeIds = new Set(filteredNodes.map(n => n.id));
+            let filteredLinks = state.links.filter(l => 
+                nodeIds.has(l.source.id || l.source) && nodeIds.has(l.target.id || l.target)
+            );
+
+            // 应用范围限制（基于实际数据量计算）
+            const totalFiltered = filteredNodes.length;
+            const coreLimit = Math.min(Math.ceil(totalFiltered * 0.05), 250);
+            const extendedLimit = Math.min(Math.ceil(totalFiltered * 0.15), 1000);
+            
+            if (state.currentRange === 'core') {
+                filteredNodes = filteredNodes.slice(0, coreLimit);
+            } else if (state.currentRange === 'extended') {
+                filteredNodes = filteredNodes.slice(0, extendedLimit);
+            }
+
+            nodeIds = new Set(filteredNodes.map(n => n.id));
+            filteredLinks = filteredLinks.filter(l => 
+                nodeIds.has(l.source.id || l.source) && nodeIds.has(l.target.id || l.target)
+            );
+
+            // 根据布局模式初始化
+            if (state.layoutMode === 'circular') {
+                initCircularLayout(g, filteredNodes, filteredLinks, width, height);
+            } else {
+                initForceLayout(g, filteredNodes, filteredLinks, width, height);
+            }
+
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // 力导向布局
+        function initForceLayout(g, nodes, links, width, height) {
+            const forceConfig = config.forces[state.currentRange];
+            
+            // 清除固定位置
+            nodes.forEach(n => {
+                n.fx = null;
+                n.fy = null;
+            });
+            
+            state.simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(forceConfig.distance))
+                .force('charge', d3.forceManyBody().strength(forceConfig.charge))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(d => d.radius + 3));
+
+            drawElements(g, nodes, links, true);
+        }
+
+        // 环形布局
+        function initCircularLayout(g, nodes, links, width, height) {
+            // 计算环形位置
+            calculateCircularLayout(nodes, width, height);
+            
+            // 绘制参考圆环
+            const categories = [...new Set(nodes.map(n => n.category))];
+            const maxRadius = Math.min(width, height) * 0.4;
+            const minRadius = maxRadius * 0.2;
+            const radiusStep = (maxRadius - minRadius) / Math.max(categories.length - 1, 1);
+            
+            // 绘制圆环背景
+            const ringGroup = g.append('g').attr('class', 'rings');
+            categories.forEach((cat, i) => {
+                const radius = minRadius + i * radiusStep;
+                const color = state.categories.get(cat)?.color || '#6366f1';
+                
+                ringGroup.append('circle')
+                    .attr('cx', width / 2)
+                    .attr('cy', height / 2)
+                    .attr('r', radius)
+                    .attr('fill', 'none')
+                    .attr('stroke', color)
+                    .attr('stroke-opacity', 0.1)
+                    .attr('stroke-width', 1)
+                    .attr('stroke-dasharray', '4,4');
+            });
+            
+            // 使用弱的力导向来保持环形结构但允许微调
+            state.simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(100).strength(0.1))
+                .force('charge', d3.forceManyBody().strength(-30))
+                .force('collide', d3.forceCollide().radius(d => d.radius + 5));
+            
+            drawElements(g, nodes, links, true);
+        }
+
+        // 绘制元素（通用）
+        function drawElements(g, nodes, links, enablePhysics) {
+            // 绘制连线（发光效果）
+            const linkGroup = g.append('g').attr('class', 'links');
+            
+            // 连线发光层
+            linkGroup.selectAll('line.glow')
+                .data(links)
+                .enter()
+                .append('line')
+                .attr('class', 'glow')
+                .attr('stroke', '#6366f1')
+                .attr('stroke-opacity', 0.1)
+                .attr('stroke-width', 4);
+
+            // 连线主体
+            const link = linkGroup.selectAll('line.main')
+                .data(links)
+                .enter()
+                .append('line')
+                .attr('class', 'main')
+                .attr('stroke', '#3a3a50')
+                .attr('stroke-opacity', 0.4)
+                .attr('stroke-width', d => Math.sqrt(d.strength) * 1.5);
+
+            // 绘制节点
+            const node = g.append('g')
+                .attr('class', 'nodes')
+                .selectAll('g')
+                .data(nodes)
+                .enter()
+                .append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            // 节点光晕
+            node.append('circle')
+                .attr('r', d => d.radius + 6)
+                .attr('fill', d => d.color)
+                .attr('opacity', 0.15)
+                .style('filter', 'blur(4px)');
+
+            // 节点主体
+            node.append('circle')
+                .attr('r', d => d.radius)
+                .attr('fill', d => d.color)
+                .attr('stroke', '#1a1a25')
+                .attr('stroke-width', 2)
+                .style('cursor', 'pointer')
+                .style('filter', 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))');
+
+            // 节点图标
+            node.append('text')
+                .text(d => d.icon)
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em')
+                .style('font-size', '10px')
+                .style('pointer-events', 'none');
+
+            // 交互事件
+            node.on('click', (event, d) => {
+                event.stopPropagation();
+                showDetail(d);
+            })
+            .on('dblclick', (event, d) => {
+                event.stopPropagation();
+                focusOnNeighbors(d.id);
+            })
+            .on('mouseover', (event, d) => showTooltip(event, d))
+            .on('mouseout', hideTooltip);
+
+            // 双击空白恢复
+            d3.select('#graph-svg').on('dblclick', () => resetFocus());
+
+            // 更新位置
+            state.simulation.on('tick', () => {
+                linkGroup.selectAll('line')
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+
+            function dragstarted(event, d) {
+                if (!event.active && state.physicsEnabled) state.simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active && state.physicsEnabled) state.simulation.alphaTarget(0);
+                // 环形布局下保持固定位置
+                if (state.layoutMode !== 'circular') {
+                    d.fx = null;
+                    d.fy = null;
+                }
+            }
+        }
+
+        function updateVisualization() {
+            if (state.simulation) state.simulation.stop();
+            initVisualization();
+        }
+
+        // ==================== 交互功能 ====================
+        function showDetail(d) {
+            state.selectedNode = d;
+            const panel = document.getElementById('detailPanel');
+            document.getElementById('detailColor').style.background = d.color;
+            document.getElementById('detailTitle').textContent = d.name;
+            
+            const cat = state.categories.get(d.category);
+            document.getElementById('detailContent').innerHTML = `
+                <div class="detail-section">
+                    <div class="detail-section-title">分类</div>
+                    <div>${cat.icon} ${d.category}</div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">属性</div>
+                    <div>• ID: ${d.id}</div>
+                    <div>• 重要性: ${d.properties.importance}</div>
+                    <div>• 创建时间: ${d.properties.created}</div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">连接</div>
+                    <div>• 关联节点: ${state.links.filter(l => 
+                        (l.source.id || l.source) === d.id || 
+                        (l.target.id || l.target) === d.id
+                    ).length} 个</div>
+                </div>
+            `;
+            panel.classList.add('show');
+        }
+
+        function closeDetail() {
+            document.getElementById('detailPanel').classList.remove('show');
+            state.selectedNode = null;
+        }
+
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `<strong style="color:${d.color}">${d.name}</strong><br><span style="opacity:0.7">${d.category}</span>`;
+            tooltip.style.left = (event.pageX + 12) + 'px';
+            tooltip.style.top = (event.pageY - 40) + 'px';
+            tooltip.classList.add('show');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('show');
+        }
+
+        function highlightSearch() {
+            const query = state.searchQuery;
+            // 选择节点主体（第二个circle元素）
+            d3.selectAll('.node')
+                .select(function() { 
+                    return this.children[1];  // 第二个circle是节点主体
+                })
+                .attr('stroke', function(d) {
+                    if (!query) return '#1a1a25';
+                    return d && d.name && d.name.toLowerCase().includes(query) ? '#fbbf24' : '#1a1a25';
+                })
+                .attr('stroke-width', function(d) {
+                    if (!query) return 2;
+                    return d && d.name && d.name.toLowerCase().includes(query) ? 4 : 2;
+                });
+        }
+
+        function focusOnNeighbors(nodeId) {
+            const connectedNodeIds = new Set([nodeId]);
+            state.links.forEach(link => {
+                const sourceId = link.source.id || link.source;
+                const targetId = link.target.id || link.target;
+                if (sourceId === nodeId) connectedNodeIds.add(targetId);
+                if (targetId === nodeId) connectedNodeIds.add(sourceId);
+            });
+
+            d3.selectAll('.node')
+                .transition().duration(300)
+                .style('opacity', d => connectedNodeIds.has(d.id) ? 1 : 0.1);
+
+            d3.selectAll('.links line')
+                .transition().duration(300)
+                .style('opacity', d => {
+                    const sourceId = d.source.id || d.source;
+                    const targetId = d.target.id || d.target;
+                    return (sourceId === nodeId || targetId === nodeId) ? 0.6 : 0.05;
+                });
+        }
+
+        function resetFocus() {
+            d3.selectAll('.node')
+                .transition().duration(300)
+                .style('opacity', 1);
+
+            d3.selectAll('.links line.glow')
+                .transition().duration(300)
+                .style('opacity', 0.1);
+            
+            d3.selectAll('.links line.main')
+                .transition().duration(300)
+                .style('opacity', 0.4);
+        }
+
+        // ==================== 布局切换 ====================
+        function toggleLayout() {
+            state.layoutMode = state.layoutMode === 'force' ? 'circular' : 'force';
+            const btn = document.getElementById('layoutBtn');
+            btn.textContent = state.layoutMode === 'force' ? '⭕' : '🕸️';
+            btn.title = state.layoutMode === 'force' ? '切换为环形布局' : '切换为力导向布局';
+            
+            showNotification(`已切换为${state.layoutMode === 'circular' ? '环形' : '力导向'}布局`);
+            updateVisualization();
+        }
+
+        // ==================== 工具栏功能 ====================
+        function zoomIn() {
+            d3.select('#graph-svg').transition().call(
+                d3.zoom().transform, state.transform.scale(1.3)
+            );
+        }
+
+        function zoomOut() {
+            d3.select('#graph-svg').transition().call(
+                d3.zoom().transform, state.transform.scale(0.7)
+            );
+        }
+
+        function resetZoom() {
+            d3.select('#graph-svg').transition().call(
+                d3.zoom().transform, d3.zoomIdentity
+            );
+        }
+
+        function togglePhysics() {
+            state.physicsEnabled = !state.physicsEnabled;
+            const toggle = document.getElementById('physicsToggle');
+            const btn = document.getElementById('physicsBtn');
+            
+            if (toggle) toggle.checked = state.physicsEnabled;
+            if (btn) btn.textContent = state.physicsEnabled ? '⏸' : '▶';
+            
+            if (state.simulation) {
+                if (state.physicsEnabled) {
+                    state.simulation.restart();
+                    state.simulation.alpha(0.3);
+                } else {
+                    state.simulation.stop();
+                }
+            }
+        }
+
+        function initPhysicsToggle() {
+            const toggle = document.getElementById('physicsToggle');
+            toggle.addEventListener('change', (e) => {
+                state.physicsEnabled = e.target.checked;
+                if (state.simulation) {
+                    if (state.physicsEnabled) {
+                        state.simulation.restart();
+                        state.simulation.alpha(0.3);
+                    } else {
+                        state.simulation.stop();
+                    }
+                }
+            });
+        }
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', initWithRealData);
+
+        window.addEventListener('resize', () => {
+            clearTimeout(window.resizeTimer);
+            window.resizeTimer = setTimeout(() => updateVisualization(), 300);
+        });
+    </script>
+</body>
+</html>

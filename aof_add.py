@@ -13,6 +13,7 @@ from typing import Any
 from bridge.cognee_add_runner import run_add_from_spec
 from bridge.cognee_runner import run_cognify_from_spec
 from bridge.errors import AOFBridgeError
+from bridge.path_resolver import resolve_data_path, resolve_result_path
 from bridge.preflight import ensure_preflight_for_add, ensure_preflight_for_cognify
 
 
@@ -45,14 +46,16 @@ def save_result_log(path: Path, payload: dict[str, Any]) -> None:
         print(f"[warn] 无法写入结果文件，已回落到: {fallback}")
 
 
-def collect_data_args(args: argparse.Namespace) -> tuple[list[str], Any]:
+def collect_data_args(args: argparse.Namespace, spec: dict) -> tuple[list[str], Any]:
     data_inputs: list[str] = []
     data_paths: list[str] = []
 
     if args.data:
         data_inputs.extend(args.data)
     if args.data_path:
-        data_paths.extend(args.data_path)
+        # 解析相对路径（支持 knowledge_repo）
+        resolved = [str(resolve_data_path(p, spec)) for p in args.data_path]
+        data_paths.extend(resolved)
 
     if not data_inputs and not data_paths:
         raise ValueError("至少提供 --data 或 --data-path")
@@ -104,21 +107,21 @@ def main() -> int:
     spec = load_spec(spec_path)
 
     project_root = spec.get("project_root") or str(Path(__file__).resolve().parent)
-    result_path = Path(args.result_file)
-    if not result_path.is_absolute():
-        result_path = Path(project_root) / result_path
+    result_path = resolve_result_path(args.result_file, spec)
 
+    knowledge_repo = spec.get("knowledge_repo")
     report: dict[str, Any] = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "spec": str(spec_path),
         "project_root": project_root,
+        "knowledge_repo": knowledge_repo,
         "dry_run": args.dry_run,
         "stages": {},
     }
 
     code = 0
     try:
-        data_paths, payload = collect_data_args(args)
+        data_paths, payload = collect_data_args(args, spec)
         if not args.skip_preflight and not args.dry_run:
             ensure_preflight_for_add(spec, data_paths=data_paths, require_api_key=True)
 

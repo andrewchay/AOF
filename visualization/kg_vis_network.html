@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识图谱可视化 - AOF</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        :root {
+            --entity-bg: #ffffff;
+            --entity-surface: rgba(255, 255, 255, 0.96);
+            --entity-surface-muted: #f8fafc;
+            --entity-surface-active: rgba(17, 17, 17, 0.065);
+            --entity-border: rgba(15, 23, 42, 0.08);
+            --entity-border-strong: rgba(15, 23, 42, 0.12);
+            --entity-text: #111827;
+            --entity-text-muted: #6b7280;
+            --entity-text-soft: #94a3b8;
+            --entity-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: radial-gradient(circle at top left, rgba(96, 165, 250, 0.08), transparent 24%),
+                        linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%);
+            color: var(--entity-text);
+            overflow: hidden;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+            gap: 18px;
+            padding: 18px;
+        }
+
+        /* 左侧控制面板 */
+        #sidebar {
+            width: 304px;
+            padding: 18px 18px 16px;
+            overflow-y: auto;
+            background: var(--entity-surface);
+            border: 1px solid var(--entity-border);
+            border-radius: 24px;
+            box-shadow: var(--entity-shadow);
+            font-size: 11px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: rgba(15, 23, 42, 0.14);
+            border-radius: 999px;
+        }
+
+        h2 {
+            font-size: 15px;
+            margin-bottom: 6px;
+            color: var(--entity-text);
+            letter-spacing: 0.01em;
+        }
+
+        .status {
+            color: var(--entity-text-muted);
+            margin-bottom: 10px;
+            font-size: 10px;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--entity-border);
+            border-radius: 999px;
+            background: var(--entity-surface);
+            color: var(--entity-text);
+            margin-bottom: 12px;
+            outline: none;
+            font-size: 11px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+        }
+
+        #searchInput::placeholder {
+            color: var(--entity-text-soft);
+        }
+
+        #searchInput:focus {
+            border-color: rgba(17, 17, 17, 0.14);
+            box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.04);
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            margin: 10px 0 6px;
+            color: var(--entity-text-muted);
+            letter-spacing: 0.02em;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--entity-border);
+            background: var(--entity-surface);
+            color: var(--entity-text-muted);
+            cursor: pointer;
+            font-size: 10px;
+            user-select: none;
+            transition: all 0.18s ease;
+        }
+
+        .btn:hover {
+            background: var(--entity-surface-muted);
+            border-color: var(--entity-border-strong);
+            color: var(--entity-text);
+            transform: translateY(-1px);
+        }
+
+        .btn.active {
+            background: var(--entity-surface-active);
+            color: var(--entity-text);
+            border-color: transparent;
+            box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.04);
+        }
+
+        /* 分类筛选按钮 */
+        .category-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 10px;
+            margin: 4px 0;
+            border-radius: 14px;
+            cursor: pointer;
+            border: 1px solid var(--entity-border);
+            background: var(--entity-surface-muted);
+            color: var(--entity-text);
+            font-size: 10.5px;
+            line-height: 1.3;
+            transition: all 0.18s ease;
+            user-select: none;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+        }
+
+        .category-btn:hover {
+            transform: translateY(-1px);
+            background: var(--entity-surface);
+        }
+
+        .category-btn.off {
+            opacity: 0.52;
+            filter: none;
+            background: var(--entity-surface);
+            border-color: var(--entity-border);
+            color: var(--entity-text-muted);
+            box-shadow: none;
+        }
+
+        .category-btn .count {
+            color: var(--entity-text-soft);
+            margin-left: auto;
+            font-size: 9px;
+        }
+
+        /* 开关 */
+        .switch-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 7px 0;
+        }
+
+        .switch-row label {
+            font-size: 10px;
+            color: var(--entity-text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .toggle {
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+            border-radius: 999px;
+            background: #d6dbe4;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle.on {
+            background: #111827;
+        }
+
+        .toggle::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+            transition: left 0.15s;
+        }
+
+        .toggle.on::after {
+            left: 18px;
+        }
+
+        /* 信息面板 */
+        #info {
+            font-size: 10px;
+            color: var(--entity-text-muted);
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--entity-border);
+            line-height: 1.7;
+        }
+
+        #info b {
+            color: var(--entity-text);
+        }
+
+        #info i {
+            color: var(--entity-text-soft);
+        }
+
+        .warning {
+            color: #b45309;
+            font-size: 9px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .warning.show {
+            display: block;
+        }
+
+        /* 右侧图表区域 */
+        #graph {
+            flex: 1;
+            min-width: 0;
+            position: relative;
+            background: rgba(255, 255, 255, 0.56);
+            border: 1px solid var(--entity-border);
+            border-radius: 28px;
+            box-shadow: var(--entity-shadow);
+            overflow: hidden;
+        }
+
+        /* 加载动画 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 100;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--entity-border);
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 12px;
+            color: var(--entity-text-muted);
+        }
+
+        /* 响应式 */
+        @media (max-width: 980px) {
+            #container {
+                gap: 12px;
+                padding: 12px;
+            }
+            #sidebar {
+                width: 286px;
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="sidebar">
+            <h2>🔮 知识图谱浏览器</h2>
+            <div class="status" id="status">加载中...</div>
+            <input id="searchInput" type="text" placeholder="🔍 搜索...">
+
+            <div class="section-title">展示范围</div>
+            <div class="btn-row">
+                <span class="btn" data-tier="250" id="btnCore">核心 <span id="coreCount">-</span></span>
+                <span class="btn" data-tier="500" id="btnExtended">扩展 <span id="extendedCount">-</span></span>
+                <span class="btn active" data-tier="9999" id="btnAll">全部 <span id="allCount">-</span></span>
+            </div>
+            <div class="warning" id="warnTier">⚠️ 全部节点较多，交互可能变慢</div>
+
+            <div class="section-title">分类筛选 <span style="color:#666;font-weight:400">(点击切换)</span></div>
+            <div class="btn-row">
+                <span class="btn" id="btnSelectAll">全选</span>
+                <span class="btn" id="btnSelectNone">清空</span>
+                <span class="btn" id="btnSelectInvert">反选</span>
+            </div>
+            <div id="categoryList"></div>
+
+            <div class="section-title">物理模拟</div>
+            <div class="switch-row">
+                <label>
+                    <span class="toggle" id="physicsToggle"></span>
+                    开启物理
+                </label>
+            </div>
+            <div class="warning" id="warnPhys">⚠️ 节点多时物理模拟会卡顿</div>
+
+            <div class="section-title" style="margin-top:6px">操作</div>
+            <div style="color:#555;font-size:9px;line-height:1.6">
+                点分类→筛选 | 双击节点→聚焦邻居<br>
+                双击空白→恢复 | 滚轮缩放 | 拖拽平移
+            </div>
+            <div id="info"></div>
+        </div>
+        <div id="graph">
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">正在加载知识图谱...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 全局状态 ====================
+        let network = null;
+        let nodesDataSet = null;
+        let edgesDataSet = null;
+        let allNodes = [];
+        let allEdges = [];
+        let categories = new Map();
+        let activeCategories = new Set();
+        let currentTier = 9999; // 默认全部
+        let physicsEnabled = false;
+        let focusMode = false;
+
+        // ==================== 颜色处理函数 ====================
+        function parseColor(value) {
+            if (!value) return { r: 148, g: 163, b: 184 };
+            const color = String(value).trim();
+            const hexMatch = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+            if (hexMatch) {
+                let hex = hexMatch[1];
+                if (hex.length === 3) {
+                    hex = hex.split("").map(p => p + p).join("");
+                }
+                return {
+                    r: parseInt(hex.slice(0, 2), 16),
+                    g: parseInt(hex.slice(2, 4), 16),
+                    b: parseInt(hex.slice(4, 6), 16)
+                };
+            }
+            const rgbMatch = color.match(/^rgba?\(([^)]+)\)$/i);
+            if (rgbMatch) {
+                const parts = rgbMatch[1].split(",").map(p => parseFloat(p.trim()));
+                return { r: parts[0] || 148, g: parts[1] || 163, b: parts[2] || 184 };
+            }
+            return { r: 148, g: 163, b: 184 };
+        }
+
+        function rgba(value, alpha) {
+            const rgb = parseColor(value);
+            return `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`;
+        }
+
+        function rgbString(rgb) {
+            return `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+        }
+
+        // ==================== 数据加载 ====================
+        async function loadData() {
+            try {
+                // 尝试加载圣经图谱数据
+                const [nodesRes, edgesRes, metaRes] = await Promise.all([
+                    fetch('scripture_nodes.json'),
+                    fetch('scripture_edges.json'),
+                    fetch('scripture_meta.json')
+                ]);
+
+                if (nodesRes.ok) {
+                    allNodes = await nodesRes.json();
+                    allEdges = edgesRes.ok ? await edgesRes.json() : [];
+                    const meta = metaRes.ok ? await metaRes.json() : { books: [] };
+
+                    // 构建分类映射
+                    meta.books.forEach(book => {
+                        categories.set(book.name, {
+                            name: book.name,
+                            color: book.color,
+                            icon: book.icon,
+                            count: book.count
+                        });
+                        activeCategories.add(book.name);
+                    });
+
+                    console.log('✅ 圣经图谱加载完成:', allNodes.length, '节点');
+                    return processData();
+                }
+            } catch (e) {
+                console.log('使用模拟数据...');
+            }
+
+            // 回退到模拟数据
+            return generateMockData();
+        }
+
+        function generateMockData() {
+            const cats = [
+                { name: '游戏内容_任务', icon: '📜', count: 257, color: '#81C784' },
+                { name: '游戏内容_版本', icon: '📅', count: 183, color: '#80DEEA' },
+                { name: '概念', icon: '💡', count: 142, color: '#E0E0E0' },
+                { name: '分析技能', icon: '🧠', count: 139, color: '#EF5350' },
+                { name: '游戏内容_道具养成', icon: '💎', count: 109, color: '#FFD54F' },
+                { name: '增长分析_指标', icon: '📊', count: 101, color: '#90CAF9' },
+                { name: '其他', icon: '·', count: 77, color: '#CFD8DC' },
+                { name: '游戏内容_副本', icon: '⚔️', count: 76, color: '#CE93D8' },
+                { name: '游戏内容_角色', icon: '🧑', count: 75, color: '#FF8A65' },
+            ];
+
+            cats.forEach(c => {
+                categories.set(c.name, c);
+                activeCategories.add(c.name);
+            });
+
+            // 生成节点
+            allNodes = [];
+            let id = 0;
+            cats.forEach(cat => {
+                for (let i = 0; i < Math.min(cat.count, 50); i++) {
+                    allNodes.push({
+                        id: `node_${id++}`,
+                        name: `${cat.name}_${i + 1}`,
+                        category: cat.name,
+                        color: cat.color,
+                        icon: cat.icon,
+                        importance: Math.random()
+                    });
+                }
+            });
+
+            // 生成边
+            allEdges = [];
+            for (let i = 0; i < allNodes.length * 1.5; i++) {
+                const s = allNodes[Math.floor(Math.random() * allNodes.length)];
+                const t = allNodes[Math.floor(Math.random() * allNodes.length)];
+                if (s.id !== t.id) {
+                    allEdges.push({
+                        source: s.id,
+                        target: t.id,
+                        type: '相关'
+                    });
+                }
+            }
+
+            return processData();
+        }
+
+        // ==================== 数据处理 ====================
+        function processData() {
+            // 计算每个节点的连接数（用于分级）
+            const degreeMap = new Map();
+            allEdges.forEach(e => {
+                degreeMap.set(e.source, (degreeMap.get(e.source) || 0) + 1);
+                degreeMap.set(e.target, (degreeMap.get(e.target) || 0) + 1);
+            });
+
+            // 为节点添加度数和样式
+            allNodes.forEach((n, i) => {
+                n.degree = degreeMap.get(n.id) || 0;
+                n.rnk = i; // 排名
+
+                // 转换颜色为 vis-network 格式
+                const baseColor = n.color || '#94a3b8';
+                n.color = {
+                    background: rgba(baseColor, 0.14),
+                    border: rgba(baseColor, 0.82),
+                    highlight: { background: rgba(baseColor, 0.22), border: baseColor },
+                    hover: { background: rgba(baseColor, 0.18), border: baseColor }
+                };
+
+                // 计算节点大小
+                n.value = Math.max(8, Math.min(25, 5 + n.degree * 0.5));
+
+                // 字体设置
+                n.font = {
+                    size: Math.max(8, 12 - Math.floor(n.name.length / 10)),
+                    color: '#334155',
+                    strokeWidth: 0
+                };
+
+                // 形状
+                n.shape = 'dot';
+                n.shadow = {
+                    enabled: true,
+                    color: rgba(baseColor, 0.14),
+                    size: 5,
+                    x: 0,
+                    y: 0
+                };
+            });
+
+            // 边样式
+            allEdges.forEach(e => {
+                const sourceNode = allNodes.find(n => n.id === e.source);
+                const baseColor = sourceNode?.color?.border || '#94a3b8';
+                e.color = {
+                    color: rgba(baseColor, 0.25),
+                    opacity: 0.4
+                };
+                e.width = 1;
+                e.smooth = false;
+            });
+
+            return { nodes: allNodes, edges: allEdges };
+        }
+
+        // ==================== 初始化网络 ====================
+        function initNetwork() {
+            const container = document.getElementById('graph');
+
+            // 创建 DataSet
+            nodesDataSet = new vis.DataSet([]);
+            edgesDataSet = new vis.DataSet([]);
+
+            // 配置选项
+            const options = {
+                physics: {
+                    enabled: physicsEnabled,
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: {
+                        gravitationalConstant: -50,
+                        centralGravity: 0.005,
+                        springLength: 120,
+                        damping: 0.7
+                    },
+                    stabilization: {
+                        iterations: 120
+                    }
+                },
+                interaction: {
+                    hover: true,
+                    tooltipDelay: 120,
+                    zoomView: true,
+                    dragView: true,
+                    dragNodes: true,
+                    hideEdgesOnDrag: true,
+                    hideNodesOnDrag: false
+                },
+                nodes: {
+                    borderWidth: 1.5,
+                    scaling: {
+                        min: 8,
+                        max: 25
+                    }
+                },
+                edges: {
+                    smooth: false,
+                    selectionWidth: 2,
+                    hoverWidth: 2
+                },
+                layout: {
+                    improvedLayout: true
+                }
+            };
+
+            // 创建网络
+            network = new vis.Network(container, {
+                nodes: nodesDataSet,
+                edges: edgesDataSet
+            }, options);
+
+            // 事件监听
+            network.on("doubleClick", handleDoubleClick);
+            network.on("click", handleClick);
+            network.on("dragStart", () => { focusMode = false; });
+
+            // 隐藏加载动画
+            document.getElementById('loading').style.display = 'none';
+
+            // 应用初始筛选
+            applyFilter();
+        }
+
+        // ==================== 事件处理 ====================
+        function handleDoubleClick(params) {
+            if (params.nodes.length === 1) {
+                // 聚焦模式
+                const nodeId = params.nodes[0];
+                focusOnNode(nodeId);
+            } else {
+                // 恢复
+                focusMode = false;
+                applyFilter();
+                document.getElementById('info').innerHTML = '';
+            }
+        }
+
+        function handleClick(params) {
+            if (params.nodes.length === 1) {
+                const nodeId = params.nodes[0];
+                const node = allNodes.find(n => n.id === nodeId);
+                const connected = network.getConnectedNodes(nodeId);
+                document.getElementById('info').innerHTML = `
+                    <b>${node.name}</b><br>
+                    ${node.category} | 连接:${connected.length} | Rank:${node.rnk}
+                `;
+            }
+        }
+
+        function focusOnNode(nodeId) {
+            focusMode = true;
+            const connected = network.getConnectedNodes(nodeId);
+            const connectedSet = new Set([nodeId, ...connected]);
+
+            const updates = allNodes.map(n => ({
+                id: n.id,
+                hidden: !connectedSet.has(n.id)
+            }));
+
+            nodesDataSet.update(updates);
+
+            const node = allNodes.find(n => n.id === nodeId);
+            document.getElementById('info').innerHTML = `
+                <b>${node.name}</b> | 邻居:${connected.length}<br>
+                <i>双击空白恢复</i>
+            `;
+
+            updateStatus();
+        }
+
+        // ==================== 筛选逻辑 ====================
+        function applyFilter() {
+            if (focusMode) return; // 聚焦模式下不应用普通筛选
+
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+            // 按层级排序（度数高的优先）
+            const sortedNodes = [...allNodes].sort((a, b) => b.degree - a.degree);
+
+            // 确定显示哪些节点
+            let visibleCount = 0;
+            const visibleIds = new Set();
+
+            for (const node of sortedNodes) {
+                // 检查分类
+                if (!activeCategories.has(node.category)) {
+                    continue;
+                }
+
+                // 检查层级限制
+                if (currentTier < 9999 && visibleCount >= currentTier) {
+                    break;
+                }
+
+                // 检查搜索
+                if (searchQuery && !node.name.toLowerCase().includes(searchQuery)) {
+                    continue;
+                }
+
+                visibleIds.add(node.id);
+                visibleCount++;
+            }
+
+            // 更新节点可见性
+            const nodeUpdates = allNodes.map(n => ({
+                id: n.id,
+                hidden: !visibleIds.has(n.id)
+            }));
+            nodesDataSet.update(nodeUpdates);
+
+            // 更新边（两端都可见才显示）
+            const edgeUpdates = allEdges.map(e => ({
+                id: e.id || `${e.source}-${e.target}`,
+                hidden: !(visibleIds.has(e.source) && visibleIds.has(e.target))
+            }));
+            edgesDataSet.update(edgeUpdates);
+
+            updateStatus();
+        }
+
+        function updateStatus() {
+            const visible = nodesDataSet.get({ filter: n => !n.hidden }).length;
+            const total = allNodes.length;
+            document.getElementById('status').textContent = `${visible} / ${total} 节点可见`;
+        }
+
+        // ==================== UI 初始化 ====================
+        function initUI() {
+            // 更新范围按钮数字
+            const total = allNodes.length;
+            document.getElementById('coreCount').textContent = Math.min(250, Math.ceil(total * 0.05)).toLocaleString();
+            document.getElementById('extendedCount').textContent = Math.min(500, Math.ceil(total * 0.15)).toLocaleString();
+            document.getElementById('allCount').textContent = total.toLocaleString();
+
+            // 生成分类按钮
+            const list = document.getElementById('categoryList');
+            categories.forEach((cat, name) => {
+                const btn = document.createElement('div');
+                btn.className = 'category-btn';
+                btn.dataset.cat = name;
+                btn.innerHTML = `${cat.icon} ${name} <span class="count">(${cat.count})</span>`;
+
+                // 设置颜色
+                const baseColor = cat.color;
+                btn.style.setProperty('--chip-bg', rgba(baseColor, 0.14));
+                btn.style.setProperty('--chip-border', rgba(baseColor, 0.32));
+
+                btn.onclick = () => toggleCategory(name, btn);
+                list.appendChild(btn);
+            });
+
+            // 范围按钮
+            document.querySelectorAll('[data-tier]').forEach(btn => {
+                btn.onclick = () => setTier(parseInt(btn.dataset.tier));
+            });
+
+            // 全选/清空/反选
+            document.getElementById('btnSelectAll').onclick = selectAll;
+            document.getElementById('btnSelectNone').onclick = selectNone;
+            document.getElementById('btnSelectInvert').onclick = selectInvert;
+
+            // 搜索
+            document.getElementById('searchInput').oninput = () => {
+                focusMode = false;
+                applyFilter();
+            };
+
+            // 物理开关
+            document.getElementById('physicsToggle').onclick = togglePhysics;
+        }
+
+        function setTier(tier) {
+            currentTier = tier;
+            focusMode = false;
+
+            // 更新按钮状态
+            document.getElementById('btnCore').classList.toggle('active', tier === 250);
+            document.getElementById('btnExtended').classList.toggle('active', tier === 500);
+            document.getElementById('btnAll').classList.toggle('active', tier >= 9999);
+
+            // 显示警告
+            document.getElementById('warnTier').classList.toggle('show', tier >= 9999);
+            document.getElementById('warnPhys').classList.toggle('show', physicsEnabled && allNodes.length > 500);
+
+            applyFilter();
+        }
+
+        function toggleCategory(name, btn) {
+            if (activeCategories.has(name)) {
+                activeCategories.delete(name);
+                btn.classList.add('off');
+            } else {
+                activeCategories.add(name);
+                btn.classList.remove('off');
+            }
+            focusMode = false;
+            applyFilter();
+        }
+
+        function selectAll() {
+            activeCategories = new Set(categories.keys());
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('off'));
+            focusMode = false;
+            applyFilter();
+        }
+
+        function selectNone() {
+            activeCategories.clear();
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.add('off'));
+            focusMode = false;
+            applyFilter();
+        }
+
+        function selectInvert() {
+            categories.forEach((_, name) => {
+                if (activeCategories.has(name)) {
+                    activeCategories.delete(name);
+                } else {
+                    activeCategories.add(name);
+                }
+            });
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                const cat = btn.dataset.cat;
+                btn.classList.toggle('off', !activeCategories.has(cat));
+            });
+            focusMode = false;
+            applyFilter();
+        }
+
+        function togglePhysics() {
+            physicsEnabled = !physicsEnabled;
+            document.getElementById('physicsToggle').classList.toggle('on', physicsEnabled);
+
+            network.setOptions({
+                physics: {
+                    enabled: physicsEnabled
+                }
+            });
+
+            if (physicsEnabled && allNodes.length > 500) {
+                document.getElementById('warnPhys').classList.add('show');
+            } else {
+                document.getElementById('warnPhys').classList.remove('show');
+            }
+        }
+
+        // ==================== 启动 ====================
+        async function init() {
+            await loadData();
+            initUI();
+            initNetwork();
+            console.log('✅ 知识图谱加载完成:', allNodes.length, '节点,', allEdges.length, '边');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

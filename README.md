@@ -32,6 +32,15 @@ AOF 是一个**企业级知识工程平台**，支持从多源数据中自动构
 探索搜索:    feeling_lucky, natural_language, triplet_completion
 ```
 
+### 人类可读的导出
+- 📝 **Markdown 导出** - 将知识图谱导出为 GBrain 风格的 `compiled_truth + timeline` 页面
+- 🔄 **图模式/Dataset 模式双回退** - 优先从图数据导出，失败时回退到原始数据
+- 📁 **MECE 目录结构** - 按实体类型自动组织（person/company/concept/...）
+
+### Agent Playbook (Skills)
+- 🤖 **Markdown Skills** - 纯文本的 Agent 操作手册（ingest/query/analytics/maintain）
+- 📖 **零代码技能系统** - Agent 读取即会用的 playbook，无需修改二进制
+
 ---
 
 ## 🔐 企业级功能（v2.0 新增）
@@ -147,6 +156,8 @@ result = await backend.pagerank(top_k=100)
 | `batch_ingestion.py` | 批量目录摄取 | ✅ |
 | `memify_feedback_loop.py` | 用户反馈分析 | ✅ |
 | `database_schema_extractor.py` | 数据库 Schema 提取 | ✅ |
+| `exporters/markdown_exporter.py` | 图谱 → Markdown 导出 | ✅ |
+| `skills/` | Agent Playbook (纯 Markdown) | ✅ |
 
 ### 企业级模块（v2.0）
 
@@ -265,6 +276,30 @@ has_access = await rbac.check_permission(
     action=Action.READ,
     resource_id="dataset_123"
 )
+```
+
+### Markdown 导出
+
+```python
+from exporters.markdown_exporter import export_dataset_to_markdown
+
+result = await export_dataset_to_markdown(
+    dataset_id="my_dataset_uuid",
+    output_dir="./brain_mirror/",
+)
+
+print(f"导出 {result.pages_exported} 页到 {result.output_dir}")
+```
+
+### Agent Skills 使用
+
+AOF 的 `skills/` 目录包含纯 Markdown 的 Agent 操作手册。Agent 在操作前应读取对应的 skill：
+
+```
+skills/SKILL_INGEST.md      # 数据摄取指南
+skills/SKILL_QUERY.md       # 查询检索指南
+skills/SKILL_ANALYTICS.md   # 图谱分析指南
+skills/SKILL_MAINTAIN.md    # 维护治理指南
 ```
 
 ### 缓存使用
@@ -424,8 +459,9 @@ kubectl scale deployment aof-api --replicas=5 -n aof
 
 - [API 参考](docs/internal/api_reference.md) - 完整 API 文档
 - [模块文档](docs/internal/bridge_modules.md) - Bridge 层详解
-- [架构设计](docs/architecture/bridge-design.md) - 桥接层技术架构
+- [架构设计](ARCHITECTURE.md) - 系统架构设计
 - [部署指南](k8s/README.md) - K8s 部署说明
+- [Agent Skills](skills/) - Agent 操作手册
 
 ---
 
