@@ -3,3 +3,10 @@ __pycache__/
 .DS_Store
 **/.DS_Store
 visualization/scripture_edges.json
+
+# Runtime artifacts and generated showcase outputs
+logs/
+data/api_runs/community/
+data/middle_layer/community/
+data/showcase/
+visualization/books/
