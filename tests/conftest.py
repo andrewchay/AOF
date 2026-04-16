@@ -9,6 +9,17 @@ from typing import Any, Generator
 import pytest
 
 
+INTEGRATION_TEST_FILES = {
+    "test_api_integration.py",
+    "test_api_enhanced.py",
+    "test_data_adapter.py",
+    "test_ontology_factory_integration.py",
+}
+E2E_TEST_FILES = {
+    "test_end_to_end.py",
+}
+
+
 @pytest.fixture
 def temp_dir() -> Generator[Path, None, None]:
     """Provide a temporary directory for tests."""
@@ -85,3 +96,15 @@ def clean_api_state(temp_dir: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     
     monkeypatch.setenv("AOF_ROOT", str(temp_dir))
     return api_data
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Auto-assign test layer markers by file to keep selectors stable."""
+    for item in items:
+        file_name = item.location[0].split("/")[-1]
+        if file_name in E2E_TEST_FILES:
+            item.add_marker(pytest.mark.e2e)
+        elif file_name in INTEGRATION_TEST_FILES:
+            item.add_marker(pytest.mark.integration)
+        else:
+            item.add_marker(pytest.mark.unit)

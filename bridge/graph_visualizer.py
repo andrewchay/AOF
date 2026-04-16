@@ -11,13 +11,13 @@
     
     # 生成可视化
     html_path = await visualizer.visualize(
-        output_path="visualizations/my_graph.html"
+        output_path="visualization/outputs/my_graph.html"
     )
     
     # 为特定主题生成可视化
     html_path = await visualizer.visualize_for_topic(
         topic="my_topic",
-        output_dir="visualizations/"
+        output_dir="visualization/outputs/"
     )
 """
 
@@ -45,7 +45,11 @@ class GraphVisualizer:
     
     def __init__(self, default_output_dir: Optional[Path] = None):
         self._cognee_available = self._check_cognee()
-        self.default_output_dir = default_output_dir or Path("visualizations")
+        # Standardized path: template/assets under `visualization/`,
+        # generated HTML outputs under `visualization/outputs/`.
+        self.default_output_dir = default_output_dir or Path("visualization/outputs")
+        # Backward compatibility: legacy output directory.
+        self.legacy_output_dir = Path("visualizations")
         self.default_output_dir.mkdir(parents=True, exist_ok=True)
     
     def _check_cognee(self) -> bool:
@@ -111,7 +115,7 @@ class GraphVisualizer:
         
         Args:
             topic: 主题名称
-            output_dir: 输出目录（默认 visualizations/）
+            output_dir: 输出目录（默认 visualization/outputs/）
             open_browser: 是否自动打开浏览器
             
         Returns:
@@ -147,7 +151,7 @@ class GraphVisualizer:
         Args:
             topic: 主题名称
             template_name: 模板文件名（位于 visualization/ 目录）
-            output_dir: 输出目录（默认 visualizations/）
+            output_dir: 输出目录（默认 visualization/outputs/）
             open_browser: 是否自动打开浏览器
 
         Returns:
@@ -232,20 +236,30 @@ class GraphVisualizer:
         Returns:
             HTML 文件路径列表
         """
-        if not self.default_output_dir.exists():
-            return []
-        
         pattern = "*.html"
         if topic:
             safe_topic = self._slugify(topic)
             pattern = f"{safe_topic}_*.html"
-        
-        files = sorted(
-            self.default_output_dir.glob(pattern),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True,
-        )
-        
+
+        search_dirs: list[Path] = []
+        if self.default_output_dir.exists():
+            search_dirs.append(self.default_output_dir)
+        if self.legacy_output_dir.exists() and self.legacy_output_dir != self.default_output_dir:
+            search_dirs.append(self.legacy_output_dir)
+        if not search_dirs:
+            return []
+
+        files: list[Path] = []
+        seen: set[Path] = set()
+        for directory in search_dirs:
+            for path in directory.glob(pattern):
+                resolved = path.resolve()
+                if resolved in seen:
+                    continue
+                seen.add(resolved)
+                files.append(path)
+
+        files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
         return files
     
     def get_latest_visualization(self, topic: Optional[str] = None) -> Optional[Path]:
@@ -402,7 +416,7 @@ async def quick_visualize(
 
 async def visualize_topic(
     topic: str,
-    output_dir: str = "visualizations",
+    output_dir: str = "visualization/outputs",
 ) -> Path:
     """为主题生成可视化。
     

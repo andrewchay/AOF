@@ -35,15 +35,15 @@ echo ""
 case $TEST_TYPE in
     unit)
         echo "Running unit tests..."
-        .venv/bin/python -m pytest tests/test_spec_mapper.py tests/test_quality_gate.py tests/test_preflight.py tests/test_error_surface.py tests/test_add_dataset_bridge.py -v -m unit
+        .venv/bin/python -m pytest -v -m unit
         ;;
     integration)
         echo "Running integration tests..."
-        .venv/bin/python -m pytest tests/test_api_integration.py tests/test_data_adapter.py tests/test_ontology_factory_integration.py -v -m integration
+        .venv/bin/python -m pytest -v -m integration
         ;;
     e2e)
         echo "Running end-to-end tests..."
-        .venv/bin/python -m pytest tests/test_end_to_end.py -v -m e2e
+        .venv/bin/python -m pytest -v -m e2e
         ;;
     all)
         echo "Running all tests..."
