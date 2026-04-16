@@ -97,6 +97,12 @@ def main() -> int:
     parser.add_argument("--max-iterations", type=int, default=3)
     parser.add_argument("--skip-align", action="store_true")
     parser.add_argument("--output-root", default="")
+    parser.add_argument("--publish-graph", action="store_true", help="Publish generated OWL into online graph")
+    parser.add_argument("--graph-backend", default="nebula", choices=["nebula", "cognee"])
+    parser.add_argument("--graph-dataset", default="", help="Graph dataset name (default: topic slug)")
+    parser.add_argument("--nebula-space", default="aof_default")
+    parser.add_argument("--allow-external-uri", action="store_true")
+    parser.add_argument("--publish-dry-run", action="store_true", help="Do not write graph backend")
     args = parser.parse_args()
 
     docs_path = Path(args.docs_path).resolve()
@@ -196,6 +202,38 @@ def main() -> int:
     skill_stdout = run(skill_cmd)
 
     # 5) manifest
+    graph_publish_report = ""
+    graph_publish_stdout = ""
+    if args.publish_graph:
+        if not ontology_file:
+            raise RuntimeError("publish-graph requested but ontology_file is empty")
+        owl_path = Path(ontology_file).resolve()
+        if not owl_path.exists():
+            raise RuntimeError(f"publish-graph requested but ontology file not found: {owl_path}")
+
+        graph_dataset = args.graph_dataset.strip() or topic_slug
+        graph_publish_report = str(artifacts_dir / f"graph_publish_report_{topic_slug}_{now}.json")
+        publish_cmd = [
+            str(py),
+            str(AOF_ROOT / "tools" / "ontology_factory" / "publish_ontology_to_graph.py"),
+            "--owl-file",
+            str(owl_path),
+            "--backend",
+            args.graph_backend,
+            "--dataset",
+            graph_dataset,
+            "--nebula-space",
+            args.nebula_space,
+            "--report-json",
+            graph_publish_report,
+        ]
+        if args.allow_external_uri:
+            publish_cmd += ["--allow-external-uri"]
+        if args.publish_dry_run:
+            publish_cmd += ["--dry-run"]
+
+        graph_publish_stdout = run(publish_cmd)
+
     manifest = {
         "topic": topic_slug,
         "created_at": now,
@@ -213,12 +251,14 @@ def main() -> int:
             "regression_jsonl": str(regression_jsonl),
             "regression_summary_md": str(regression_md),
             "skills_update_md": str(skills_md),
+            "graph_publish_report_json": graph_publish_report,
         },
         "logs": {
             "ontology_stdout": ontology_stdout,
             "mapping_stdout": mapping_stdout,
             "regression_stdout": regression_stdout,
             "skills_stdout": skill_stdout,
+            "graph_publish_stdout": graph_publish_stdout,
         },
     }
     manifest_file = artifacts_dir / f"middle_layer_manifest_{topic_slug}_{now}.json"
@@ -234,6 +274,8 @@ def main() -> int:
     print(f"- regression_jsonl: {regression_jsonl}")
     print(f"- regression_summary: {regression_md}")
     print(f"- skills_update_md: {skills_md}")
+    if graph_publish_report:
+        print(f"- graph_publish_report: {graph_publish_report}")
     return 0
 
 

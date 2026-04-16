@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 
 def check_spec_schema(spec_path: Path) -> list[dict[str, Any]]:
     """检查 spec 文件的数据完整性。"""
@@ -116,7 +118,20 @@ def check_ontology_data(owl_path: Path) -> list[dict[str, Any]]:
                 'field': 'classes',
                 'error': f'本体中 Class 数量不足 ({len(classes)} < 8)，可能需要重新生成本体'
             })
-        
+
+        # 检查可疑外部 URI 污染（例如 w3schools 等）
+        if str(PROJECT_ROOT) not in sys.path:
+            sys.path.insert(0, str(PROJECT_ROOT))
+        from tools.ontology_factory.ontology_uri_sanitizer import find_external_entity_uris
+
+        suspicious = find_external_entity_uris(owl_path)
+        if suspicious:
+            sample = ', '.join(item['iri'] for item in suspicious[:3])
+            errors.append({
+                'field': 'uri_sanitization',
+                'error': f'检测到 {len(suspicious)} 个非白名单实体 URI，示例: {sample}'
+            })
+
     except Exception as e:
         errors.append({
             'field': 'parse',
@@ -128,7 +143,7 @@ def check_ontology_data(owl_path: Path) -> list[dict[str, Any]]:
 
 def main() -> int:
     """主函数。"""
-    project_root = Path(__file__).resolve().parents[2]
+    project_root = PROJECT_ROOT
     
     print("=" * 60)
     print("L3 数据完整性检查")
