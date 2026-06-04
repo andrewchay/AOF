@@ -1,0 +1,21 @@
+{
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "knowledge_repo": "/Users/chaihao/LLM/AOF/data",
+  "dataset": "genshin_ultimate_kg",
+  "runtime": {
+    "run_in_background": false,
+    "incremental_loading": true,
+    "data_per_batch": 10,
+    "retries": 2,
+    "backoff_seconds": 1.0
+  },
+  "ontology": {
+    "file": "/Users/chaihao/LLM/AOF/ontologies/genshin_ontology.owl",
+    "matching_cutoff": 0.8
+  },
+  "cognee": {
+    "root": "/Users/chaihao/LLM/cognee"
+  }
+}
+
+

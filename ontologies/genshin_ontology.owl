@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#GameplaySystem">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">GameplaySystem</rdfs:label>
+    <rdfs:comment xml:lang="zh">游戏系统 - 游戏的核心玩法机制 (祈愿, 体力/原粹树脂, 圣遗物, 深境螺旋, 尘歌壶)</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#isMemberOf">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">属于组织</rdfs:label>
+    <rdfs:domain rdf:resource="http://genshin.mihoyo.com/ontology#PlayableCharacter"/>
+    <rdfs:range rdf:resource="http://genshin.mihoyo.com/ontology#LoreFaction"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#LoreFaction">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">LoreFaction</rdfs:label>
+    <rdfs:comment xml:lang="zh">势力组织 - 游戏背景故事中的各大阵营和社团 (西风骑士团, 璃月七星, 愚人众, 深渊教团, 魔女会)</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#interactsWith">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">相互作用</rdfs:label>
+    <rdfs:domain rdf:resource="http://genshin.mihoyo.com/ontology#GameElement"/>
+    <rdfs:range rdf:resource="http://genshin.mihoyo.com/ontology#GameElement"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#Region">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Region</rdfs:label>
+    <rdfs:comment xml:lang="zh">区域/国度 - 提瓦特大陆上的七国及其他特定区域 (蒙德, 璃月, 稻妻, 须弥, 枫丹, 纳塔, 至冬, 坎瑞亚)</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#triggersReaction">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">触发反应</rdfs:label>
+    <rdfs:domain rdf:resource="http://genshin.mihoyo.com/ontology#GameElement"/>
+    <rdfs:range rdf:resource="http://genshin.mihoyo.com/ontology#ElementalReaction"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#PlayableCharacter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">PlayableCharacter</rdfs:label>
+    <rdfs:comment xml:lang="zh">可玩角色 - 玩家可以在游戏中获得并操控的角色</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#ElementalReaction">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">ElementalReaction</rdfs:label>
+    <rdfs:comment xml:lang="zh">元素反应 - 两种或多种元素相遇时触发的特定化学或物理效应</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#hasDescription">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">详细描述</rdfs:label>
+    <rdfs:domain rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#rulesOver">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">统治/管理</rdfs:label>
+    <rdfs:domain rdf:resource="http://genshin.mihoyo.com/ontology#LoreEntity"/>
+    <rdfs:range rdf:resource="http://genshin.mihoyo.com/ontology#Region"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#GameElement">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">GameElement</rdfs:label>
+    <rdfs:comment xml:lang="zh">游戏元素 - 提瓦特大陆的元素基石 (火, 水, 风, 雷, 草, 冰, 岩)</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#belongsToRegion">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">属于国度</rdfs:label>
+    <rdfs:domain rdf:resource="http://genshin.mihoyo.com/ontology#PlayableCharacter"/>
+    <rdfs:range rdf:resource="http://genshin.mihoyo.com/ontology#Region"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#LoreEntity">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">LoreEntity</rdfs:label>
+    <rdfs:comment xml:lang="zh">历史与背景实体 - 魔神、龙王、执政等传说中的存在</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#wieldsElement">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">使用元素</rdfs:label>
+    <rdfs:domain rdf:resource="http://genshin.mihoyo.com/ontology#PlayableCharacter"/>
+    <rdfs:range rdf:resource="http://genshin.mihoyo.com/ontology#GameElement"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#hasWeaponType">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">武器类型</rdfs:label>
+    <rdfs:domain rdf:resource="http://genshin.mihoyo.com/ontology#PlayableCharacter"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://genshin.mihoyo.com/ontology#hasRarity">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">星级/稀有度</rdfs:label>
+    <rdfs:domain rdf:resource="http://genshin.mihoyo.com/ontology#PlayableCharacter"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+</rdf:RDF>

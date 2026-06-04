@@ -159,24 +159,55 @@ class MarkdownExporter:
             from cognee.infrastructure.databases.graph import get_graph_engine  # type: ignore
             graph_engine = await get_graph_engine()
 
-            # 获取所有节点（不同版本的 API 可能不同）
-            if hasattr(graph_engine, "get_nodes"):
-                raw_nodes = await graph_engine.get_nodes()
-                for node in raw_nodes:
-                    nodes.append(self._normalize_node(node))
-            elif hasattr(graph_engine, "list_nodes"):
-                raw_nodes = await graph_engine.list_nodes()
-                for node in raw_nodes:
-                    nodes.append(self._normalize_node(node))
-            else:
-                # 尝试 Cypher / 原生查询
+            # 优先检查 Kuzu/通用 Cypher 查询
+            if hasattr(graph_engine, "query"):
                 try:
-                    result = await graph_engine.query("MATCH (n) RETURN n LIMIT 10000")
+                    result = await graph_engine.query("MATCH (n:Node) RETURN n.id, n.name, n.type, n.properties")
                     for record in result:
-                        node = record.get("n", record)
-                        nodes.append(self._normalize_node(node))
+                        if len(record) == 4:
+                            node_id, name, ntype, props_str = record
+                            props = {}
+                            if props_str:
+                                try:
+                                    import json
+                                    props = json.loads(props_str)
+                                except Exception:
+                                    pass
+                            nodes.append(self._normalize_node({
+                                "id": node_id,
+                                "name": name,
+                                "type": ntype,
+                                "properties": props,
+                                **props
+                            }))
+                        else:
+                            node = record[0] if isinstance(record, (list, tuple)) else record
+                            nodes.append(self._normalize_node(node))
                 except Exception:
                     pass
+
+            # 如果没有成功获取节点，尝试原本的方法
+            if not nodes:
+                if hasattr(graph_engine, "get_nodes"):
+                    try:
+                        raw_nodes = await graph_engine.get_nodes()
+                        for node in raw_nodes:
+                            nodes.append(self._normalize_node(node))
+                    except Exception:
+                        pass
+                elif hasattr(graph_engine, "list_nodes"):
+                    raw_nodes = await graph_engine.list_nodes()
+                    for node in raw_nodes:
+                        nodes.append(self._normalize_node(node))
+                else:
+                    # 尝试 Cypher / 原生查询
+                    try:
+                        result = await graph_engine.query("MATCH (n) RETURN n LIMIT 10000")
+                        for record in result:
+                            node = record.get("n", record)
+                            nodes.append(self._normalize_node(node))
+                    except Exception:
+                        pass
         except Exception:
             pass
 
@@ -195,26 +226,55 @@ class MarkdownExporter:
             from cognee.infrastructure.databases.graph import get_graph_engine  # type: ignore
             graph_engine = await get_graph_engine()
 
-            if hasattr(graph_engine, "get_edges"):
-                raw_edges = await graph_engine.get_edges()
-                for edge in raw_edges:
-                    edges.append(self._normalize_edge(edge))
-            elif hasattr(graph_engine, "list_edges"):
-                raw_edges = await graph_engine.list_edges()
-                for edge in raw_edges:
-                    edges.append(self._normalize_edge(edge))
-            else:
+            # 优先使用 Kuzu/通用 Cypher 查询
+            if hasattr(graph_engine, "query"):
                 try:
-                    result = await graph_engine.query(
-                        "MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 10000"
-                    )
+                    result = await graph_engine.query("MATCH (a:Node)-[r:EDGE]->(b:Node) RETURN a.id, b.id, r.relationship_name, r.properties")
                     for record in result:
-                        edge = record.get("r", {})
-                        edge["source"] = self._extract_node_id(record.get("a"))
-                        edge["target"] = self._extract_node_id(record.get("b"))
-                        edges.append(self._normalize_edge(edge))
+                        if len(record) == 4:
+                            source_id, target_id, rel_name, props_str = record
+                            props = {}
+                            if props_str:
+                                try:
+                                    import json
+                                    props = json.loads(props_str)
+                                except Exception:
+                                    pass
+                            edges.append(self._normalize_edge({
+                                "source": source_id,
+                                "target": target_id,
+                                "relation": rel_name,
+                                "properties": props,
+                                **props
+                            }))
                 except Exception:
                     pass
+
+            # 回落到原有的 get_edges
+            if not edges:
+                if hasattr(graph_engine, "get_edges"):
+                    try:
+                        raw_edges = await graph_engine.get_edges()
+                        for edge in raw_edges:
+                            edges.append(self._normalize_edge(edge))
+                    except Exception:
+                        pass
+                elif hasattr(graph_engine, "list_edges"):
+                    raw_edges = await graph_engine.list_edges()
+                    for edge in raw_edges:
+                        edges.append(self._normalize_edge(edge))
+                else:
+                    try:
+                        result = await graph_engine.query(
+                            "MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 10000"
+                        )
+                        for record in result:
+                            edge = record.get("r", {})
+                            edge["source"] = self._extract_node_id(record.get("a"))
+                            edge["target"] = self._extract_node_id(record.get("b"))
+                            edges.append(self._normalize_edge(edge))
+                    except Exception:
+                        pass
         except Exception:
             pass
 
