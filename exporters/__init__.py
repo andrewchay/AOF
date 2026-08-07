@@ -6,6 +6,11 @@ from .training_data_exporter import (
     export_dataset_to_training_data,
     ExportResult as TrainingDataExportResult,
 )
+from .okf_exporter import (
+    OKFExporter,
+    export_dataset_to_okf,
+    OKFExportResult,
+)
 
 __all__ = [
     "MarkdownExporter",
@@ -13,4 +18,7 @@ __all__ = [
     "TrainingDataExporter",
     "export_dataset_to_training_data",
     "TrainingDataExportResult",
+    "OKFExporter",
+    "export_dataset_to_okf",
+    "OKFExportResult",
 ]
