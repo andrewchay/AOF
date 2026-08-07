@@ -74,6 +74,51 @@ def register_executor(task_type: str, executor: Callable):
     logger.info(f"Registered executor for task type: {task_type}")
 
 
+class TrainingDataExecutor:
+    """训练数据生成任务执行器"""
+
+    async def execute(self, task: Task) -> Any:
+        """执行训练数据生成任务"""
+        import sys
+        from pathlib import Path
+
+        params = task.parameters
+        dataset_name = params.get("dataset_name", "")
+        generators = params.get("generators", ["sft", "rag_eval"])
+        output_dir = params.get("output_dir", "./training_data")
+        max_samples = params.get("max_samples", 1000)
+
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from bridge.training_data import TrainingDataPipeline, QualityConfig, GeneratorConfig
+        from bridge.training_data.generators import SFTGenerator, RAGEvalGenerator, AgentToolGenerator
+
+        gen_mapping = {
+            "sft": SFTGenerator,
+            "rag_eval": RAGEvalGenerator,
+            "agent_tool": AgentToolGenerator,
+        }
+        generator_instances = []
+        for name in generators:
+            cls = gen_mapping.get(name)
+            if cls:
+                generator_instances.append(cls())
+
+        pipeline = TrainingDataPipeline()
+        result = await pipeline.run(
+            dataset_name=dataset_name,
+            generators=generator_instances,
+            output_path=Path(output_dir),
+            quality_config=QualityConfig(),
+            generator_config=GeneratorConfig(max_samples=max_samples),
+        )
+
+        return {
+            "task_type": "training_data",
+            "dataset_name": dataset_name,
+            "result": result.to_dict(),
+        }
+
+
 def get_executor(task_type: str) -> Callable:
     """获取执行器"""
     return EXECUTORS.get(task_type)
