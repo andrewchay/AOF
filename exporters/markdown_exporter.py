@@ -20,7 +20,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 import sys
@@ -597,9 +596,9 @@ class MarkdownExporter:
 
         # 从属性中提取时间线索
         time_fields = ["created_at", "updated_at", "ingested_at", "timestamp", "date"]
-        for field in time_fields:
-            if field in node and node[field]:
-                events.append((str(node[field]), f"记录 {field}"))
+        for tf in time_fields:
+            if tf in node and node[tf]:
+                events.append((str(node[tf]), f"记录 {tf}"))
 
         if not events:
             return ""
