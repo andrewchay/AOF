@@ -89,10 +89,20 @@ def _parse_frontmatter(content: str) -> tuple[dict[str, object], str]:
 def _parse_scalar(value: str) -> object:
     """解析 frontmatter 标量 / 列表."""
     value = value.strip()
-    # 括号包裹的引号列表
+    # 括号包裹的引号/裸项列表，如 ["eng", "person"] 或 [a, b]
     if value.startswith("[") and value.endswith("]"):
-        items = re.findall(r'"([^"]*)"|\'([^\']*)\'|([^,]+)', value)
-        return [a or b or c.strip() for a, b, c in items if (a or b or c.strip())]
+        inner = value[1:-1].strip()
+        if inner == "":
+            return []
+        items = []
+        for raw in inner.split(","):
+            item = raw.strip()
+            if len(item) >= 2 and item[0] == '"' and item[-1] == '"':
+                item = item[1:-1]
+            elif len(item) >= 2 and item[0] == "'" and item[-1] == "'":
+                item = item[1:-1]
+            items.append(item)
+        return items
     # 引号包裹
     if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
         return value[1:-1]

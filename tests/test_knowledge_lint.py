@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.knowledge_lint import OKFLinter, _parse_frontmatter, _resolve_okf_path
+from tools.knowledge_lint import OKFLinter, _parse_frontmatter, _parse_scalar, _resolve_okf_path
 
 
 def _write(directory: Path, rel_path: str, content: str) -> None:
@@ -26,6 +26,14 @@ def test_parse_frontmatter_missing_returns_empty():
     meta, body = _parse_frontmatter("no frontmatter here")
     assert meta == {}
     assert body == "no frontmatter here"
+
+
+def test_parse_scalar_list_bugfix():
+    """回归：引号列表不应被错误拆成含括号的散项."""
+    assert _parse_scalar('["eng", "person"]') == ["eng", "person"]
+    assert _parse_scalar('["person"]') == ["person"]
+    assert _parse_scalar("[]") == []
+    assert _parse_scalar('"Alice"') == "Alice"
 
 
 # ---------- 路径解析 ----------
