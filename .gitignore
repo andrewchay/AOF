@@ -10,3 +10,8 @@ data/api_runs/community/
 data/middle_layer/community/
 data/showcase/
 visualization/books/
+
+# Runtime state / result singletons (machine-local, regenerable)
+logs/aof_add_result.json
+data/api_runs/run_index.json
+data/api_runs/topic_state.json
