@@ -37,6 +37,28 @@ AOF 是一个**企业级知识工程平台**，支持从多源数据中自动构
 - 🔄 **图模式/Dataset 模式双回退** - 优先从图数据导出，失败时回退到原始数据
 - 📁 **MECE 目录结构** - 按实体类型自动组织（person/company/concept/...）
 
+### 🤖 训练数据生成（AI/Agent 训练数据集）
+基于知识图谱和文档自动生成结构化训练数据，支持三种类型：
+
+| 类型 | 用途 | 输出格式 |
+|------|------|---------|
+| **SFT** | LLM 监督微调 | OpenAI chat completions (messages) |
+| **RAG Eval** | 检索增强生成评估 | question-answer-context 三元组 |
+| **Agent Tool** | Agent 工具调用训练 | OpenAI function calling |
+
+**生成策略**：
+- **实体问答** - 基于节点属性生成 instruction-response 对
+- **关系推理** - 基于三元组生成关联问题
+- **文档摘要** - 基于文本 chunks 生成摘要任务
+- **多轮对话** - 基于子图路径模拟连贯对话
+- **工具调用** - 基于策略本体生成 function calling 样本
+
+**质量控制**：
+- BLAKE2b 去重（与增量同步一致）
+- 长度过滤、多样性评分
+- 跨生成器全局去重
+- 可选 train/val/test 拆分
+
 ### Agent Playbook (Skills)
 - 🤖 **Markdown Skills** - 纯文本的 Agent 操作手册（ingest/query/analytics/maintain）
 - 📖 **零代码技能系统** - Agent 读取即会用的 playbook，无需修改二进制
@@ -157,6 +179,10 @@ result = await backend.pagerank(top_k=100)
 | `memify_feedback_loop.py` | 用户反馈分析 | ✅ |
 | `database_schema_extractor.py` | 数据库 Schema 提取 | ✅ |
 | `exporters/markdown_exporter.py` | 图谱 → Markdown 导出 | ✅ |
+| `exporters/training_data_exporter.py` | 图谱 → AI 训练数据集 | ✅ |
+| `training_data/generators/` | SFT/RAG/Agent 数据生成 | ✅ |
+| `training_data/pipeline.py` | 生成流水线编排 | ✅ |
+| `training_data/quality.py` | 质量过滤与去重 | ✅ |
 | `skills/` | Agent Playbook (纯 Markdown) | ✅ |
 
 ### 企业级模块（v2.0）
@@ -289,6 +315,33 @@ result = await export_dataset_to_markdown(
 )
 
 print(f"导出 {result.pages_exported} 页到 {result.output_dir}")
+```
+
+### 训练数据生成
+
+```python
+from exporters.training_data_exporter import export_dataset_to_training_data
+
+# 生成 SFT + RAG 评估数据
+result = await export_dataset_to_training_data(
+    dataset_id="my_dataset",
+    output_dir="./training_data/",
+    generators=["sft", "rag_eval"],
+    max_samples=1000,
+)
+
+print(f"生成 {result.total_samples} 条样本")
+print(f"类型分布: {result.samples_by_type}")
+print(f"输出文件: {result.output_files}")
+
+# 支持 train/val/test 拆分
+result = await export_dataset_to_training_data(
+    dataset_id="my_dataset",
+    output_dir="./training_data/",
+    generators=["sft", "rag_eval", "agent_tool"],
+    max_samples=5000,
+    enable_split=True,
+)
 ```
 
 ### Agent Skills 使用
