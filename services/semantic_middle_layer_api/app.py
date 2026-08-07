@@ -24,7 +24,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Query
-from fastapi.responses import PlainTextResponse, FileResponse
+from fastapi.responses import PlainTextResponse, FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 # Logging
@@ -3763,6 +3764,27 @@ async def okf_export_dataset(
         bundle_title=bundle_title,
     )
     return result.to_dict()
+
+
+# ==================== Frontend Static Hosting (lightweight deploy) ====================
+# 放在所有 API 路由之后，catch-all 最后注册不抢占 /v1/* 等 API。
+_app_dist = AOF_ROOT / 'web' / 'dist'
+if os.environ.get('AOF_SERVE_WEB', '1') == '1' and _app_dist.is_dir():
+    if (_app_dist / 'assets').is_dir():
+        app.mount('/assets', StaticFiles(directory=_app_dist / 'assets'), name='aof_assets')
+
+    @app.get('/{full_path:path}', include_in_schema=False)
+    async def _spa_fallback(full_path: str):
+        target = (_app_dist / full_path).resolve() if full_path else _app_dist
+        try:
+            target.relative_to(_app_dist.resolve())
+        except ValueError:
+            return HTMLResponse(content='Not Found', status_code=404)
+        if target.is_file():
+            return FileResponse(target)
+        return FileResponse(_app_dist / 'index.html')
+
+    logging.getLogger(__name__).info('[AOF] 前端静态托管已启用: %s', _app_dist)
 
 
 if __name__ == '__main__':
