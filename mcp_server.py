@@ -25,7 +25,7 @@ import json
 import os
 import sys
 import traceback
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
@@ -198,9 +198,6 @@ async def _tool_hybrid_search(args: dict[str, Any]) -> dict[str, Any]:
 async def _tool_enhanced_search(args: dict[str, Any]) -> dict[str, Any]:
     from bridge.enhanced_search import search_with_intent
 
-    spec = _load_spec()
-    dataset = args.get("dataset_name") or spec.get("dataset")
-
     result = await search_with_intent(
         query=args["query"],
         user_intent=args.get("user_intent"),
@@ -287,6 +284,171 @@ async def _tool_list_datasets(args: dict[str, Any]) -> dict[str, Any]:
             for d in datasets
         ]
     }
+
+
+# ---------------------------------------------------------------------------
+# OKF / LLM Wiki knowledge consumption tools (P2)
+# ---------------------------------------------------------------------------
+
+def _bundle_dir(args: dict[str, Any]) -> Path:
+    """解析知识包目录：优先 bundle_dir 参数，其次 AOF_OKF_DIR，最后默认 ./okf_bundle."""
+    explicit = args.get("bundle_dir")
+    if explicit:
+        p = Path(explicit)
+        return p if p.is_absolute() else (PROJECT_ROOT / p)
+    env_dir = os.environ.get("AOF_OKF_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        return p if p.is_absolute() else (PROJECT_ROOT / p)
+    spec = _load_spec()
+    okf_dir = (spec.get("okf") or {}).get("dir")
+    if okf_dir:
+        p = Path(okf_dir)
+        return p if p.is_absolute() else (PROJECT_ROOT / p)
+    return PROJECT_ROOT / "okf_bundle"
+
+
+def _resolve_concept_path(bundle: Path, path: str) -> Path | None:
+    """安全解析 Concept 路径：拒绝目录穿越（含 ..）逃出 bundle. 返回已确认存在的文件或 None.
+
+    兼容 index/search 返回的去 .md 后缀路径（如 person/Alice）。
+    """
+    raw = Path(path)
+    if raw.is_absolute():
+        return None
+    # 严格拒绝任何 .. 段（路径穿越防护）
+    if any(part in ("..", "") for part in raw.parts):
+        return None
+    candidate = bundle / raw
+    # 补 .md 后缀：路径无后缀时尝试补 .md
+    if candidate.is_dir() or not candidate.suffix:
+        candidate_md = bundle / Path(str(raw) + ".md")
+        return candidate_md if _is_safe_file(candidate_md, bundle) else None
+    return candidate if _is_safe_file(candidate, bundle) else None
+
+
+def _is_safe_file(candidate: Path, bundle: Path) -> bool:
+    """确认 candidate 是 bundle 内的 .md 文件（双保险防穿越）."""
+    try:
+        candidate.resolve().relative_to(bundle.resolve())
+    except ValueError:
+        return False
+    return candidate.is_file() and candidate.suffix == ".md"
+
+
+async def _tool_okf_index(args: dict[str, Any]) -> dict[str, Any]:
+    """读取知识包 index.md（渐进式披露目录）."""
+    bundle = _bundle_dir(args)
+    index_file = bundle / "index.md"
+    if not index_file.is_file():
+        return {
+            "bundle_dir": str(bundle),
+            "error": f"知识包目录缺少 index.md: {bundle}",
+            "exists": False,
+        }
+    content = index_file.read_text(encoding="utf-8")
+    return {
+        "bundle_dir": str(bundle),
+        "exists": True,
+        "index_md": content,
+    }
+
+
+async def _tool_okf_get_concept(args: dict[str, Any]) -> dict[str, Any]:
+    """按 path 读取单个 Concept 完整内容."""
+    bundle = _bundle_dir(args)
+    path = args.get("path", "")
+    if not path:
+        return {"error": "缺少 path 参数", "asset": None}
+    target = _resolve_concept_path(bundle, path)
+    if not target:
+        return {"error": f"Concept 不存在或路径非法: {path}", "path": path, "exists": False}
+    content = target.read_text(encoding="utf-8")
+    rel = target.relative_to(bundle).as_posix()
+    return {
+        "bundle_dir": str(bundle),
+        "path": rel,
+        "exists": True,
+        "concept": content,
+    }
+
+
+async def _tool_okf_search_concepts(args: dict[str, Any]) -> dict[str, Any]:
+    """按 type/title/tag/正文文本 搜索知识包内 Concept."""
+    from tools.knowledge_lint import _parse_frontmatter
+
+    bundle = _bundle_dir(args)
+    query = (args.get("query") or "").strip().lower()
+    node_type = (args.get("type") or "").strip().lower()
+    title = (args.get("title") or "").strip().lower()
+    tag = (args.get("tag") or "").strip().lower()
+    limit = int(args.get("limit", 20))
+
+    if not bundle.is_dir():
+        return {"bundle_dir": str(bundle), "error": "知识包目录不存在", "results": []}
+
+    matches: list[dict[str, Any]] = []
+    for md in sorted(bundle.rglob("*.md")):
+        if md.name in ("index.md", "log.md"):
+            continue
+        if md.name == md.parent.name:  # 跳过目录同名
+            continue
+        try:
+            meta, body = _parse_frontmatter(md.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        meta_type = str(meta.get("type", "")).lower()
+        meta_title = str(meta.get("title", "")).lower()
+        meta_tags = [str(t).lower() for t in meta.get("tags", [])] if isinstance(meta.get("tags", []), list) else []
+        text_blob = " ".join([meta_title, meta_type, " ".join(meta_tags), body.lower()])
+
+        # 过滤
+        if node_type and node_type not in meta_type:
+            continue
+        if title and title not in meta_title:
+            continue
+        if tag and not any(tag in t for t in meta_tags):
+            continue
+        if query and query not in text_blob:
+            continue
+
+        # 优先根据匹配维度排序：type 精确 > title 前缀 > tag > 正文
+        score = 0
+        if node_type and node_type == meta_type:
+            score += 16
+        if title and meta_title.startswith(title):
+            score += 8
+        if query and query in meta_title:
+            score += 4
+        if tag and tag in meta_tags:
+            score += 2
+
+        rel = md.relative_to(bundle).as_posix()
+        desc = str(meta.get("description", ""))[:200]
+        matches.append({
+            "path": rel,
+            "title": meta.get("title", md.stem),
+            "type": meta.get("type", ""),
+            "tags": meta.get("tags", []),
+            "description": desc,
+            "score": score,
+        })
+
+    matches.sort(key=lambda m: (-m["score"], m["title"]))
+    return {
+        "bundle_dir": str(bundle),
+        "count": len(matches[:limit]),
+        "results": matches[:limit],
+    }
+
+
+async def _tool_okf_lint(args: dict[str, Any]) -> dict[str, Any]:
+    """对知识包运行结构体检（断链/重复/口径冲突）."""
+    from tools.knowledge_lint import OKFLinter
+
+    bundle = _bundle_dir(args)
+    report = OKFLinter().lint(bundle)
+    return report.to_dict()
 
 
 # ---------------------------------------------------------------------------
@@ -392,6 +554,62 @@ def build_server() -> McpServer:
             "properties": {},
         },
         handler=_tool_list_datasets,
+    ))
+
+    # --- OKF / LLM Wiki knowledge consumption tools ---
+
+    server.register_tool(McpTool(
+        name="aof_okf_index",
+        description="读取 OKF 知识包的 index.md 渐进式披露目录（Agent 应优先调用以获取全局知识索引）",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "bundle_dir": {"type": "string", "description": "知识包目录（可选，默认由 AOF_OKF_DIR 或配置决定）"},
+            },
+        },
+        handler=_tool_okf_index,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_okf_get_concept",
+        description="按 path 读取单个 OKF Concept 的完整内容（frontmatter + 正文），如 person/alice.md",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Concept 相对路径，如 person/alice.md"},
+                "bundle_dir": {"type": "string", "description": "知识包目录（可选）"},
+            },
+            "required": ["path"],
+        },
+        handler=_tool_okf_get_concept,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_okf_search_concepts",
+        description="按 type/title/tag/正文文本搜索 OKF 知识包内的 Concept",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "正文文本关键词搜索"},
+                "type": {"type": "string", "description": "按 Concept type 过滤，如 person/company/metric"},
+                "title": {"type": "string", "description": "按标题过滤"},
+                "tag": {"type": "string", "description": "按标签过滤"},
+                "limit": {"type": "integer", "description": "返回最大条数", "default": 20},
+            },
+        },
+        handler=_tool_okf_search_concepts,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_okf_lint",
+        description="对 OKF 知识包运行结构体检（断链/重复/口径冲突），返回体检报告",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "bundle_dir": {"type": "string", "description": "知识包目录（可选）"},
+            },
+        },
+        handler=_tool_okf_lint,
     ))
 
     return server
