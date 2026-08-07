@@ -11,6 +11,7 @@ This version includes:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import subprocess
@@ -25,6 +26,9 @@ from typing import Any, Optional
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Query
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field
+
+# Logging
+logger = logging.getLogger('aof_api')
 
 # Configuration
 AOF_ROOT = Path(os.environ.get('AOF_ROOT', str(Path(__file__).resolve().parents[2]))).resolve()
@@ -1855,6 +1859,230 @@ def export_regression(topic: str) -> dict[str, Any]:
         'regression_jsonl': mf['artifacts'].get('regression_jsonl', ''),
         'regression_summary_md': mf['artifacts'].get('regression_summary_md', ''),
         'skills_update_md': mf['artifacts'].get('skills_update_md', ''),
+    }
+
+
+# ==================== Training Data Generation Endpoints ====================
+
+class TrainingDataGenerateReq(BaseModel):
+    """训练数据生成请求。"""
+    dataset_name: str
+    generators: list[str] = Field(default=['sft', 'rag_eval'])
+    max_samples: int = Field(default=1000, ge=10, le=10000)
+    quality_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    enable_deduplication: bool = True
+    enable_train_val_test_split: bool = False
+    system_prompt_template: Optional[str] = None
+
+
+class TrainingDataJobResp(BaseModel):
+    """训练数据生成任务响应。"""
+    job_id: str
+    status: str
+    progress: float
+    estimated_samples: int
+    output_files: list[str]
+    metrics: dict[str, Any]
+
+
+_TRAINING_DATA_JOBS: dict[str, dict[str, Any]] = {}
+
+
+@app.post('/v1/training-data/generate')
+async def generate_training_data(req: TrainingDataGenerateReq) -> dict[str, Any]:
+    """
+    生成 AI/Agent 训练数据集。
+
+    基于知识图谱和文档生成结构化训练数据，支持 SFT、RAG 评估、Agent 工具调用三种类型。
+
+    Args:
+        dataset_name: 数据集名称
+        generators: 生成器类型列表 ["sft", "rag_eval", "agent_tool"]
+        max_samples: 每种生成器的最大样本数
+        quality_threshold: 质量阈值（0-1）
+        enable_deduplication: 是否启用去重
+        enable_train_val_test_split: 是否拆分为训练/验证/测试集
+        system_prompt_template: 自定义 system prompt 模板
+
+    Returns:
+        任务信息，包含 job_id 用于后续查询
+    """
+    import sys
+    import uuid
+    sys.path.insert(0, str(AOF_ROOT))
+
+    from bridge.training_data import TrainingDataPipeline, QualityConfig, GeneratorConfig
+    from bridge.training_data.generators import SFTGenerator, RAGEvalGenerator, AgentToolGenerator
+
+    job_id = str(uuid.uuid4())
+
+    # 解析生成器
+    gen_mapping = {
+        'sft': SFTGenerator,
+        'rag_eval': RAGEvalGenerator,
+        'agent_tool': AgentToolGenerator,
+    }
+    generators = []
+    for name in req.generators:
+        cls = gen_mapping.get(name)
+        if cls:
+            generators.append(cls())
+
+    if not generators:
+        raise HTTPException(status_code=400, detail='No valid generators specified')
+
+    # 配置
+    gen_config = GeneratorConfig(
+        max_samples=req.max_samples,
+        system_prompt_template=req.system_prompt_template or '',
+    )
+    quality_config = QualityConfig(
+        enable_deduplication=req.enable_deduplication,
+    )
+
+    # 输出目录
+    output_dir = API_DATA / 'training_data' / job_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 初始化任务状态
+    _TRAINING_DATA_JOBS[job_id] = {
+        'job_id': job_id,
+        'status': 'running',
+        'progress': 0.0,
+        'dataset_name': req.dataset_name,
+        'generators': req.generators,
+        'output_dir': str(output_dir),
+        'output_files': [],
+        'metrics': {},
+        'created_at': datetime.now().isoformat(),
+    }
+
+    # 在后台执行（同步执行但返回 job_id）
+    try:
+        pipeline = TrainingDataPipeline()
+        result = await pipeline.run(
+            dataset_name=req.dataset_name,
+            generators=generators,
+            output_path=output_dir,
+            quality_config=quality_config,
+            generator_config=gen_config,
+            enable_split=req.enable_train_val_test_split,
+        )
+
+        _TRAINING_DATA_JOBS[job_id].update({
+            'status': 'success',
+            'progress': 100.0,
+            'output_files': result.output_files,
+            'metrics': {
+                'total_samples': result.total_samples,
+                'samples_by_type': result.samples_by_type,
+                'duration_seconds': result.duration_seconds,
+                'quality_metrics': result.quality_metrics,
+            },
+        })
+
+        return {
+            'status': 'success',
+            'job_id': job_id,
+            'message': 'Training data generation completed',
+            'result': {
+                'total_samples': result.total_samples,
+                'samples_by_type': result.samples_by_type,
+                'output_files': result.output_files,
+                'duration_seconds': result.duration_seconds,
+            },
+        }
+
+    except Exception as e:
+        _TRAINING_DATA_JOBS[job_id]['status'] = 'failure'
+        _TRAINING_DATA_JOBS[job_id]['error'] = str(e)
+        logger.error(f'Training data generation failed: {e}', exc_info=True)
+        raise HTTPException(status_code=500, detail=f'Training data generation failed: {e}')
+
+
+@app.get('/v1/training-data/jobs/{job_id}')
+def get_training_data_job(job_id: str) -> dict[str, Any]:
+    """
+    查询训练数据生成任务状态。
+
+    Args:
+        job_id: 任务 ID
+
+    Returns:
+        任务状态和进度信息
+    """
+    job = _TRAINING_DATA_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f'Job {job_id} not found')
+    return {
+        'status': 'success',
+        'job': job,
+    }
+
+
+@app.get('/v1/training-data/jobs/{job_id}/download')
+def download_training_data(job_id: str, file: str = 'training_data') -> Any:
+    """
+    下载生成的训练数据文件。
+
+    Args:
+        job_id: 任务 ID
+        file: 文件名（默认 training_data.jsonl，或 train/validation/test）
+
+    Returns:
+        文件下载响应
+    """
+    job = _TRAINING_DATA_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f'Job {job_id} not found')
+
+    output_dir = Path(job['output_dir'])
+
+    # 查找文件
+    candidates = [
+        output_dir / f"{file}.jsonl",
+        output_dir / file,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return FileResponse(
+                path=str(candidate),
+                filename=candidate.name,
+                media_type='application/jsonl+json',
+            )
+
+    # 列出可用文件
+    available = [f.name for f in output_dir.glob('*.jsonl')] if output_dir.exists() else []
+    raise HTTPException(
+        status_code=404,
+        detail=f'File not found. Available: {available}',
+    )
+
+
+@app.get('/v1/training-data/templates')
+def get_training_data_templates() -> dict[str, Any]:
+    """
+    获取各生成器的 prompt 模板。
+
+    Returns:
+        SFT、RAG Eval、Agent Tool 的默认模板
+    """
+    return {
+        'status': 'success',
+        'templates': {
+            'sft': {
+                'system_prompt': '你是一个企业知识助手，基于知识图谱回答用户问题。',
+                'description': 'SFT 微调数据生成器，基于实体、关系、文档生成 instruction-response 对',
+            },
+            'rag_eval': {
+                'system_prompt': '',
+                'description': 'RAG 评估数据生成器，基于图谱生成 question-answer-context 三元组',
+            },
+            'agent_tool': {
+                'system_prompt': '',
+                'description': 'Agent 工具调用数据生成器，基于策略本体生成 function calling 样本',
+            },
+        },
     }
 
 
