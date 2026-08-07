@@ -22,8 +22,10 @@
 - [x] P3-A 后端 OKF 服务化：抽取 exporters/okf_service.py（共享），新增 /v1/okf/* REST 端点（bundles/index/concept/search/lint/export），重构 mcp_server 复用共享逻辑
 - [x] P3-A 测试（okf_service 12 + okf_api 7）+ 全量 285 无回归 + 端到端 TestClient 验证
 - [x] P3-B 前端工程骨架（Vue3+ElementPlus+Vite+pnpm：router/api/stores/layout + 5 视图注册）
-- [x] P3-C 核心页面骨架（Dashboard/OKF浏览完整实现，Ingest/Graph/Agent占位）
-- [x] P3-D 联调：前端 dev(5173) → proxy → 后端(8787) → OKF 全链路打通；修复 frontmatter 列表解析 bug
+- [x] P3-C 核心页面：Dashboard/OKF浏览 + Graph(vis-network)/Ingest(目录+URL摄取)/Agent(OKF检索问答)
+- [x] P3-D 前端构建通过 + 三个页面模块编译 + 端点经代理连通
+- [x] P3 轻量部署：后端托管 web/dist 单端口访问（SPA fallback 不抢 API）+ run_web.sh 一键启动
+- [x] 全量 286 测试无回归
 - [ ] P3 提交并 push
 
 ## P2: MCP Server - OKF 知识消费工具 (2026-08-07) ✅ 已提交并推送
