@@ -3644,6 +3644,127 @@ async def get_graph_categories(dataset: str = 'default') -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f'Failed to get categories: {e}')
 
 
+# ==================== OKF / LLM Wiki Knowledge Bundle Endpoints ====================
+
+def _okf_root() -> Path:
+    """OKF 知识包根目录：优先 AOF_OKF_DIR，其次 spec.okf.dir，默认 <AOF_ROOT>/okf_bundle."""
+    import os as _os
+    env_dir = _os.environ.get('AOF_OKF_DIR')
+    if env_dir:
+        p = Path(env_dir)
+        return p if p.is_absolute() else (AOF_ROOT / p)
+    return AOF_ROOT / 'okf_bundle'
+
+
+def _okf_service():
+    """惰性导入共享 okf_service 模块."""
+    import sys as _sys
+    if str(AOF_ROOT) not in _sys.path:
+        _sys.path.insert(0, str(AOF_ROOT))
+    from exporters import okf_service
+    return okf_service
+
+
+def _resolve_bundle_dir(name: str | None, bundle_root: Path) -> tuple[Path, str, str | None]:
+    """把 bundle 名解析为目录：name 缺省用根下第一个含 index.md 的包."""
+    import sys as _sys
+    if str(AOF_ROOT) not in _sys.path:
+        _sys.path.insert(0, str(AOF_ROOT))
+    from exporters.okf_service import list_bundles as _list
+    listing = _list(bundle_root)
+    error = None
+    if name:
+        candidate = bundle_root / name
+        if not (candidate / 'index.md').is_file():
+            error = f'知识包不存在: {name}'
+            return candidate, name, error
+        return candidate, name, None
+    # 未指定 name：取第一个知识包
+    if listing['bundles']:
+        first = listing['bundles'][0]
+        return Path(first['path']), first['name'], None
+    return bundle_root, '', '知识包目录为空，无可用知识包'
+
+
+@app.get('/v1/okf/bundles')
+async def okf_list_bundles() -> dict[str, Any]:
+    """列出 OKF 知识包根目录下的所有知识包."""
+    svc = _okf_service()
+    root = _okf_root()
+    return svc.list_bundles(root)
+
+
+@app.get('/v1/okf/bundles/{bundle_name}/index')
+async def okf_bundle_index(bundle_name: str) -> dict[str, Any]:
+    """读取指定知识包的 index.md 渐进式披露目录."""
+    svc = _okf_service()
+    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    if error:
+        return {'bundle_dir': str(bindir), 'exists': False, 'error': error}
+    return svc.read_index(bindir)
+
+
+@app.get('/v1/okf/bundles/{bundle_name}/concept')
+async def okf_get_concept(bundle_name: str, path: str) -> dict[str, Any]:
+    """读取指定知识包内单个 Concept 完整内容."""
+    svc = _okf_service()
+    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    if error:
+        return {'error': error, 'exists': False}
+    return svc.get_concept(bindir, path)
+
+
+@app.get('/v1/okf/bundles/{bundle_name}/search')
+async def okf_search_concepts(
+    bundle_name: str,
+    query: str | None = None,
+    type: str | None = None,  # noqa: A002 - FastAPI 参数名
+    title: str | None = None,
+    tag: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+) -> dict[str, Any]:
+    """按 type/title/tag/正文搜索知识包内 Concept."""
+    svc = _okf_service()
+    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    if error:
+        return {'bundle_dir': str(bindir), 'error': error, 'count': 0, 'results': []}
+    return svc.search_concepts(bindir, query=query, node_type=type, title=title, tag=tag, limit=limit)
+
+
+@app.post('/v1/okf/bundles/{bundle_name}/lint')
+async def okf_lint_bundle(bundle_name: str) -> dict[str, Any]:
+    """对指定知识包运行结构体检（断链/重复/口径冲突）."""
+    svc = _okf_service()
+    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    if error:
+        return {'error': error, 'concepts_scanned': 0, 'issues': []}
+    return svc.lint_bundle(bindir)
+
+
+@app.post('/v1/okf/export')
+async def okf_export_dataset(
+    dataset_name: str | None = None,
+    dataset_id: str | None = None,
+    output_dir: str | None = None,
+    bundle_title: str | None = None,
+) -> dict[str, Any]:
+    """把数据集导出为 OKF 知识包（供 Web UI 创建动作调用）."""
+    import sys as _sys
+    if str(AOF_ROOT) not in _sys.path:
+        _sys.path.insert(0, str(AOF_ROOT))
+    from exporters.okf_exporter import OKFExporter
+
+    exp = OKFExporter(cognee_root=None)
+    out = Path(output_dir) if output_dir else None
+    result = await exp.export(
+        output_dir=str(out) if out else '/tmp/aof_okf_export',
+        dataset_id=dataset_id,
+        dataset_name=dataset_name,
+        bundle_title=bundle_title,
+    )
+    return result.to_dict()
+
+
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run(app, host='0.0.0.0', port=8787)
