@@ -332,6 +332,21 @@ async def _tool_okf_lint(args: dict[str, Any]) -> dict[str, Any]:
     return lint_bundle(bundle)
 
 
+async def _tool_rag_retrieve(args: dict[str, Any]) -> dict[str, Any]:
+    """RAG 统一检索：多路召回（关键词+向量+图谱路径）+ 命中溯源."""
+    from exporters.rag_service import rag_retrieve
+    dataset_name = args.get("dataset_name") or (args.get("dataset_id") or "")
+    result = await rag_retrieve(
+        query=args["query"],
+        dataset_id=args.get("dataset_id"),
+        dataset_name=dataset_name or None,
+        limit=int(args.get("limit", 10)),
+        expansion=bool(args.get("expansion", False)),
+        include_graph=bool(args.get("include_graph", True)),
+    )
+    return result.to_dict()
+
+
 # ---------------------------------------------------------------------------
 # Build and run server
 # ---------------------------------------------------------------------------
@@ -491,6 +506,24 @@ def build_server() -> McpServer:
             },
         },
         handler=_tool_okf_lint,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_rag_retrieve",
+        description="RAG 统一检索：关键词 + 向量 + 图谱路径 多路召回，RRF 融合，每条结果携带 provenance 命中溯源（来源路/数据集/种子实体/图谱路径/关系）。用于 Agent 做知识问答前的事实检索。",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "检索查询"},
+                "dataset_id": {"type": "string", "description": "数据集 ID（可选）"},
+                "dataset_name": {"type": "string", "description": "数据集名称（可选，默认取 spec.dataset）"},
+                "limit": {"type": "integer", "description": "返回最大条数", "default": 10},
+                "expansion": {"type": "boolean", "description": "是否开启查询扩展", "default": False},
+                "include_graph": {"type": "boolean", "description": "是否包含图谱路径召回（第三路）", "default": True},
+            },
+            "required": ["query"],
+        },
+        handler=_tool_rag_retrieve,
     ))
 
     return server

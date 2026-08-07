@@ -14,6 +14,7 @@ INTEGRATION_TEST_FILES = {
     "test_api_enhanced.py",
     "test_data_adapter.py",
     "test_ontology_factory_integration.py",
+    "test_rag_api.py",
 }
 E2E_TEST_FILES = {
     "test_end_to_end.py",

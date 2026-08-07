@@ -3766,6 +3766,52 @@ async def okf_export_dataset(
     return result.to_dict()
 
 
+# ==================== RAG Retrieval Endpoints ====================
+
+class RagRetrieveReq(BaseModel):
+    """RAG 统一检索请求（多路召回 + 命中溯源）."""
+    query: str = Field(..., min_length=1, description='检索查询')
+    dataset_id: str | None = Field(default=None, description='数据集 ID（可选）')
+    dataset_name: str | None = Field(default=None, description='数据集名称（可选，默认取 spec.dataset）')
+    limit: int = Field(default=10, ge=1, le=50, description='返回结果数')
+    expansion: bool = Field(default=False, description='是否开启查询扩展')
+    include_graph: bool = Field(default=True, description='是否包含图谱路径召回（第三路）')
+
+
+@app.post('/v1/rag/retrieve')
+async def rag_retrieve(req: RagRetrieveReq) -> dict[str, Any]:
+    """RAG 统一检索：关键词 + 向量 + 图谱路径多路召回，RRF 融合，带命中溯源.
+
+    返回结构中每条 result 携带 provenance（来源路 / 数据集 / 种子实体 / 图谱路径 / 关系），
+    供 Agent 消费时追踪"为什么命中".
+    """
+    import sys as _sys
+    if str(AOF_ROOT) not in _sys.path:
+        _sys.path.insert(0, str(AOF_ROOT))
+    from exporters.rag_service import rag_retrieve as _retrieve
+
+    dataset_name = req.dataset_name
+    if not dataset_name:
+        try:
+            spec_path = os.environ.get('AOF_SPEC_PATH', 'aof_spec.example.json')
+            sp = Path(spec_path)
+            if not sp.is_absolute():
+                sp = AOF_ROOT / sp
+            if sp.exists():
+                dataset_name = (json.loads(sp.read_text(encoding='utf-8')).get('dataset') or '')
+        except Exception:
+            dataset_name = ''
+    result = await _retrieve(
+        query=req.query,
+        dataset_id=req.dataset_id,
+        dataset_name=dataset_name,
+        limit=req.limit,
+        expansion=req.expansion,
+        include_graph=req.include_graph,
+    )
+    return result.to_dict()
+
+
 # ==================== Frontend Static Hosting (lightweight deploy) ====================
 # 放在所有 API 路由之后，catch-all 最后注册不抢占 /v1/* 等 API。
 _app_dist = AOF_ROOT / 'web' / 'dist'

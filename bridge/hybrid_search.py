@@ -57,8 +57,9 @@ class HybridChunkResult:
     chunk_text: str
     type: str = "unknown"
     score: float = 0.0
-    source: str = "unknown"  # 'keyword' | 'vector' | 'rrf'
+    source: str = "unknown"  # 'keyword' | 'vector' | 'graph' | 'rrf'
     metadata: dict[str, Any] = field(default_factory=dict)
+    provenance: dict[str, Any] = field(default_factory=dict)  # 命中溯源链路
 
 
 @dataclass
@@ -69,6 +70,7 @@ class HybridSearchResult:
     results: list[HybridChunkResult]
     keyword_count: int = 0
     vector_count: int = 0
+    graph_count: int = 0
     execution_time_ms: int = 0
 
 
@@ -173,6 +175,15 @@ def rrf_fusion(lists: list[list[HybridChunkResult]]) -> list[HybridChunkResult]:
 
     # 按融合分数降序排列
     sorted_entries = sorted(scores.values(), key=lambda x: x["score"], reverse=True)
+
+    # 把融合分写回对象，并将来源标记为融合结果，原始来源保留在 metadata 中
+    for entry in sorted_entries:
+        r = entry["result"]
+        r.score = entry["score"]
+        r.metadata = r.metadata or {}
+        r.metadata["_rrf_source"] = r.source
+        r.source = "rrf"
+
     return [entry["result"] for entry in sorted_entries]
 
 
@@ -272,6 +283,14 @@ def _cap_per_page(results: list[HybridChunkResult], max_per_page: int) -> list[H
 # ---------------------------------------------------------------------------
 def _normalize_cognee_result(raw: Any, source_label: str) -> Optional[HybridChunkResult]:
     """将 Cognee 的多种返回格式统一为 HybridChunkResult."""
+    # 兼容 Cognee 包装层: {dataset_id, dataset_name, search_result: [...]}
+    if isinstance(raw, dict) and "search_result" in raw:
+        results = raw["search_result"]
+        if isinstance(results, list) and results:
+            # 返回包装内第一条的有效结果；调用方会再遍历，这里只需展开
+            return _normalize_cognee_result(results[0], source_label)
+        return None
+
     if isinstance(raw, str):
         text = raw.strip()
         if not text:
@@ -317,6 +336,20 @@ def _normalize_cognee_result(raw: Any, source_label: str) -> Optional[HybridChun
         source=source_label,
         metadata={k: v for k, v in raw.items() if k not in {"text", "content", "chunk_text", "result", "summary"}},
     )
+
+
+def _flatten_cognee_results(raw: Any) -> list[Any]:
+    """将 Cognee 可能返回的嵌套/包装结构展平为 chunk 对象列表."""
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        out = []
+        for item in raw:
+            out.extend(_flatten_cognee_results(item))
+        return out
+    if isinstance(raw, dict) and "search_result" in raw:
+        return _flatten_cognee_results(raw.get("search_result"))
+    return [raw]
 
 
 def _slugify(text: str) -> str:
@@ -370,7 +403,7 @@ class AOFHybridSearch:
                 datasets=datasets,
             )
             normalized = []
-            for item in (results if isinstance(results, list) else [results]):
+            for item in _flatten_cognee_results(results):
                 norm = _normalize_cognee_result(item, "keyword")
                 if norm:
                     normalized.append(norm)
@@ -400,11 +433,52 @@ class AOFHybridSearch:
                 timeout=15.0,
             )
             normalized = []
-            for item in (results if isinstance(results, list) else [results]):
+            for item in _flatten_cognee_results(results):
                 norm = _normalize_cognee_result(item, "vector")
                 if norm:
                     normalized.append(norm)
             return normalized
+        except Exception:
+            return []
+
+    async def _graph_search(
+        self,
+        query: str,
+        dataset_id: str | None,
+        dataset_name: str | None,
+        limit: int,
+    ) -> list[HybridChunkResult]:
+        """图谱路径召回：实体匹配 + 关系路径扩展，构成第三路.
+
+        该路是 AOF 的差异化能力：从知识图谱的"实体-关系"结构出发，
+        输出带完整溯源链路（seed_matched / graph_path / relation）的结果.
+        """
+        try:
+            from bridge.graph_retrieval import graph_path_retrieval  # type: ignore
+
+            hits = await graph_path_retrieval(
+                query=query,
+                dataset_id=dataset_id,
+                dataset_name=dataset_name,
+                limit=limit * 2,
+                cognee_root=self.cognee_root,
+            )
+            results: list[HybridChunkResult] = []
+            for hit in hits:
+                results.append(HybridChunkResult(
+                    slug=_slugify(f"{hit.seed}:{hit.node}"),
+                    chunk_text=hit.text,
+                    type=hit.node_type,
+                    score=hit.score,
+                    source="graph",
+                    metadata={
+                        "seed": hit.seed,
+                        "node": hit.node,
+                        "hops": hit.hops,
+                    },
+                    provenance=hit.provenance,
+                ))
+            return results
         except Exception:
             return []
 
@@ -416,6 +490,7 @@ class AOFHybridSearch:
         limit: int = 20,
         offset: int = 0,
         expansion: bool = False,
+        include_graph: bool = True,
     ) -> HybridSearchResult:
         """执行混合搜索.
 
@@ -426,6 +501,7 @@ class AOFHybridSearch:
             limit: 返回结果数量
             offset: 分页偏移
             expansion: 是否开启查询扩展
+            include_graph: 是否包含图谱路径召回（第三路）
 
         Returns:
             HybridSearchResult
@@ -466,28 +542,33 @@ class AOFHybridSearch:
             if isinstance(lst, list):
                 vector_results.extend(lst)
 
-        # 如果完全没有向量结果，直接退化为关键词结果
-        if not vector_results:
-            deduped = dedup_results(keyword_results)
-            final = deduped[offset : offset + limit]
-            return HybridSearchResult(
-                query=query,
-                expanded_queries=queries,
-                results=final,
-                keyword_count=len(keyword_results),
-                vector_count=0,
-                execution_time_ms=int((time.time() - start_time) * 1000),
-            )
+        # 3b. 图谱路径召回（第三路）
+        graph_results: list[HybridChunkResult] = []
+        if include_graph:
+            try:
+                graph_results = await self._graph_search(query, dataset_id, dataset_name, inner_limit)
+            except Exception:
+                graph_results = []
 
-        # 4. RRF 融合
+        # 4. RRF 融合（至少一路非空就融合；不因为向量路失败而退化）
         all_lists = []
-        # 把每个查询变体的向量结果作为独立列表
-        # 为了简单，我们把所有向量结果合并为一个列表，所有关键词结果合并为一个列表
-        # 也可以更细粒度地按查询变体分别融合，这里采用和 GBrain 一致的策略
         if vector_results:
             all_lists.append(vector_results)
         if keyword_results:
             all_lists.append(keyword_results)
+        if graph_results:
+            all_lists.append(graph_results)
+
+        if not all_lists:
+            return HybridSearchResult(
+                query=query,
+                expanded_queries=queries,
+                results=[],
+                keyword_count=0,
+                vector_count=0,
+                graph_count=0,
+                execution_time_ms=int((time.time() - start_time) * 1000),
+            )
 
         fused = rrf_fusion(all_lists)
 
@@ -501,6 +582,7 @@ class AOFHybridSearch:
             results=final,
             keyword_count=len(keyword_results),
             vector_count=len(vector_results),
+            graph_count=len(graph_results),
             execution_time_ms=int((time.time() - start_time) * 1000),
         )
 
@@ -514,6 +596,7 @@ async def hybrid_search(
     dataset_name: Optional[str] = None,
     limit: int = 20,
     expansion: bool = False,
+    include_graph: bool = True,
     cognee_root: Optional[str] = None,
 ) -> HybridSearchResult:
     """便捷函数：执行混合搜索."""
@@ -524,6 +607,7 @@ async def hybrid_search(
         dataset_name=dataset_name,
         limit=limit,
         expansion=expansion,
+        include_graph=include_graph,
     )
 
 
