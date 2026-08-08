@@ -28,10 +28,17 @@ def _env_int(key: str, default: int) -> int:
 
 @dataclass
 class ParserConfig:
-    """解析层运行配置。"""
+    """解析层运行配置。
+
+    ``engine`` 选定主解析引擎：
+    - ``docling``（默认）：中英文/Office/扫描件稳定优，快。
+    - ``mineru``（高配开关）：复杂表格/版式/图片保留更强，但慢、需隔离 mineru venv。
+    """
 
     # 是否启用解析层（整体开关）。关闭时所有文档走 fallback 原样给 cognee.add。
     enabled: bool = True
+    # 主引擎：docling / mineru
+    engine: str = "docling"
     # 慢速引擎最长执行秒数
     timeout: int = 300
     # 默认语言（影响 OCR）
@@ -40,8 +47,8 @@ class ParserConfig:
     cache_enabled: bool = True
     # 缓存目录（None=用默认）
     cache_dir: str | os.PathLike | None = None
-    # 路由到 docling 的扩展名集合
-    docling_exts: set[str] = field(default_factory=lambda: set(PARSABLE_EXTS))
+    # 路由到主引擎的扩展名集合（PDF/Office）
+    engine_exts: set[str] = field(default_factory=lambda: set(PARSABLE_EXTS))
     # 直读的扩展名集合（md/txt）
     direct_exts: set[str] = field(default_factory=lambda: set(PLAIN_EXTS))
     # 解析失败时的 fallback 行为：True=原样交给 cognee.add；False=报错
@@ -49,9 +56,18 @@ class ParserConfig:
 
     @classmethod
     def from_env(cls) -> "ParserConfig":
+        engine = os.environ.get("AOF_PARSER_ENGINE", "docling").strip().lower()
+        if engine not in {"docling", "mineru"}:
+            engine = "docling"
+        # MinerU 更慢，提高默认超时
+        base_timeout = _env_int("AOF_PARSER_TIMEOUT", 300)
+        timeout = base_timeout
+        if engine == "mineru" and "AOF_PARSER_TIMEOUT" not in os.environ:
+            timeout = 900
         return cls(
             enabled=_env_bool("AOF_PARSER_ENABLED", True),
-            timeout=_env_int("AOF_PARSER_TIMEOUT", 300),
+            engine=engine,
+            timeout=timeout,
             lang=os.environ.get("AOF_PARSER_LANG", "zh"),
             cache_enabled=_env_bool("AOF_PARSER_CACHE", True),
             cache_dir=os.environ.get("AOF_PARSER_CACHE_DIR") or None,
@@ -59,12 +75,12 @@ class ParserConfig:
         )
 
     def route(self, path: Path) -> str:
-        """按扩展名返回路由目标：``docling`` / ``direct`` / ``fallback`` / ``unsupported``。"""
+        """按扩展名返回路由目标：``docling``/``mineru``/``direct``/``unsupported``/``fallback``。"""
         ext = path.suffix.lower()
         if ext in self.dirparsing_exts():  # markdown 直读
             return "direct"
-        if ext in self.docling_exts:
-            return "docling"
+        if ext in self.engine_exts:
+            return self.engine
         if ext in {
             ".png",
             ".jpg",

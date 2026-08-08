@@ -19,10 +19,16 @@ from pathlib import Path
 from bridge.document_parser.cache import ParseCache, blake2b_file
 from bridge.document_parser.config import ParserConfig
 from bridge.document_parser.engine_base import ParsedDoc
-from bridge.document_parser.engines import docling_engine
+from bridge.document_parser.engines import docling_engine, mineru_engine
 from bridge.document_parser.normalizer import normalize
 
 logger = logging.getLogger(__name__)
+
+# 引擎模块注册：route 返回值 → 引擎模块
+_ENGINE_MODULES = {
+    "docling": docling_engine,
+    "mineru": mineru_engine,
+}
 
 
 @dataclass
@@ -74,9 +80,9 @@ def parse_document(
             _fallback(p, reason=f"unsupported type {p.suffix}"), use_raw_path=True
         )
 
-    # --- docling 解析（含缓存）---
-    if route == "docling":
-        return _parse_with_docling(p, cfg, cache)
+    # --- 主引擎解析（docling / mineru，含缓存）---
+    if route in _ENGINE_MODULES:
+        return _parse_with_engine(route, p, cfg, cache)
 
     # --- 其他扩展名兜底 ---
     return ParseResult(
@@ -84,9 +90,13 @@ def parse_document(
     )
 
 
-def _parse_with_docling(
-    path: Path, cfg: ParserConfig, cache: ParseCache | None
+def _parse_with_engine(
+    engine: str, path: Path, cfg: ParserConfig, cache: ParseCache | None
 ) -> ParseResult:
+    mod = _ENGINE_MODULES.get(engine)
+    if mod is None:  # pragma: no cover
+        return ParseResult(_fallback(path, reason=f"unknown engine {engine}"), use_raw_path=True)
+
     # 1) 内容指纹（缓存键用）
     try:
         fingerprint = blake2b_file(path)
@@ -98,21 +108,21 @@ def _parse_with_docling(
     if cfg.cache_enabled:
         c = cache or ParseCache(cfg.cache_dir)
         key = c.build_key(
-            file_path=path, fingerprint=fingerprint, engine="docling", lang=cfg.lang
+            file_path=path, fingerprint=fingerprint, engine=engine, lang=cfg.lang
         )
         hit = c.get(key)
         if hit is not None:
-            logger.debug("document_parser: cache hit %s", path.name)
+            logger.debug("document_parser: cache hit (%s) %s", engine, path.name)
             return ParseResult(
-                _from_dict(hit, path, engine="docling"), use_raw_path=False, cached=True
+                _from_dict(hit, path, engine=engine), use_raw_path=False, cached=True
             )
 
     # 3) 真正解析
     try:
-        parsed = docling_engine.parse(path, lang=cfg.lang, timeout=cfg.timeout)
+        parsed = mod.parse(path, lang=cfg.lang, timeout=cfg.timeout)
     except Exception as e:  # noqa: BLE001 - 引擎失败须降级，不抛出
         logger.warning(
-            "document_parser: docling 失败 %s (%s); fallback 到原路径", path.name, e
+            "document_parser: %s 失败 %s (%s); fallback 到原路径", engine, path.name, e
         )
         return ParseResult(_fallback(path, reason=str(e)), use_raw_path=True)
 
@@ -120,7 +130,7 @@ def _parse_with_docling(
         return ParseResult(parsed, use_raw_path=True)
 
     norm = normalize(parsed)
-    norm.engine = "docling"
+    norm.engine = engine
 
     # 4) 写缓存
     if cfg.cache_enabled:

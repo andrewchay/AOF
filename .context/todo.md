@@ -55,7 +55,7 @@
 - [x] 循证 diff 收敛：入口仅+5行解析逻辑，无格式噪声
 - [x] 单测 18 个（routes/cache/parse/imgest_helper）+ 全量 381 通过
 - [x] 阶段1 提交 git（6411cb1）
-- [ ] （可选）push origin
+- [x] push origin（阶段1-3 已推送）
 
 ## P6: document_parser 阶段 2 - 全格式 + 异步队列 (2026-08-08)
 - [x] Office 全格式覆盖：OOXML(docx/pptx/xlsx) docling 成功；旧格式(doc/ppt/xls) 优雅降级 fallback 不崩溃（实测需 LibreOffice 才转）
@@ -63,7 +63,7 @@
 - [x] 缓存+降级健壮性复核（阶段 1 已实现，阶段 2 补 Office 全覆盖测试）
 - [x] 单测 +5（Office 覆盖 2 + 异步队列 3）+ 全量 386 通过 + e2e smoke（异步真实 docling success）
 - [x] 阶段2 提交 git（18ebd31）
-- [ ] （可选）push origin
+- [x] push origin（阶段1-3 已推送）
 
 ## P7: document_parser 阶段 3 - 对外能力 + 回归基线 (2026-08-08)
 - [x] API 端点：POST /v1/documents/parse（同步返回 ParsedDoc / async 返回 task_id），app.py 加 ParseDocReq + _get_parse_queue 单例 + 5 测试
@@ -72,7 +72,17 @@
 - [x] Web 集成：IngestView 新增「文档解析」tab + ingest.ts documentParse；vue-tsc + vite build 通过
 - [x] parse_tasks 加惰性 start（submit_parse 幂等，支持 API 单例）
 - [x] 全量 401 通过 + ruff 干净
-- [ ] 阶段3 提交 git
+- [x] 阶段3 提交 git（aefe41a）
+- [x] push origin（阶段1-3 已推送）
+
+## P8: document_parser 阶段 4 - MinerU 高精度引擎接入 (2026-08-08)
+- [x] worker_entry 加 mineru 分支（subprocess 调 CLI -b pipeline，sys.prefix 定位 CLI，zh→ch 语言映射）
+- [x] engines/mineru_engine.py（隔离 subprocess 封装，默认更长超时）
+- [x] config 加 engine 字段（docling 默认 / mineru 开关，AOF_PARSER_ENGINE），route 按引擎分派
+- [x] core 重构：_parse_with_engine 通用（docling/mineru 二选一，缓存键含 engine）
+- [x] 实测：worker mineru 分支 ok=true（中文PDF 表格+markdown）；parse_document engine=mineru 全链路 11s
+- [x] 单测 +4（MinerU 路由/解析/docling 默认）+ 全量 405 通过
+- [ ] 提交 git（待）
 
 
 

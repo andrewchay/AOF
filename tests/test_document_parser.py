@@ -210,5 +210,47 @@ class TestParseResultShape(unittest.TestCase):
         self.assertEqual(r.doc.engine, "fallback")
 
 
+class TestMinerUEngine(unittest.TestCase):
+    """MinerU 高精度引擎路由与解析（阶段 2 预留，本阶段接入）。"""
+
+    def test_config_default_engine_is_docling(self):
+        cfg = ParserConfig()
+        self.assertEqual(cfg.engine, "docling")
+
+    def test_mineu_engine_routes_pdf_to_mineru(self):
+        cfg = ParserConfig(engine="mineru")
+        self.assertEqual(cfg.route(Path("a.pdf")), "mineru")
+        self.assertEqual(cfg.route(Path("a.docx")), "mineru")
+        self.assertEqual(cfg.route(Path("a.md")), "direct")  # md 始终直读
+
+    @patch("bridge.document_parser.core.mineru_engine.parse")
+    def test_parse_document_uses_mineru_when_configured(self, mock_mineru):
+        mock_mineru.return_value = ParsedDoc(
+            content="# 报告", source_path="a.pdf", engine="mineru", tables_count=3
+        )
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "a.pdf"
+            f.write_bytes(b"%PDF")
+            cfg = ParserConfig(engine="mineru", enabled=True, cache_enabled=False)
+            r = parse_document(f, config=cfg, cache=None)
+        self.assertFalse(r.use_raw_path)
+        self.assertEqual(r.doc.engine, "mineru")
+        self.assertEqual(r.doc.tables_count, 3)
+        mock_mineru.assert_called_once()
+
+    @patch("bridge.document_parser.core.docling_engine.parse")
+    def test_parse_document_docling_when_default(self, mock_docling):
+        mock_docling.return_value = ParsedDoc(
+            content="# 报告", source_path="a.pdf", engine="docling", tables_count=2
+        )
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "a.pdf"
+            f.write_bytes(b"%PDF")
+            cfg = ParserConfig(enabled=True, cache_enabled=False)
+            r = parse_document(f, config=cfg, cache=None)
+        self.assertEqual(r.doc.engine, "docling")
+        mock_docling.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
