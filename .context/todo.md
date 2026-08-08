@@ -38,4 +38,30 @@
 - [x] ruff + 全量 pytest 验证（266 全过，无回归）+ 协议级 & 端到端 smoke
 - [ ] 拆分提交并 push
 
+## P4: 企业文档解析层设计（document_parser）(2026-08-08)
+- [x] 评审设计稿（.context 待办决策、引擎选型、架构盲区）
+- [x] 对照源码核验：读取 4 条摄取入口 + cognee_add_runner + cognee.add 签名 + 增量加载器 blake2b 指纹
+- [x] 发现并修正核心盲区：4 条入口实际均为内联 `cognee.add(path)`，未经 `run_add_from_spec`（原稿第 5.1 节前提不成立）
+- [x] 通过 AskUserQuestion 确认插入策略 =「公共 parse_document() 模块 + 逐入口接入」
+- [x] 落地 3 项待办决策（PoC 先做 / GPU 待业务给 / 结构化 JSON 产出）
+- [x] 定稿 docs/architecture/document-parser-design.md（已标注已评审定稿 + 变更记录）
+- [ ] （后续）设计稿提交 git
+
+## P5: document_parser 阶段 0 PoC（引擎对比）(2026-08-08)
+- [x] 搭独立 Python 3.12 PoC venv（不污染主项目 3.13 venv，清华镜像加速）
+- [x] 安装三引擎：docling 2.118.1（主解析 venv）+ unstructured 0.25.2 + mineru 3.4.4（隔离 venv，pipeline backend）
+- [x] 写 run_poc/gen_samples 脚本（引擎抽象 + 遍历 + 元数据 + 报告聚合），ruff 通过
+- [x] 发现关键工程结论：三引擎不能共享同一 venv（MinerU 需 transformers<5 与 Docling/Unstructured 的 5.x 冲突）；MinerU 为 CLI/FastAPI 架构非 Python API
+- [x] 合成样例（中英 PDF/DOCX/XLSX）三条引擎全跑通，中文表格/标题层级/耗时对比定量产出
+- [x] Unstructured 中文表格严重扁平化 + 缺 xlsx 依赖（msoffcrypto 已补）→ 退出主引擎候选
+- [x] 产出 POC_REPORT.md（主引擎初步建议：Docling 或 MinerU，待真实文档再定）
+- [x] gitignore 隔离 data/poc（sampe+run 不入库）；tools/document_parser_poc 可提交
+- [x] 真实企业文档到位（8 份：中英 PDF×4 + 扫描件 + PPTX×2 + DOCX + XLSX）
+- [x] Docling 全量 8 份真实文档跑通，中文/扫描件/大文档质量优（DOCX 95表/XL?SX 17表）
+- [x] MinerU 代表性真实文档（新合创17p/扫描件/XLSX/PPTX，25页批~55s）质量优，图片抽存 56 张
+- [x] Unstructured 全量真实文档：PDF 表格全失灵+标题过度分节，确认淘汰
+- [x] 更新 POC_REPORT.md：真实文档结论 + 主引擎最终建议（Docling 首选，MinerU 高精增强）
+- [ ] 主引擎拍板确认（建议 Docling 首选 / MinerU 高配）
+- [ ] PoC 脚本/报告提交 git
+
 ## P1: LLM Wiki / OKF 导出器 (2026-08-07) ✅ 已提交并推送

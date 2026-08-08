@@ -15,3 +15,10 @@ visualization/books/
 logs/aof_add_result.json
 data/api_runs/run_index.json
 data/api_runs/topic_state.json
+
+# Phase 0 POC: real enterprise sample docs (do not commit, may contain sensitive content)
+data/poc/samples/**
+data/poc/synthetic/**
+data/poc/runs/**
+!tools/document_parser_poc/*.md
+
