@@ -7,7 +7,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from bridge.document_parser.ingest_helper import (
+    log_parse_context,
+    maybe_parse_local_file,
+)
 from bridge.errors import AddExecutionError, CogneeImportError
+
+
+# 兼容旧名：cognee_add_runner._maybe_parse_local_file → ingest_helper.maybe_parse_local_file
+_maybe_parse_local_file = maybe_parse_local_file
 
 
 def _import_cognee(cognee_root: str | None = None):
@@ -70,10 +78,14 @@ async def run_add_from_spec(spec: dict[str, Any], data: Any):
     retries = int(runtime.get("retries", 0))
     backoff_seconds = float(runtime.get("backoff_seconds", 1.0))
 
+    # 解析层：本地文件先归一化再 add（设计稿 §5.1）
+    data_to_add, parser_ctx = _maybe_parse_local_file(data)
+    log_parse_context(parser_ctx, caller="cognee_add_runner", filename=str(data))
+
     try:
         return await _add_with_retry(
             cognee=cognee,
-            data=data,
+            data=data_to_add,
             add_kwargs=add_kwargs,
             retries=retries,
             backoff_seconds=backoff_seconds,

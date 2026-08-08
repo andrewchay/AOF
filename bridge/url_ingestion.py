@@ -352,8 +352,16 @@ class URLIngester:
             return
         
         import cognee
+
+        # 解析层：本地文件先归一化再 add（设计稿 §5.1）
+        from bridge.document_parser.ingest_helper import (
+            log_parse_context,
+            maybe_parse_local_file,
+        )
+        data_to_add, parser_ctx = maybe_parse_local_file(str(file_path))
+        log_parse_context(parser_ctx, caller="url_ingestion", filename=file_path.name)
         
-        await cognee.add(str(file_path), dataset_name=dataset_name)
+        await cognee.add(data_to_add, dataset_name=dataset_name)
     
     def _extract_title(self, content: URLContent) -> Optional[str]:
         """从内容中提取标题。"""

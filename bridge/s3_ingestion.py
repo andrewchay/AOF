@@ -365,7 +365,16 @@ class S3Ingester:
             # 摄取到 Cognee
             if self._cognee_available:
                 import cognee
-                await cognee.add(str(local_path), dataset_name=dataset_name)
+
+                # 解析层：本地文件先归一化再 add（设计稿 §5.1）
+                from bridge.document_parser.ingest_helper import (
+                    log_parse_context,
+                    maybe_parse_local_file,
+                )
+                data_to_add, parser_ctx = maybe_parse_local_file(str(local_path))
+                log_parse_context(parser_ctx, caller="s3_ingestion", filename=str(local_path))
+
+                await cognee.add(data_to_add, dataset_name=dataset_name)
             
             # 记录历史
             result = S3IngestResult(

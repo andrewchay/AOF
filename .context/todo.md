@@ -47,6 +47,15 @@
 - [x] 定稿 docs/architecture/document-parser-design.md（已标注已评审定稿 + 变更记录）
 - [ ] （后续）设计稿提交 git
 
+## P5: document_parser 阶段 1 核心落地 (2026-08-08)
+- [x] 确认部署架构：全隔离 subprocess（主 venv 零新增依赖，各引擎独立解释器）
+- [x] document_parser 包：core(parse_document + 路由 + 缓存 + 降级) / engine_base / subprocess_runner / cache(blake2b) / config / normalizer / ingest_helper / worker_entry
+- [x] docling 主引擎（首选），隔离子进程调用；核心链路冷/热缓存 e2e 验证（冷16.1s→热0.000s）
+- [x] 接入 cognee_add_runner.run_add_from_spec + 4 条入口（batch/incremental/s3/url）
+- [x] 循证 diff 收敛：入口仅+5行解析逻辑，无格式噪声
+- [x] 单测 18 个（routes/cache/parse/imgest_helper）+ 全量 381 通过
+- [ ] 阶段1 提交 git
+
 ## P5: document_parser 阶段 0 PoC（引擎对比）(2026-08-08)
 - [x] 搭独立 Python 3.12 PoC venv（不污染主项目 3.13 venv，清华镜像加速）
 - [x] 安装三引擎：docling 2.118.1（主解析 venv）+ unstructured 0.25.2 + mineru 3.4.4（隔离 venv，pipeline backend）
@@ -61,7 +70,8 @@
 - [x] MinerU 代表性真实文档（新合创17p/扫描件/XLSX/PPTX，25页批~55s）质量优，图片抽存 56 张
 - [x] Unstructured 全量真实文档：PDF 表格全失灵+标题过度分节，确认淘汰
 - [x] 更新 POC_REPORT.md：真实文档结论 + 主引擎最终建议（Docling 首选，MinerU 高精增强）
-- [ ] 主引擎拍板确认（建议 Docling 首选 / MinerU 高配）
-- [ ] PoC 脚本/报告提交 git
+- [x] 主引擎拍板确认（用户接受 Docling 首选 / MinerU 高配）— commit ed43997
+- [x] 提交：设计稿 + PoC 工具 + .gitignore + todo（ed43997，7 文件 983 行）
+- [x] push 到 origin/codex/internal-edition（ed43997 + RAG 8bbc36a，分支已同步）
 
 ## P1: LLM Wiki / OKF 导出器 (2026-08-07) ✅ 已提交并推送

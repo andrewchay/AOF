@@ -273,8 +273,13 @@ class BatchIngestor:
             # 构建添加参数
             add_kwargs = {"dataset_name": dataset_name}
             
+            # 解析层：本地文件先归一化再 add（设计稿 §5.1）
+            from bridge.document_parser.ingest_helper import log_parse_context, maybe_parse_local_file
+            data_to_add, parser_ctx = maybe_parse_local_file(str(file_path))
+            log_parse_context(parser_ctx, caller="batch_ingestion", filename=file_path.name)
+            
             # 添加文件
-            await cognee.add(str(file_path), **add_kwargs)
+            await cognee.add(data_to_add, **add_kwargs)
             
             ingested.status = "success"
             ingested.message = "Successfully ingested"
