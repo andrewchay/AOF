@@ -54,7 +54,18 @@
 - [x] 接入 cognee_add_runner.run_add_from_spec + 4 条入口（batch/incremental/s3/url）
 - [x] 循证 diff 收敛：入口仅+5行解析逻辑，无格式噪声
 - [x] 单测 18 个（routes/cache/parse/imgest_helper）+ 全量 381 通过
-- [ ] 阶段1 提交 git
+- [x] 阶段1 提交 git（6411cb1）
+- [ ] （可选）push origin
+
+## P6: document_parser 阶段 2 - 全格式 + 异步队列 (2026-08-08)
+- [x] Office 全格式覆盖：OOXML(docx/pptx/xlsx) docling 成功；旧格式(doc/ppt/xls) 优雅降级 fallback 不崩溃（实测需 LibreOffice 才转）
+- [x] 异步解析队列：parse_tasks.py（DocumentParseQueue 子类复用 bridge/tasks，submit_parse/get_parse_result，不动 bridge/tasks 核心）
+- [x] 缓存+降级健壮性复核（阶段 1 已实现，阶段 2 补 Office 全覆盖测试）
+- [x] 单测 +5（Office 覆盖 2 + 异步队列 3）+ 全量 386 通过 + e2e smoke（异步真实 docling success）
+- [ ] 阶段2 提交 git
+
+
+
 
 ## P5: document_parser 阶段 0 PoC（引擎对比）(2026-08-08)
 - [x] 搭独立 Python 3.12 PoC venv（不污染主项目 3.13 venv，清华镜像加速）

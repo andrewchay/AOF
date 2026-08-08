@@ -40,6 +40,27 @@ class TestRoute(unittest.TestCase):
     def test_unknown_routes_fallback(self):
         self.assertEqual(self._cfg().route(Path("a.bin")), "fallback")
 
+    def test_all_office_exts_route_docling(self):
+        # 阶段 2：Office 全格式覆盖（OOXML + 旧二进制）都路由到 docling
+        for ext in (".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"):
+            self.assertEqual(self._cfg().route(Path(f"a{ext}")), "docling", ext)
+
+    @patch(
+        "bridge.document_parser.core.docling_engine.parse",
+        side_effect=RuntimeError("engine down"),
+    )
+    def test_parse_all_office_exts_no_crash(self, _mock):
+        # 阶段 2：对每个 Office 扩展名，parse_document 不崩溃（mock 引擎失败 → 优雅降级 fallback）
+        with tempfile.TemporaryDirectory() as d:
+            cfg = ParserConfig(enabled=True, cache_enabled=False)
+            for ext in (".docx", ".pptx", ".xlsx", ".doc", ".ppt", ".xls"):
+                f = Path(d) / f"a{ext}"
+                f.write_bytes(b"not real content")
+                r = parse_document(f, config=cfg, cache=None)
+                # 引擎失败 → 优雅降级 fallback，use_raw_path=True，绝不崩溃
+                self.assertEqual(r.doc.engine, "fallback", ext)
+                self.assertTrue(r.use_raw_path, ext)
+
 
 class TestParseCache(unittest.TestCase):
     def setUp(self):

@@ -11,8 +11,10 @@ from bridge.document_parser.cache import ParseCache, blake2b_file
 from bridge.document_parser.config import ParserConfig
 from bridge.document_parser.core import ParseResult, parse_document
 from bridge.document_parser.engine_base import ParsedDoc
+from bridge.document_parser.parse_tasks import DocumentParseQueue
 
 __all__ = [
+    "DocumentParseQueue",
     "ParseCache",
     "ParseResult",
     "ParserConfig",
