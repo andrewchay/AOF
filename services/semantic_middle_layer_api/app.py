@@ -194,6 +194,14 @@ class IngestDocsReq(BaseModel):
     docs_uri: str
 
 
+class ParseDocReq(BaseModel):
+    """文档解析请求（阶段 3，document_parser 对外能力）。"""
+
+    path: str
+    async_: bool = Field(default=False, alias="async")
+    lang: str = "zh"
+
+
 class IngestMetadataReq(BaseModel):
     topic: str
     metadata: dict[str, Any]
@@ -249,6 +257,19 @@ def _ensure_store() -> None:
         STATE_FILE.write_text('{}', encoding='utf-8')
     if not RUN_INDEX.exists():
         RUN_INDEX.write_text('{}', encoding='utf-8')
+
+
+_parse_queue_singleton = None
+
+
+def _get_parse_queue():
+    """模块级 DocumentParseQueue 单例（异步解析端点复用，避免每次请求新建）。"""
+    global _parse_queue_singleton
+    if _parse_queue_singleton is None:
+        from bridge.document_parser import DocumentParseQueue, ParserConfig
+
+        _parse_queue_singleton = DocumentParseQueue(parser_config=ParserConfig())
+    return _parse_queue_singleton
 
 
 def _slugify(text: str) -> str:
@@ -427,6 +448,40 @@ def ingest_docs(req: IngestDocsReq) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail='docs_uri not exists')
     st = _update_topic_state(req.topic, {'docs_uri': str(docs)})
     return {'status': 'accepted', 'topic': _slugify(req.topic), 'state': st}
+
+
+@app.post('/v1/documents/parse')
+async def document_parse(req: ParseDocReq) -> dict[str, Any]:
+    """解析单个文件为干净 Markdown + 元数据（document_parser 阶段 3 对外能力）。
+
+    同步模式：返回 ParsedDoc（content + metadata）。
+    异步模式（async=true）：提交到 DocumentParseQueue，返回 task_id 供轮询。
+    """
+    path = Path(req.path).expanduser().resolve()
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=400, detail=f'path not a file: {req.path}')
+
+    from bridge.document_parser import ParserConfig, parse_document
+
+    if req.async_:
+        queue = _get_parse_queue()
+        task_id = await queue.submit_parse(str(path), name=f"api-parse:{path.name}")
+        return {'status': 'accepted', 'task_id': task_id, 'path': str(path)}
+
+    config = ParserConfig(lang=req.lang)
+    result = parse_document(path, config=config)
+    doc = result.doc
+    return {
+        'status': 'ok',
+        'path': str(path),
+        'engine': doc.engine,
+        'use_raw_path': result.use_raw_path,
+        'cached': result.cached,
+        'format': 'markdown',
+        'tables_count': doc.tables_count,
+        'pages': doc.pages,
+        'content': doc.content,
+    }
 
 
 @app.post('/v1/ingest/metadata')

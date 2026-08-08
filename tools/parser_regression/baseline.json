@@ -1,0 +1,19 @@
+{
+  "name": "synthetic-baseline-v1",
+  "engine": "docling",
+  "samples_dir": "samples",
+  "description": "合成样例回归基线（阶段 3）：防升级引擎/依赖后解析质量回退。真实企业文档基线见本地 data/poc/synthetic（不入库）。",
+  "rules": {
+    "content_nonempty": true,
+    "min_content_chars": 30,
+    "min_tables": {
+      "sample_report_zh.pdf": 1,
+      "sample_product_en.pdf": 1,
+      "sample_vendor.docx": 1,
+      "sample_revenue.xlsx": 1
+    },
+    "docs_with_tables_ratio_min": 0.75,
+    "allowed_engines": ["docling", "direct"],
+    "fallback_allowed": false
+  }
+}

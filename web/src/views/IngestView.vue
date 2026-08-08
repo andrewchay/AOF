@@ -59,6 +59,32 @@ async function doUrlIngest() {
   }
 }
 
+// 文档解析预览（document_parser 阶段 3）
+const parsePath = ref('')
+const parseLang = ref('zh')
+const parseLoading = ref(false)
+const parseResult = ref<ingestApi.ParseResult | null>(null)
+
+async function doDocumentParse() {
+  if (!parsePath.value.trim()) {
+    ElMessage.warning('请输入文件路径')
+    return
+  }
+  parseLoading.value = true
+  try {
+    parseResult.value = await ingestApi.documentParse(parsePath.value.trim(), { lang: parseLang.value })
+    if (parseResult.value.status === 'ok') {
+      ElMessage.success(`解析成功（engine=${parseResult.value.engine}）`)
+    } else {
+      ElMessage.warning(`解析状态：${parseResult.value.status}`)
+    }
+  } catch (e: any) {
+    ElMessage.error(`解析失败：${e.message ?? e}`)
+  } finally {
+    parseLoading.value = false
+  }
+}
+
 // 数据集列表
 const datasets = ref<assetsApi.DatasetInfo[]>([])
 const datasetsLoading = ref(false)
@@ -120,6 +146,37 @@ async function loadDatasets() {
             </el-form-item>
           </el-form>
           <pre v-if="urlResult" class="result-pre">{{ JSON.stringify(urlResult, null, 2) }}</pre>
+        </el-card>
+      </el-tab-pane>
+
+      <!-- 文档解析预览 -->
+      <el-tab-pane label="文档解析" name="parse">
+        <el-card shadow="never">
+          <el-form label-width="110px" style="max-width: 620px">
+            <el-form-item label="文件路径">
+              <el-input v-model="parsePath" placeholder="/path/to/doc.pdf" />
+            </el-form-item>
+            <el-form-item label="语言">
+              <el-select v-model="parseLang" style="width: 200px">
+                <el-option value="zh" label="中文" />
+                <el-option value="en" label="英文" />
+              </el-select>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" :loading="parseLoading" @click="doDocumentParse">解析预览</el-button>
+            </el-form-item>
+          </el-form>
+          <template v-if="parseResult">
+            <el-divider />
+            <el-descriptions :column="3" border>
+              <el-descriptions-item label="引擎">{{ parseResult.engine }}</el-descriptions-item>
+              <el-descriptions-item label="表格数">{{ parseResult.tables_count }}</el-descriptions-item>
+              <el-descriptions-item label="页数">{{ parseResult.pages }}</el-descriptions-item>
+              <el-descriptions-item label="使用原路径">{{ parseResult.use_raw_path }}</el-descriptions-item>
+              <el-descriptions-item label="命中缓存">{{ parseResult.cached }}</el-descriptions-item>
+            </el-descriptions>
+            <pre v-if="parseResult.content" class="result-pre">{{ parseResult.content }}</pre>
+          </template>
         </el-card>
       </el-tab-pane>
     </el-tabs>

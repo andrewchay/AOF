@@ -62,7 +62,17 @@
 - [x] 异步解析队列：parse_tasks.py（DocumentParseQueue 子类复用 bridge/tasks，submit_parse/get_parse_result，不动 bridge/tasks 核心）
 - [x] 缓存+降级健壮性复核（阶段 1 已实现，阶段 2 补 Office 全覆盖测试）
 - [x] 单测 +5（Office 覆盖 2 + 异步队列 3）+ 全量 386 通过 + e2e smoke（异步真实 docling success）
-- [ ] 阶段2 提交 git
+- [x] 阶段2 提交 git（18ebd31）
+- [ ] （可选）push origin
+
+## P7: document_parser 阶段 3 - 对外能力 + 回归基线 (2026-08-08)
+- [x] API 端点：POST /v1/documents/parse（同步返回 ParsedDoc / async 返回 task_id），app.py 加 ParseDocReq + _get_parse_queue 单例 + 5 测试
+- [x] MCP 工具：aof_document_parse（path/lang 参数，返回 engine/content/元数据）+ 4 测试（mcp_server 共 14）
+- [x] 回归基线：tools/parser_regression/（baseline.json + run_eval.py，抽取 evaluate() 可测）+ samples 4 份可提交 + 6 测试；真实 docling eval PASS
+- [x] Web 集成：IngestView 新增「文档解析」tab + ingest.ts documentParse；vue-tsc + vite build 通过
+- [x] parse_tasks 加惰性 start（submit_parse 幂等，支持 API 单例）
+- [x] 全量 401 通过 + ruff 干净
+- [ ] 阶段3 提交 git
 
 
 

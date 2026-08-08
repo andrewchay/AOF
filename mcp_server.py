@@ -347,6 +347,29 @@ async def _tool_rag_retrieve(args: dict[str, Any]) -> dict[str, Any]:
     return result.to_dict()
 
 
+async def _tool_document_parse(args: dict[str, Any]) -> dict[str, Any]:
+    """把本地文件解析为干净 Markdown + 元数据（document_parser 阶段 3）。"""
+    path = args.get("path")
+    if not path:
+        return {"error": "path 参数必填", "ok": False}
+    from bridge.document_parser import ParserConfig, parse_document
+
+    config = ParserConfig(lang=args.get("lang", "zh"))
+    result = parse_document(path, config=config)
+    doc = result.doc
+    return {
+        "ok": True,
+        "path": str(path),
+        "engine": doc.engine,
+        "use_raw_path": result.use_raw_path,
+        "cached": result.cached,
+        "format": "markdown",
+        "tables_count": doc.tables_count,
+        "pages": doc.pages,
+        "content": doc.content,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Build and run server
 # ---------------------------------------------------------------------------
@@ -524,6 +547,20 @@ def build_server() -> McpServer:
             "required": ["query"],
         },
         handler=_tool_rag_retrieve,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_document_parse",
+        description="把本地文件解析为干净 Markdown + 元数据（document_parser），供下游知识摄取",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "本地文件绝对路径（pdf/docx/pptx/xlsx 等）"},
+                "lang": {"type": "string", "description": "解析语言（默认 zh）", "default": "zh"},
+            },
+            "required": ["path"],
+        },
+        handler=_tool_document_parse,
     ))
 
     return server

@@ -18,3 +18,25 @@ export async function ingestUrlBatch(urls: string[], datasetName?: string) {
   const { data } = await client.post('/ingest/url/batch', { urls, dataset_name: datasetName })
   return data
 }
+
+export interface ParseResult {
+  status: string
+  path: string
+  engine: string
+  use_raw_path: boolean
+  cached: boolean
+  format?: string
+  tables_count: number | null
+  pages: number | null
+  content: string
+}
+
+export async function documentParse(path: string, opts: { async?: boolean; lang?: string } = {}) {
+  const { data } = await client.post('/documents/parse', {
+    path,
+    async: opts.async ?? false,
+    lang: opts.lang ?? 'zh',
+  })
+  return data as ParseResult & { task_id?: string }
+}
+

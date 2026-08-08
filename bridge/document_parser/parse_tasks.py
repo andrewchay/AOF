@@ -54,8 +54,13 @@ class DocumentParseQueue(TaskQueue):
         timeout_seconds: Optional[int] = None,
         name: Optional[str] = None,
     ) -> str:
-        """提交一个异步解析任务，返回 task_id。"""
+        """提交一个异步解析任务，返回 task_id。
+
+        首次调用自动 start（幂等），便于单例直接 submit。
+        """
         from bridge.tasks.models import Task
+
+        await self.start()
 
         task = Task(
             task_type=TASK_TYPE_PARSE,

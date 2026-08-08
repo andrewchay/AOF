@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 from mcp_server import build_server
 
@@ -139,3 +140,52 @@ def test_default_bundle_dir_fallback(tmp_path, monkeypatch):
     monkeypatch.setattr("mcp_server.PROJECT_ROOT", tmp_path)
     from mcp_server import _bundle_dir
     assert _bundle_dir({}) == tmp_path / "okf_bundle"
+
+
+# ---------------------------------------------------------------------------
+# aof_document_parse（阶段 3）
+# ---------------------------------------------------------------------------
+
+
+def test_document_parse_tool_registered():
+    server = build_server()
+    assert "aof_document_parse" in server.tools
+
+
+def test_document_parse_markdown_direct(tmp_path):
+    """md 文件 → direct 引擎，返回干净 markdown。"""
+    f = tmp_path / "note.md"
+    f.write_text("# 标题\n\n正文", encoding="utf-8")
+    server = build_server()
+    result = asyncio.run(_tool(server, "aof_document_parse").handler({"path": str(f)}))
+    assert result["ok"] is True
+    assert result["engine"] == "direct"
+    assert result["use_raw_path"] is False
+    assert "# 标题" in result["content"]
+
+
+def test_document_parse_missing_path():
+    """path 缺失 → 返回 error。"""
+    server = build_server()
+    result = asyncio.run(_tool(server, "aof_document_parse").handler({}))
+    assert result["ok"] is False
+    assert "error" in result
+
+
+@patch("bridge.document_parser.parse_document")
+def test_document_parse_engine_ok(mock_parse, tmp_path):
+    """mock 引擎成功 → 返回 docling 结果。"""
+    f = tmp_path / "report.pdf"
+    f.write_bytes(b"%PDF-fake")
+    from bridge.document_parser.core import ParseResult
+    from bridge.document_parser.engine_base import ParsedDoc
+
+    mock_parse.return_value = ParseResult(
+        ParsedDoc(content="# 报告", source_path=str(f), engine="docling", tables_count=3),
+        use_raw_path=False,
+    )
+    server = build_server()
+    result = asyncio.run(_tool(server, "aof_document_parse").handler({"path": str(f)}))
+    assert result["ok"] is True
+    assert result["engine"] == "docling"
+    assert result["tables_count"] == 3
