@@ -82,7 +82,22 @@
 - [x] core 重构：_parse_with_engine 通用（docling/mineru 二选一，缓存键含 engine）
 - [x] 实测：worker mineru 分支 ok=true（中文PDF 表格+markdown）；parse_document engine=mineru 全链路 11s
 - [x] 单测 +4（MinerU 路由/解析/docling 默认）+ 全量 405 通过
-- [ ] 提交 git（待）
+- [x] 提交 git（b50fc0a）
+- [x] push（已推送）
+
+## P9: 检索增益量化框架（验收标准4）(2026-08-08)
+- [x] 6 份领域 PDF 文档集（零售CRM：会员/积分/KPOS/商圈/营销/站点数据，含表格）
+- [x] 20 条查询 + golden（queries.json）
+- [x] eval.py（hit_rate@k / MRR 纯函数）+ 9 单测
+- [x] run_pipeline.py：baseline（add原PDF）vs enhanced（add parse_document 产物）双管道建档+检索；cognee 环境配置引导（.env）
+- [x] README（配置 embedding/LLM 端点说明）+ .gitignore 保护 .env/runs
+- [x] 待用户提供 embedding/LLM 端点（.env 填入）后跑真实 hit rate/MRR 对比
+- [x] **真实对比完成**：Embedding=Ollama bge-m3 + LLM=DeepSeek deepseek-chat
+- [x] cognee 链路打通：add+cognify+retrieve（单文档验证 OK）
+- [x] **结果：hit_rate@5 0.40→0.45(+12.5%)，MRR 0.1583→0.20(+26.3%)**（GAIN_REPORT.md）
+- [x] 修复：doc_title 文本匹配（cognee source=rrf 无文件名，靠 DocumentChunk 标题归属）+12 测试
+- [ ] 提交框架+报告 git（待）
+- [x] push（已推送）
 
 
 

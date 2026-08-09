@@ -22,3 +22,9 @@ data/poc/synthetic/**
 data/poc/runs/**
 !tools/document_parser_poc/*.md
 
+
+# secrets - never commit
+.env
+.env.local
+.env.*.local
+tools/retrieval_gain/runs/

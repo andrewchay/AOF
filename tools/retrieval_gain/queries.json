@@ -1,0 +1,27 @@
+{
+  "title": "零售CRM检索增益评测查询集",
+  "dataset": "retail_kg_parser_gain",
+  "description": "20 条真实风格查询。golden 文档 + doc_title（该文档 markdown 首行标识，用于检索命中文档判定）。",
+  "queries": [
+    {"id": 1, "query": "黑卡会员的消费门槛是多少", "golden": "member_klub", "doc_title": "KLUB 会员体系"},
+    {"id": 2, "query": "黑卡会员能享受哪些专属权益", "golden": "member_klub", "doc_title": "KLUB 会员体系"},
+    {"id": 3, "query": "金卡会员一年要消费多少才能保持层级", "golden": "member_klub", "doc_title": "KLUB 会员体系"},
+    {"id": 4, "query": "会员积分有效期多久，逾期如何处理", "golden": "points_system", "doc_title": "积分累积与兑换"},
+    {"id": 5, "query": "1200积分可以抵扣多少现金", "golden": "points_system", "doc_title": "积分累积与兑换"},
+    {"id": 6, "query": "微信支付积分是否有多倍奖励", "golden": "points_system", "doc_title": "积分累积与兑换"},
+    {"id": 7, "query": "KPOS为什么要校验微信支付流水号防止重复积分", "golden": "kpos_store", "doc_title": "KPOS 门店交易系统"},
+    {"id": 8, "query": "门店能否同时开通KPOS和微信商圈积分", "golden": "kpos_store", "doc_title": "KPOS 门店交易系统"},
+    {"id": 9, "query": "KPOS记录的是订单号还是支付流水号", "golden": "kpos_store", "doc_title": "KPOS 门店交易系统"},
+    {"id": 10, "query": "微信商圈积分以什么作为累积依据", "golden": "wechat_circle", "doc_title": "微信商圈积分"},
+    {"id": 11, "query": "小额客如何在KGO自助上传小票积分并防止重复", "golden": "wechat_circle", "doc_title": "微信商圈积分"},
+    {"id": 12, "query": "微信支付流水号在哪个渠道会被记录用于防重", "golden": "wechat_circle", "doc_title": "微信商圈积分"},
+    {"id": 13, "query": "七夕活动满1000元赠多少元券", "golden": "qixi_campaign", "doc_title": "七夕会员营销"},
+    {"id": 14, "query": "七夕小K盒怎么购买，什么时候开始", "golden": "qixi_campaign", "doc_title": "七夕会员营销"},
+    {"id": 15, "query": "七夕活动带动会员消费增长多少百分比", "golden": "qixi_campaign", "doc_title": "七夕会员营销"},
+    {"id": 16, "query": "上海站点黑卡会员有多少人", "golden": "site_data", "doc_title": "分站点核心运营"},
+    {"id": 17, "query": "广州站点会员总数大概多少", "golden": "site_data", "doc_title": "分站点核心运营"},
+    {"id": 18, "query": "普通会员三个月留存率是多少", "golden": "site_data", "doc_title": "分站点核心运营"},
+    {"id": 19, "query": "哪个站点的黑卡会员ARPU最高", "golden": "site_data", "doc_title": "分站点核心运营"},
+    {"id": 20, "query": "黑卡和金卡的标准都需要哪些条件权益体系", "golden": "member_klub", "doc_title": "KLUB 会员体系"}
+  ]
+}
