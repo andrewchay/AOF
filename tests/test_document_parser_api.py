@@ -36,6 +36,11 @@ def client(clean_api_state: Path) -> TestClient:
 
 @pytest.mark.skipif(not HAS_DEPS, reason="requires fastapi/testclient")
 class TestDocumentParseEndpoint:
+    @pytest.fixture(autouse=True)
+    def _allow_temp_dir(self, temp_dir: Path, monkeypatch: pytest.MonkeyPatch):
+        """把 pytest 临时目录加入解析白名单（测试环境模拟外部允许根）。"""
+        monkeypatch.setenv("AOF_PARSER_ALLOW_ROOTS", str(temp_dir))
+
     def test_sync_parse_markdown(self, client: TestClient, temp_dir: Path):
         """md 文件直读 → direct 引擎，content 非空。"""
         f = temp_dir / "note.md"
@@ -81,7 +86,9 @@ class TestDocumentParseEndpoint:
         f.write_bytes(b"%PDF-fake")
         with patch("services.semantic_middle_layer_api.app._get_parse_queue") as mq:
             queue = type("Q", (), {})()
-            queue.submit_parse = __import__("unittest").mock.AsyncMock(return_value="task-abc")
+            queue.submit_parse = __import__("unittest").mock.AsyncMock(
+                return_value="task-abc"
+            )
             mq.return_value = queue
             r = client.post("/v1/documents/parse", json={"path": str(f), "async": True})
         assert r.status_code == 200

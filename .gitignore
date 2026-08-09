@@ -28,3 +28,4 @@ data/poc/runs/**
 .env.local
 .env.*.local
 tools/retrieval_gain/runs/
+data/parse_cache/

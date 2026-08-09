@@ -461,6 +461,13 @@ async def document_parse(req: ParseDocReq) -> dict[str, Any]:
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=400, detail=f'path not a file: {req.path}')
 
+    # 路径限域（防任意文件读取）：只允许解析白名单根目录内的文件
+    from bridge.document_parser.security import PathNotAllowedError, validate_parse_path
+
+    try:
+        path = validate_parse_path(path)
+    except PathNotAllowedError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     from bridge.document_parser import ParserConfig, parse_document
 
     if req.async_:

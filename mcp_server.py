@@ -352,14 +352,22 @@ async def _tool_document_parse(args: dict[str, Any]) -> dict[str, Any]:
     path = args.get("path")
     if not path:
         return {"error": "path 参数必填", "ok": False}
+
+    # 路径限域（防任意文件读取）
+    from bridge.document_parser.security import PathNotAllowedError, validate_parse_path
+
+    try:
+        safe_path = validate_parse_path(path)
+    except PathNotAllowedError as e:
+        return {"error": str(e), "ok": False, "path": path}
+
     from bridge.document_parser import ParserConfig, parse_document
 
     config = ParserConfig(lang=args.get("lang", "zh"))
-    result = parse_document(path, config=config)
+    result = parse_document(safe_path, config=config)
     doc = result.doc
-    return {
-        "ok": True,
-        "path": str(path),
+    return {"ok": True,
+        "path": str(safe_path),
         "engine": doc.engine,
         "use_raw_path": result.use_raw_path,
         "cached": result.cached,

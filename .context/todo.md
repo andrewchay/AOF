@@ -96,8 +96,16 @@
 - [x] cognee 链路打通：add+cognify+retrieve（单文档验证 OK）
 - [x] **结果：hit_rate@5 0.40→0.45(+12.5%)，MRR 0.1583→0.20(+26.3%)**（GAIN_REPORT.md）
 - [x] 修复：doc_title 文本匹配（cognee source=rrf 无文件名，靠 DocumentChunk 标题归属）+12 测试
-- [ ] 提交框架+报告 git（待）
+- [x] 提交框架+报告 git（01f4c41）
 - [x] push（已推送）
+
+## P10: 安全风险审查与修复（2026-08-09）
+- [x] 全面风险审查：发现**风险A 任意文件读取**（API/MCP document_parse 接受任意路径，.txt/.md 可泄露内容）
+- [x] 修复：bridge/document_parser/security.py（validate_parse_path 白名单根目录 + 拒系统敏感），接入 API(403)+MCP
+- [x] 安全确认：DeepSeek key 仅 .env(gitignored)；subprocess 无注入；真实企业文档/评估数据均不入库
+- [x] 附加：data/parse_cache/ 缓存目录加入 gitignore（运行产物不入库）
+- [x] 单测 +9（security 8 + MCP reject 1）+ 全量 426 通过
+- [ ] 提交安全修复 git（待）
 
 
 
