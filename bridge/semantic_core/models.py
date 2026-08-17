@@ -16,6 +16,7 @@ class SemanticModelError(ValueError):
 
 
 class ResourceKind(str, Enum):
+    ONTOLOGY = "Ontology"
     VOCABULARY = "Vocabulary"
     CONCEPT = "Concept"
     OBJECT_TYPE = "ObjectType"

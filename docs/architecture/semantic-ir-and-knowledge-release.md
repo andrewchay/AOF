@@ -44,3 +44,15 @@ valid time、证据和依赖属于语义契约，会影响 revision。
 每个 `CompiledArtifact` 固定记录 compiler、Release digest、全部输入 revision、媒体类型和原始
 文件 SHA-256。`CompilerRegistry` 在返回产物前现场验证路径、文件摘要和 Release 绑定；产物 URI
 不得逃逸编译输出目录。相同 Release 的可复现性通过跨目录构建得到相同 content hash 验证。
+
+## 旧资产防腐层
+
+`bridge.semantic_core.adapters` 将当前 AOF 资产转换为统一 IR，不要求一次性改写旧存储：
+
+- ontology release → `Ontology` + `ConstraintSet` + `Vocabulary`，并校验三个源文件哈希；
+- mapping library → `PhysicalDataset`、`Metric`、`Dimension`、`Concept`、`QueryTemplate`；
+- Datalog release → `RuleSet`，保留 program、旧引擎 hash 和源文件 hash；
+- OKF bundle → `RetrievalProfile`，记录所有 Markdown 文件及 bundle 内容摘要。
+
+适配器产生的依赖必须闭包，能够直接构建 Knowledge Release。旧版本号和旧内容哈希作为迁移
+证据保留，但发布时间等易变字段不进入语义 revision，避免相同资产在不同环境产生不同身份。
