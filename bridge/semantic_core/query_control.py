@@ -3,18 +3,28 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import uuid
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from bridge.decision_provenance import DecisionProvenanceStore
 
-from .identity import SignedPrincipalVerifier
+from .canonical import canonical_data
+from .identity import SemanticPrincipal, SignedPrincipalVerifier
 from .models import SemanticResource
 from .query_audit import AuditedQueryService
 from .query_execution import QueryExecutor
-from .query_plans import QueryRequest, TrustedSnapshotResolver
+from .query_plans import QueryRequest, TrustedQueryError, TrustedSnapshotResolver
 from .query_policy import GovernedQueryExecutor, QueryPolicy, QueryPolicyWaiver
+from .query_runs import (
+    HmacQueryEvidenceAttestor,
+    QueryRun,
+    QueryRunError,
+    SqliteQueryRunRepository,
+)
 from .compilers import CompilationRunRepository
 
 
@@ -31,15 +41,33 @@ class QueryControlPlane:
         *,
         verifier: SignedPrincipalVerifier,
         decision_store: DecisionProvenanceStore,
+        query_runs: SqliteQueryRunRepository | None = None,
+        evidence_attestor: HmacQueryEvidenceAttestor | None = None,
     ) -> None:
         self.root = Path(root)
         self.verifier = verifier
         self.decision_store = decision_store
+        self.query_runs = query_runs or SqliteQueryRunRepository(
+            self.root / "query-runs.sqlite3"
+        )
+        self.evidence_attestor = evidence_attestor or HmacQueryEvidenceAttestor(
+            key_id=f"{verifier.key_id}:query-evidence",
+            secret=hashlib.sha256(b"aof-query-evidence\0" + verifier.secret).digest(),
+        )
 
     def execute(
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
     ) -> dict[str, Any]:
         principal = self.verifier.verify(headers)
+        return self._execute(payload, principal=principal, replay_of=None)
+
+    def _execute(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        principal: SemanticPrincipal,
+        replay_of: str | None,
+    ) -> dict[str, Any]:
         repository = CompilationRunRepository(self.root / principal.tenant_id)
         resolver = TrustedSnapshotResolver(repository)
         request = QueryRequest.create(
@@ -70,7 +98,105 @@ class QueryControlPlane:
             waivers=waivers,
             session_id=self._optional(payload, "session_id"),
         )
-        return result.to_dict()
+        result_value = result.to_dict()
+        query_result = result.governed_result.result
+        request_value = {
+            "channel": request.channel,
+            "capability": request.capability.value,
+            "query": request.query,
+            "purpose": request.purpose,
+            "parameters": canonical_data(request.parameters),
+            "policy_resource_id": policy.resource_id,
+            "waivers": [canonical_data(item) for item in raw_waivers],
+        }
+        query_run = QueryRun.build(
+            query_run_id=self._query_run_id(payload),
+            tenant_id=principal.tenant_id,
+            actor=f"principal:{principal.subject}",
+            request=request_value,
+            compilation_run_id=query_result.run_id,
+            compilation_run_digest=query_result.run_digest,
+            release_id=query_result.release_id,
+            release_digest=query_result.release_digest,
+            plan_digest=query_result.plan_digest,
+            policy_report_digest=result.governed_result.policy_report.report_digest,
+            governed_result=result_value["governed_result"],
+            decisions=result_value["decisions"],
+            evidence_package=result_value["evidence_package"],
+            replay_of=replay_of,
+            recorded_at=datetime.now(timezone.utc).isoformat(),
+        )
+        query_run = query_run.with_attestation(self.evidence_attestor.sign(query_run))
+        return self.query_runs.put(query_run).to_dict()
+
+    def get_run(
+        self, query_run_id: str, *, headers: Mapping[str, str]
+    ) -> dict[str, Any]:
+        principal = self.verifier.verify(headers)
+        run = self.query_runs.get(query_run_id, tenant_id=principal.tenant_id)
+        if run is None:
+            raise QueryControlPlaneError(f"query run not found: {query_run_id}")
+        self._verify_attestation(run)
+        return run.to_dict()
+
+    def replay(
+        self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
+    ) -> dict[str, Any]:
+        principal = self.verifier.verify(headers)
+        source_id = self._required(payload, "source_query_run_id")
+        source = self.query_runs.get(source_id, tenant_id=principal.tenant_id)
+        if source is None:
+            raise QueryControlPlaneError(f"query run not found: {source_id}")
+        expected = self._required(payload, "expected_source_digest")
+        if expected != source.run_digest:
+            raise QueryControlPlaneError("query replay source digest mismatch")
+        self._verify_attestation(source)
+        repository = CompilationRunRepository(self.root / principal.tenant_id)
+        resolver = TrustedSnapshotResolver(repository)
+        request = QueryRequest.create(
+            channel=str(source.request["channel"]),
+            capability=str(source.request["capability"]),
+            query=str(source.request["query"]),
+            purpose=str(source.request["purpose"]),
+            parameters=self._mapping(source.request.get("parameters", {}), "parameters"),
+        )
+        try:
+            current = resolver.plan(request, tenant_id=principal.tenant_id)
+        except TrustedQueryError as exc:
+            raise QueryControlPlaneError(
+                "strict replay snapshot no longer matches the persisted query run"
+            ) from exc
+        if (
+            current.plan_digest != source.plan_digest
+            or current.run_id != source.compilation_run_id
+            or current.run_digest != source.compilation_run_digest
+            or current.release_digest != source.release_digest
+        ):
+            raise QueryControlPlaneError(
+                "strict replay snapshot no longer matches the persisted query run"
+            )
+        replay_payload = {
+            **canonical_data(source.request),
+            "query_run_id": self._required(payload, "query_run_id"),
+            "rationale": self._required(payload, "rationale"),
+            "session_id": self._optional(payload, "session_id"),
+        }
+        return self._execute(replay_payload, principal=principal, replay_of=source_id)
+
+    def _verify_attestation(self, run: QueryRun) -> None:
+        if run.attestation is None or not self.evidence_attestor.verify(
+            run.attestation, run=run
+        ):
+            raise QueryRunError("query evidence attestation is invalid")
+
+    @staticmethod
+    def _query_run_id(payload: Mapping[str, Any]) -> str:
+        value = payload.get("query_run_id")
+        if value is None:
+            return f"query-{uuid.uuid4().hex}"
+        if not isinstance(value, str) or not value.strip():
+            raise QueryControlPlaneError("query_run_id must be a non-empty string")
+        return value.strip()
 
     def _load_policy(
         self,

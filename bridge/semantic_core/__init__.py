@@ -20,6 +20,12 @@ from .query_execution import (
 )
 from .query_audit import AuditedQueryResult, AuditedQueryService, QueryEvidencePackage
 from .query_control import QueryControlPlane, QueryControlPlaneError
+from .query_runs import (
+    HmacQueryEvidenceAttestor,
+    QueryRun,
+    QueryRunError,
+    SqliteQueryRunRepository,
+)
 from .semantic_query import (
     IntentFilter,
     SemanticIntent,
@@ -84,6 +90,10 @@ __all__ = [
     "QueryEvidencePackage",
     "QueryControlPlane",
     "QueryControlPlaneError",
+    "HmacQueryEvidenceAttestor",
+    "QueryRun",
+    "QueryRunError",
+    "SqliteQueryRunRepository",
     "SemanticIntent",
     "IntentFilter",
     "SemanticQueryCompileError",

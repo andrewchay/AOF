@@ -19,6 +19,7 @@ from bridge.semantic_core import (
     FederatedQueryPlanner,
     FederatedQueryRequest,
     FederatedQueryStep,
+    HmacQueryEvidenceAttestor,
     QueryPolicy,
     QueryControlPlane,
     QueryPolicyWaiver,
@@ -849,19 +850,53 @@ def test_rest_and_mcp_query_boundaries_share_signed_control_plane(tmp_path, monk
         "rationale": "Exercise the signed transport boundary.",
     }
 
-    response = TestClient(api_module.app).post(
-        "/v1/semantic/query", json=payload, headers=_query_headers()
+    client = TestClient(api_module.app)
+    response = client.post(
+        "/v1/semantic/query",
+        json={**payload, "query_run_id": "rest-query-001"},
+        headers=_query_headers(),
     )
     server = mcp_server.build_server()
     mcp_result = asyncio.run(
         server.tools["aof_semantic_query"].handler(
-            {**payload, "principal_headers": _query_headers()}
+            {
+                **payload,
+                "query_run_id": "mcp-query-001",
+                "principal_headers": _query_headers(),
+            }
+        )
+    )
+    stored = client.get(
+        "/v1/semantic/query-runs/rest-query-001", headers=_query_headers()
+    )
+    replay = client.post(
+        "/v1/semantic/query-runs/replay",
+        json={
+            "source_query_run_id": "rest-query-001",
+            "expected_source_digest": response.json()["run_digest"],
+            "query_run_id": "rest-query-002",
+            "rationale": "Verify strict REST replay.",
+        },
+        headers=_query_headers(),
+    )
+    mcp_stored = asyncio.run(
+        server.tools["aof_semantic_query_get_run"].handler(
+            {
+                "query_run_id": "mcp-query-001",
+                "principal_headers": _query_headers(),
+            }
         )
     )
 
     assert response.status_code == 200
+    assert stored.status_code == 200
+    assert replay.status_code == 201
     assert response.json()["governed_result"]["result"]["capability"] == "semantic_search"
+    assert response.json()["attestation"]["signature"]
+    assert stored.json() == response.json()
+    assert replay.json()["replay_of"] == "rest-query-001"
     assert mcp_result["governed_result"]["result"]["capability"] == "semantic_search"
+    assert mcp_stored == mcp_result
 
 
 def test_query_control_plane_rejects_bad_identity_and_unpublished_policy(tmp_path) -> None:
@@ -888,3 +923,82 @@ def test_query_control_plane_rejects_bad_identity_and_unpublished_policy(tmp_pat
         control.execute(payload, headers=bad_headers)
     with pytest.raises(ValueError, match="not in the trusted release"):
         control.execute(payload, headers=_query_headers())
+
+
+def test_query_control_plane_persists_and_strictly_replays_signed_runs(tmp_path) -> None:
+    _trusted_query_runtime(tmp_path)
+    attestor = HmacQueryEvidenceAttestor(
+        key_id="query-evidence", secret=b"query-evidence-secret"
+    )
+    control = QueryControlPlane(
+        tmp_path / "compiler",
+        verifier=SignedPrincipalVerifier(
+            key_id="query-identity", secret=b"query-identity-secret"
+        ),
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+        evidence_attestor=attestor,
+    )
+    payload = {
+        "query_run_id": "query-001",
+        "channel": "production",
+        "capability": "semantic_search",
+        "query": "customer",
+        "purpose": "support",
+        "policy_resource_id": "aof://acme/platform/policy/query-trusted",
+        "rationale": "Persist an immutable governed query.",
+    }
+
+    first = control.execute(payload, headers=_query_headers())
+    stored = control.get_run("query-001", headers=_query_headers())
+    replayed = control.replay(
+        {
+            "source_query_run_id": "query-001",
+            "expected_source_digest": first["run_digest"],
+            "query_run_id": "query-002",
+            "rationale": "Strictly replay the pinned query.",
+        },
+        headers=_query_headers(),
+    )
+
+    assert stored == first
+    assert first["status"] == "succeeded"
+    assert attestor.verify(first["attestation"], run=control.query_runs.get(
+        "query-001", tenant_id="acme"
+    ))
+    assert replayed["replay_of"] == "query-001"
+    assert replayed["plan_digest"] == first["plan_digest"]
+    assert replayed["governed_result"]["governed_result_digest"] == (
+        first["governed_result"]["governed_result_digest"]
+    )
+
+    with pytest.raises(ValueError, match="source digest"):
+        control.replay(
+            {
+                "source_query_run_id": "query-001",
+                "expected_source_digest": "sha256:wrong",
+                "query_run_id": "query-003",
+                "rationale": "Reject a non-exact replay source.",
+            },
+            headers=_query_headers(),
+        )
+
+    CompilationRunRepository(tmp_path / "compiler" / "acme").advance_channel(
+        "production",
+        {
+            "action": "rollback",
+            "run_id": "sales-query-all-001",
+            "previous_run_id": "sales-query-all-002",
+            "actor": "publisher:test",
+            "decision_id": "decision:test-channel-move",
+        },
+    )
+    with pytest.raises(ValueError, match="snapshot no longer matches"):
+        control.replay(
+            {
+                "source_query_run_id": "query-001",
+                "expected_source_digest": first["run_digest"],
+                "query_run_id": "query-004",
+                "rationale": "Reject a replay after channel movement.",
+            },
+            headers=_query_headers(),
+        )

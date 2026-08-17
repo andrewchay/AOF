@@ -306,6 +306,12 @@ REST `POST /v1/semantic/query` 与 MCP `aof_semantic_query` 使用同一控制�
 确定性 semantic SQL、结构化 Graph traversal、Datalog、只读 SPARQL 和 QueryTemplate。每种能力均消费真实编译制品，并返回相同的 governed result、决策链与
 `aof.query-evidence-package/v1`；签名错误、跨 tenant snapshot、未发布 Policy 或制品摘要不一致都会在执行前阻断。
 
+成功查询会持久化为 `aof.query-run/v1`：不可变记录同时绑定规范化请求、CompilationRun、Release、QueryPlan、
+Policy report、governed result、决策链和 evidence package，并由独立 key-id 的 HMAC attestation 签名。
+`GET /v1/semantic/query-runs/{id}` 与 MCP `aof_semantic_query_get_run` 在返回前重新验签。严格回放必须提供源
+`run_digest`；控制面还会重新解析 channel，并要求 plan、CompilationRun 和 Release 摘要与源 Run 完全一致，
+因此环境指针移动后不会把“刷新执行”伪装成“原快照回放”。
+
 QueryPlan 还会从 Intent、QueryTemplate 或 capability 制品解析传递依赖闭包；非搜索能力在执行前对闭包中的
 每个 Resource 做策略检查，semantic search 则在执行前形成可见 Resource/field scope，并在结果摘要计算前
 执行投影。旧 `/v1/semantic/compile` 未锁定 Release、未执行 Policy 且允许 LLM 直接生成 SQL，因此所有服务

@@ -3982,6 +3982,7 @@ class SemanticCompilerRollbackReq(BaseModel):
 
 
 class SemanticQueryReq(BaseModel):
+    query_run_id: Optional[str] = None
     channel: str = Field(min_length=1)
     capability: str = Field(min_length=1)
     query: str = Field(min_length=1)
@@ -3990,6 +3991,14 @@ class SemanticQueryReq(BaseModel):
     rationale: str = Field(min_length=1)
     parameters: dict[str, Any] = Field(default_factory=dict)
     waivers: list[dict[str, Any]] = Field(default_factory=list)
+    session_id: Optional[str] = None
+
+
+class SemanticQueryReplayReq(BaseModel):
+    source_query_run_id: str = Field(min_length=1)
+    expected_source_digest: str = Field(min_length=1)
+    query_run_id: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
     session_id: Optional[str] = None
 
 
@@ -4039,7 +4048,11 @@ def _semantic_compiler_control():
 
 
 def _semantic_query_control():
-    from bridge.semantic_core import QueryControlPlane, SignedPrincipalVerifier
+    from bridge.semantic_core import (
+        HmacQueryEvidenceAttestor,
+        QueryControlPlane,
+        SignedPrincipalVerifier,
+    )
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
     if not secret:
@@ -4056,6 +4069,14 @@ def _semantic_query_control():
             secret=secret,
         ),
         decision_store=_decision_store(),
+        evidence_attestor=HmacQueryEvidenceAttestor(
+            key_id=os.environ.get(
+                'AOF_QUERY_EVIDENCE_SIGNING_KEY_ID', 'query-evidence-key-default'
+            ),
+            secret=os.environ.get(
+                'AOF_QUERY_EVIDENCE_SIGNING_SECRET', secret.decode('utf-8')
+            ).encode('utf-8'),
+        ),
     )
 
 
@@ -4337,6 +4358,26 @@ async def execute_trusted_semantic_query(
         return _semantic_query_control().execute(
             req.model_dump(exclude_none=True), headers=request.headers
         )
+    except Exception as exc:
+        raise _semantic_query_error(exc) from exc
+
+
+@app.post('/v1/semantic/query-runs/replay', status_code=201)
+async def replay_trusted_semantic_query(
+    req: SemanticQueryReplayReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_query_control().replay(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_query_error(exc) from exc
+
+
+@app.get('/v1/semantic/query-runs/{query_run_id}')
+async def get_trusted_semantic_query_run(
+    query_run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_query_control().get_run(query_run_id, headers=request.headers)
     except Exception as exc:
         raise _semantic_query_error(exc) from exc
 

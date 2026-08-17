@@ -543,7 +543,11 @@ async def _tool_semantic_compile_get_channel(args: dict[str, Any]) -> dict[str, 
 
 def _semantic_query_control():
     from bridge.decision_provenance import DecisionProvenanceStore
-    from bridge.semantic_core import QueryControlPlane, SignedPrincipalVerifier
+    from bridge.semantic_core import (
+        HmacQueryEvidenceAttestor,
+        QueryControlPlane,
+        SignedPrincipalVerifier,
+    )
 
     secret = os.environ.get("AOF_SEMANTIC_IDENTITY_SECRET", "").encode("utf-8")
     if not secret:
@@ -562,12 +566,30 @@ def _semantic_query_control():
             secret=secret,
         ),
         decision_store=DecisionProvenanceStore(),
+        evidence_attestor=HmacQueryEvidenceAttestor(
+            key_id=os.environ.get(
+                "AOF_QUERY_EVIDENCE_SIGNING_KEY_ID", "query-evidence-key-default"
+            ),
+            secret=os.environ.get(
+                "AOF_QUERY_EVIDENCE_SIGNING_SECRET", secret.decode("utf-8")
+            ).encode("utf-8"),
+        ),
     )
 
 
 async def _tool_semantic_query(args: dict[str, Any]) -> dict[str, Any]:
     payload, headers = _compiler_request(args)
     return _semantic_query_control().execute(payload, headers=headers)
+
+
+async def _tool_semantic_query_replay(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_query_control().replay(payload, headers=headers)
+
+
+async def _tool_semantic_query_get_run(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_query_control().get_run(payload["query_run_id"], headers=headers)
 
 
 def _register_semantic_compiler_tools(server: McpServer) -> None:
@@ -671,6 +693,7 @@ def _register_semantic_query_tools(server: McpServer) -> None:
                 "type": "object",
                 "properties": {
                     "channel": {"type": "string"},
+                    "query_run_id": {"type": "string"},
                     "capability": {
                         "type": "string",
                         "enum": [
@@ -705,6 +728,50 @@ def _register_semantic_query_tools(server: McpServer) -> None:
                 ],
             },
             handler=_tool_semantic_query,
+        )
+    )
+    principal = {
+        "type": "object",
+        "description": "Identity-gateway signed X-AOF principal headers.",
+    }
+    server.register_tool(
+        McpTool(
+            name="aof_semantic_query_replay",
+            description="严格按持久化 QueryRun 的 Release、计划和请求摘要执行独立回放。",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "source_query_run_id": {"type": "string"},
+                    "expected_source_digest": {"type": "string"},
+                    "query_run_id": {"type": "string"},
+                    "rationale": {"type": "string"},
+                    "session_id": {"type": "string"},
+                    "principal_headers": principal,
+                },
+                "required": [
+                    "source_query_run_id",
+                    "expected_source_digest",
+                    "query_run_id",
+                    "rationale",
+                    "principal_headers",
+                ],
+            },
+            handler=_tool_semantic_query_replay,
+        )
+    )
+    server.register_tool(
+        McpTool(
+            name="aof_semantic_query_get_run",
+            description="读取并验签当前 tenant 的不可变 QueryRun。",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "query_run_id": {"type": "string"},
+                    "principal_headers": principal,
+                },
+                "required": ["query_run_id", "principal_headers"],
+            },
+            handler=_tool_semantic_query_get_run,
         )
     )
 

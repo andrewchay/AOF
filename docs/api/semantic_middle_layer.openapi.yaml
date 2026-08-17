@@ -127,6 +127,29 @@ paths:
       responses:
         '410':
           description: 固定拒绝，并指向 /v1/semantic/query 的 semantic_sql capability
+  /v1/semantic/query:
+    post:
+      summary: 执行并持久化 Release 锁定的治理查询
+      responses:
+        '200':
+          description: 已签名的 aof.query-run/v1
+  /v1/semantic/query-runs/replay:
+    post:
+      summary: 严格回放不可变 QueryRun
+      responses:
+        '201':
+          description: 新的已签名 QueryRun；快照漂移时拒绝
+  /v1/semantic/query-runs/{query_run_id}:
+    get:
+      summary: 读取并验签租户内 QueryRun
+      parameters:
+        - name: query_run_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 已验证的 aof.query-run/v1
   /v1/semantic/evaluate:
     post:
       summary: 候选查询/计划评估
