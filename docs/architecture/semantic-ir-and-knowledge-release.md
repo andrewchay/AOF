@@ -151,3 +151,10 @@ HMAC 验签和决策审计完整性检查。真实 mapping 同时覆盖“不同
 ```bash
 .venv/bin/python -m pytest tests/test_semantic_release_e2e.py -q
 ```
+
+## 运行时消费闭环
+
+`SemanticRuntimeConsumer` 在加载任何产物前重新验证文件 SHA-256、候选 Release digest 和完整输入
+Revision。通过后，OWL/SHACL bundle 会实际解析为 RDF 图，Datalog bundle 会进入确定性推理引擎，
+RAG bundle 可按统一资源内容检索，MCP bundle 会生成可枚举的 resources/tools catalog。运行时不接受
+未注册 target，也不会在摘要失败时降级读取。
