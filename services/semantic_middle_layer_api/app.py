@@ -4015,7 +4015,10 @@ def _semantic_governance():
     from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
     from bridge.semantic_core.releases import SqliteReleaseRepository
     from bridge.semantic_core.attestations import HmacReleaseAttestor
-    from bridge.semantic_core.validators import ontology_release_validator
+    from bridge.semantic_core.validators import (
+        ontology_release_validator,
+        semantic_query_regression_validator,
+    )
 
     governance_root = AOF_ROOT / 'data' / 'semantic_governance'
     signing_secret = os.environ.get('AOF_RELEASE_SIGNING_SECRET', '').encode('utf-8')
@@ -4027,7 +4030,7 @@ def _semantic_governance():
         governance_root,
         decision_store=_decision_store(),
         compiler_registry=default_compiler_registry(),
-        validators=[ontology_release_validator],
+        validators=[ontology_release_validator, semantic_query_regression_validator],
         release_repository=SqliteReleaseRepository(governance_root / 'releases.sqlite3'),
         access_policy=SemanticGovernancePolicy(),
         release_attestor=attestor,

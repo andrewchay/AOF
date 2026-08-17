@@ -99,6 +99,18 @@ P0 的持久层是本地原子文件和 append-only 决策账本；生产替换�
 类型等细节。SHACL 未支持约束和 RDF 解析错误不可 waiver；其他冲突必须显式 waiver 或修订后重新
 提交，未解决的阻断 finding 不能进入 approval。无本体资源的 Release 不受该门禁影响。
 
+## 全资源影响与语义回归门
+
+`SemanticImpactAnalyzer` 以 Resource `depends_on` 构建传递依赖图，对比前后 revisions 后输出
+`aof.semantic-impact-report/v1`。报告区分 added、removed、changed 和 downstream affected resources，
+并派生需要重建的 MCP tools、QueryContracts 与 runtime artifacts；Proposal `/impact` 直接返回这些字段和
+稳定 report digest，因此 Metric 或 Binding 变化不再只有文件级 diff。
+
+`QueryContract` 是一等 Semantic Resource。默认 REST Proposal validator 当前支持 `semantic_sql` 与
+`semantic_search` 两类回归：前者重新编译类型化 Intent 并比较参数化 SQL，后者在候选 RAG 资源快照上比较
+golden resource IDs。编译失败或结果漂移均生成不可豁免 blocking finding，必须修改候选资源或更新并审查
+contract revision 后才能发布。
+
 ## P0.5 多运行时编译
 
 `default_compiler_registry()` 是 API 和嵌入式调用共享的默认编译器集合，当前包含：

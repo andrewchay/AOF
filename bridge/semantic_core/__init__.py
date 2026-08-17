@@ -31,6 +31,7 @@ from .federated_query import (
     FederatedQueryResult,
     FederatedQueryStep,
 )
+from .impact import SemanticImpactAnalyzer, SemanticImpactError, SemanticImpactReport
 from .query_policy import (
     GovernedQueryExecutor,
     GovernedQueryResult,
@@ -89,6 +90,9 @@ __all__ = [
     "FederatedQueryRequest",
     "FederatedQueryResult",
     "FederatedQueryStep",
+    "SemanticImpactAnalyzer",
+    "SemanticImpactError",
+    "SemanticImpactReport",
     "GovernedQueryExecutor",
     "GovernedQueryResult",
     "QueryPolicy",

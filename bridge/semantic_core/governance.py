@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
@@ -15,7 +15,8 @@ from bridge.decision_provenance import DecisionProvenanceStore
 from .canonical import canonical_json, content_digest
 from .attestations import HmacReleaseAttestor
 from .compilers import CompilerRegistry
-from .models import SemanticResource
+from .impact import SemanticImpactAnalyzer
+from .models import ResourceKind, SemanticResource
 from .releases import FileReleaseRepository, KnowledgeRelease, ReleaseError, SqliteReleaseRepository
 
 
@@ -213,11 +214,37 @@ class SemanticGovernanceService:
         resources = self._resources(manifest)
         current = {resource.resource_id: resource.revision_id for resource in resources}
         previous: dict[str, str] = {}
+        parent: KnowledgeRelease | None = None
         if manifest.get("parent_release"):
             parent = self._release_get(manifest["parent_release"], manifest["tenant_id"])
             if parent is None:
                 raise SemanticGovernanceError(f"parent release not found: {manifest['parent_release']}")
             previous = {item.resource_id: item.revision_id for item in parent.resources}
+        previous_resources = []
+        current_by_id = {resource.resource_id: resource for resource in resources}
+        if parent is not None:
+            for ref in parent.resources:
+                current_resource = current_by_id.get(ref.resource_id)
+                if current_resource is not None:
+                    previous_resources.append(
+                        replace(current_resource, revision_id=ref.revision_id)
+                    )
+                    continue
+                parts = ref.resource_id.split("/")
+                previous_resources.append(
+                    SemanticResource.create(
+                        resource_id=ref.resource_id,
+                        kind=ResourceKind(ref.kind),
+                        name=parts[-1],
+                        domain=parts[-3],
+                        owner="retired-resource",
+                    )
+                )
+        detailed = SemanticImpactAnalyzer().compare(
+            previous_resources,
+            resources,
+            compiled_artifacts=parent.compiled_artifacts if parent is not None else (),
+        )
         return {
             "proposal_id": proposal_id,
             "resource_count": len(resources),
@@ -225,6 +252,11 @@ class SemanticGovernanceService:
             "removed": sorted(set(previous) - set(current)),
             "changed": sorted(key for key in set(current) & set(previous) if current[key] != previous[key]),
             "unchanged": sorted(key for key in set(current) & set(previous) if current[key] == previous[key]),
+            "affected_resource_ids": list(detailed.affected_resource_ids),
+            "affected_mcp_tools": list(detailed.affected_mcp_tools),
+            "affected_contract_ids": list(detailed.affected_contract_ids),
+            "affected_artifacts": list(detailed.affected_artifacts),
+            "impact_report_digest": detailed.report_digest,
         }
 
     def waive_finding(

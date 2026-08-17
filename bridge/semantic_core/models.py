@@ -33,6 +33,7 @@ class ResourceKind(str, Enum):
     RULE_SET = "RuleSet"
     CONSTRAINT_SET = "ConstraintSet"
     QUERY_TEMPLATE = "QueryTemplate"
+    QUERY_CONTRACT = "QueryContract"
     RETRIEVAL_PROFILE = "RetrievalProfile"
     POLICY = "Policy"
 
