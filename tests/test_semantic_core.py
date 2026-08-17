@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from bridge.semantic_core import ResourceKind, SemanticModelError, SemanticResource
+from bridge.semantic_core import (
+    FileReleaseRepository,
+    KnowledgeRelease,
+    ReleaseError,
+    ResourceKind,
+    SemanticModelError,
+    SemanticResource,
+)
 
 
 def test_semantic_resource_revision_is_canonical() -> None:
@@ -103,3 +110,71 @@ def test_semantic_resource_rejects_invalid_identity_and_self_dependency() -> Non
             owner="team",
             depends_on=["aof://acme/sales/metric/gmv"],
         )
+
+
+def test_knowledge_release_requires_dependency_closure_and_is_canonical() -> None:
+    dataset = SemanticResource.create(
+        resource_id="aof://acme/sales/logical-dataset/order",
+        kind=ResourceKind.LOGICAL_DATASET,
+        name="order",
+        domain="sales",
+        owner="data-platform",
+    )
+    metric = SemanticResource.create(
+        resource_id="aof://acme/sales/metric/gmv",
+        kind=ResourceKind.METRIC,
+        name="gmv",
+        domain="sales",
+        owner="data-platform",
+        depends_on=[dataset.resource_id],
+    )
+
+    with pytest.raises(ReleaseError, match="missing resource dependencies"):
+        KnowledgeRelease.build(release_id="sales-knowledge@2026.08.17.1", resources=[metric])
+
+    first = KnowledgeRelease.build(
+        release_id="sales-knowledge@2026.08.17.1", resources=[metric, dataset]
+    )
+    reordered = KnowledgeRelease.build(
+        release_id="sales-knowledge@2026.08.17.1", resources=[dataset, metric]
+    )
+    assert first.release_digest == reordered.release_digest
+    assert first.to_dict() == reordered.to_dict()
+
+
+def test_release_round_trip_detects_tampering_and_repository_prevents_overwrite(tmp_path) -> None:
+    resource = SemanticResource.create(
+        resource_id="aof://acme/sales/concept/customer",
+        kind=ResourceKind.CONCEPT,
+        name="customer",
+        domain="sales",
+        owner="knowledge-team",
+    )
+    release = KnowledgeRelease.build(
+        release_id="sales-knowledge@2026.08.17.1",
+        resources=[resource],
+        scope={"tenant_id": "acme", "domain": "sales"},
+        validation={"schema": {"status": "passed", "report_hash": "sha256:ok"}},
+    )
+    repository = FileReleaseRepository(tmp_path / "releases")
+
+    assert repository.publish(release) == release
+    assert repository.publish(release) == release
+    assert repository.get(release.release_id) == release
+
+    tampered = release.to_dict()
+    tampered["scope"]["tenant_id"] = "other"
+    with pytest.raises(ReleaseError, match="release_digest"):
+        KnowledgeRelease.from_dict(tampered)
+
+    changed_resource = SemanticResource.create(
+        resource_id=resource.resource_id,
+        kind=resource.kind,
+        name=resource.name,
+        domain=resource.domain,
+        owner=resource.owner,
+        description="changed",
+    )
+    conflicting = KnowledgeRelease.build(release_id=release.release_id, resources=[changed_resource])
+    with pytest.raises(ReleaseError, match="cannot be overwritten"):
+        repository.publish(conflicting)

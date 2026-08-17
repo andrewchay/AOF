@@ -26,3 +26,12 @@ valid time、证据和依赖属于语义契约，会影响 revision。
 - 非有限浮点数、非字符串映射键和非 JSON 语义值被拒绝。
 - 每条证据必须有稳定 `evidence_id`；同一 ID 的冲突内容被拒绝。
 - 依赖必须是合法 AOF Resource ID，资源不能依赖自身。
+
+## Knowledge Release Manifest
+
+`KnowledgeRelease` 把能够共同运行的 revisions、编译产物、验证报告与治理引用冻结成一个
+`aof.release/v1` manifest。构建时强制检查资源依赖闭包；资源和产物输入顺序不会影响
+`release_digest`。反序列化和发布都会重新验证摘要。
+
+本地 `FileReleaseRepository` 是开发后端：相同发布可幂等重试，但同一个 `release_id` 不允许被
+不同摘要覆盖。生产实现应遵循相同接口语义并迁移到支持事务、租户隔离和并发约束的存储。
