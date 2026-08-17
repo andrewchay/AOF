@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import replace
 
 import pytest
@@ -14,10 +15,12 @@ from bridge.semantic_core import (
     QueryExecutor,
     GovernedQueryExecutor,
     QueryPolicy,
+    QueryControlPlane,
     QueryPolicyWaiver,
     QueryRequest,
     ResourceKind,
     SemanticResource,
+    SignedPrincipalVerifier,
     TrustedQueryError,
     TrustedSnapshotResolver,
 )
@@ -29,7 +32,7 @@ from bridge.semantic_core.compilers import (
 )
 
 
-def _trusted_query_runtime(tmp_path):
+def _trusted_query_runtime(tmp_path, compiler_root=None):
     ontology = SemanticResource.create(
         resource_id="aof://acme/sales/ontology/sales",
         kind=ResourceKind.ONTOLOGY,
@@ -76,7 +79,20 @@ def _trusted_query_runtime(tmp_path):
             "required_parameters": ["region"],
         },
     )
-    resources = [ontology, rules, concept, profile, template]
+    query_policy = SemanticResource.create(
+        resource_id="aof://acme/platform/policy/query-trusted",
+        kind=ResourceKind.POLICY,
+        name="query-trusted",
+        domain="platform",
+        owner="security-governance",
+        spec={
+            "policy_type": "query",
+            "role_capabilities": {
+                "analyst": ["semantic_search", "datalog", "sparql", "query_template"]
+            },
+        },
+    )
+    resources = [ontology, rules, concept, profile, template, query_policy]
     release = KnowledgeRelease.build(
         release_id="sales-query@2.0.0",
         resources=resources,
@@ -100,7 +116,7 @@ def _trusted_query_runtime(tmp_path):
         )
     )
     registry = default_compiler_registry()
-    repository = CompilationRunRepository(tmp_path / "compiler" / "acme")
+    repository = CompilationRunRepository((compiler_root or tmp_path / "compiler") / "acme")
     service = CompilationRunService(
         repository,
         registry=registry,
@@ -472,3 +488,124 @@ def test_query_evidence_package_detects_tampering(tmp_path) -> None:
     )
 
     assert tampered.verify() is False
+
+
+def _query_headers(capability_role: str = "analyst") -> dict[str, str]:
+    return SignedPrincipalVerifier(
+        key_id="query-identity", secret=b"query-identity-secret"
+    ).sign_headers(subject="alice", tenant_id="acme", roles=[capability_role])
+
+
+def test_signed_query_control_plane_executes_all_compiled_engines(tmp_path) -> None:
+    _trusted_query_runtime(tmp_path)
+    control = QueryControlPlane(
+        tmp_path / "compiler",
+        verifier=SignedPrincipalVerifier(
+            key_id="query-identity", secret=b"query-identity-secret"
+        ),
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+    )
+    base = {
+        "channel": "production",
+        "policy_resource_id": "aof://acme/platform/policy/query-trusted",
+        "rationale": "Verify the governed cross-engine query platform.",
+    }
+    requests = [
+        {**base, "capability": "semantic_search", "query": "customer", "purpose": "support"},
+        {
+            **base,
+            "capability": "datalog",
+            "query": "eligible",
+            "purpose": "eligibility",
+            "parameters": {"facts": [{"predicate": "customer", "terms": ["alice"]}]},
+        },
+        {
+            **base,
+            "capability": "sparql",
+            "query": "ASK { <https://example.test/Customer> a <https://example.test/Entity> }",
+            "purpose": "ontology-audit",
+        },
+        {
+            **base,
+            "capability": "query_template",
+            "query": "customer-by-region",
+            "purpose": "regional-analysis",
+            "parameters": {"region": "'east'"},
+        },
+    ]
+
+    results = [control.execute(payload, headers=_query_headers()) for payload in requests]
+
+    assert [item["governed_result"]["result"]["capability"] for item in results] == [
+        "semantic_search",
+        "datalog",
+        "sparql",
+        "query_template",
+    ]
+    assert all(item["evidence_package"]["package_digest"].startswith("sha256:") for item in results)
+
+
+def test_rest_and_mcp_query_boundaries_share_signed_control_plane(tmp_path, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    import mcp_server
+    import services.semantic_middle_layer_api.app as api_module
+
+    compiler_root = tmp_path / "data" / "semantic_compiler"
+    _trusted_query_runtime(tmp_path, compiler_root=compiler_root)
+    monkeypatch.setattr(api_module, "AOF_ROOT", tmp_path)
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_SECRET", "query-identity-secret")
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_KEY_ID", "query-identity")
+    monkeypatch.setenv("AOF_COMPILER_STATE_DIR", str(compiler_root))
+    monkeypatch.setenv(
+        "AOF_DECISION_PROVENANCE_FILE",
+        str(tmp_path / "data" / "audit" / "decision_provenance.jsonl"),
+    )
+    payload = {
+        "channel": "production",
+        "capability": "semantic_search",
+        "query": "customer",
+        "purpose": "support",
+        "policy_resource_id": "aof://acme/platform/policy/query-trusted",
+        "rationale": "Exercise the signed transport boundary.",
+    }
+
+    response = TestClient(api_module.app).post(
+        "/v1/semantic/query", json=payload, headers=_query_headers()
+    )
+    server = mcp_server.build_server()
+    mcp_result = asyncio.run(
+        server.tools["aof_semantic_query"].handler(
+            {**payload, "principal_headers": _query_headers()}
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.json()["governed_result"]["result"]["capability"] == "semantic_search"
+    assert mcp_result["governed_result"]["result"]["capability"] == "semantic_search"
+
+
+def test_query_control_plane_rejects_bad_identity_and_unpublished_policy(tmp_path) -> None:
+    _trusted_query_runtime(tmp_path)
+    control = QueryControlPlane(
+        tmp_path / "compiler",
+        verifier=SignedPrincipalVerifier(
+            key_id="query-identity", secret=b"query-identity-secret"
+        ),
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+    )
+    payload = {
+        "channel": "production",
+        "capability": "semantic_search",
+        "query": "customer",
+        "purpose": "support",
+        "policy_resource_id": "aof://acme/platform/policy/not-published",
+        "rationale": "Verify boundary rejection.",
+    }
+    bad_headers = _query_headers()
+    bad_headers["x-aof-principal-signature"] = "bad"
+
+    with pytest.raises(ValueError, match="signature"):
+        control.execute(payload, headers=bad_headers)
+    with pytest.raises(ValueError, match="not in the trusted release"):
+        control.execute(payload, headers=_query_headers())

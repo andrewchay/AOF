@@ -249,6 +249,28 @@ class TrustedSnapshotResolver:
             plan_digest=content_digest(payload),
         )
 
+    def verify_artifact(self, plan: QueryPlan, target: str) -> QueryArtifactRef:
+        """Verify a supplemental artifact from the exact run pinned by a query plan."""
+        if not plan.verify():
+            raise TrustedQueryError("query plan digest mismatch")
+        run = self.repository.get(plan.run_id)
+        if run is None:
+            raise TrustedQueryError(f"compilation run not found: {plan.run_id}")
+        if (
+            run.tenant_id != plan.tenant_id
+            or run.run_digest != plan.run_digest
+            or run.release_digest != plan.release_digest
+        ):
+            raise TrustedQueryError("query plan does not match its compilation run")
+        artifact = next(
+            (item for item in run.artifacts if item.get("target") == target), None
+        )
+        if artifact is None:
+            raise TrustedQueryError(
+                f"trusted query boundary requires missing artifact target: {target}"
+            )
+        return self._verify_artifact(run, artifact)
+
     @staticmethod
     def _verify_pointer(pointer: Mapping[str, Any], channel: str) -> None:
         if pointer.get("api_version") != "aof.compilation-channel/v1":

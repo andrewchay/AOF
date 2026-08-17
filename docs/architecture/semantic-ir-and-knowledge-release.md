@@ -272,6 +272,17 @@ QueryResult、完整 Policy report 与 governed result digest；策略拒绝不�
 字段授权证据以及 PROV-O 风格审计轨迹。证据包自身内容寻址，可离线检查篡改；查询执行决策带有 capability、
 purpose 与 channel 标签，可直接用于先例查询和下游影响分析。
 
+## 统一查询外部边界
+
+`QueryControlPlane` 是 REST 与 MCP 共用的零信任入口。调用方必须提交签名 Principal、channel、capability、
+purpose 和 QueryPolicy resource ID；tenant 与 roles 只取自验签后的 Principal。控制面不接受调用方上传 Policy，
+而是从 QueryPlan 锁定的同一 CompilationRun 中额外校验 `semantic-json` 制品并加载已发布 Policy revision，避免
+用临时宽松策略绕过治理。
+
+REST `POST /v1/semantic/query` 与 MCP `aof_semantic_query` 使用同一控制面和返回契约，覆盖 semantic search、
+Datalog、只读 SPARQL 和 QueryTemplate。每种能力均消费真实编译制品，并返回相同的 governed result、决策链与
+`aof.query-evidence-package/v1`；签名错误、跨 tenant snapshot、未发布 Policy 或制品摘要不一致都会在执行前阻断。
+
 ## 生产运维闭环
 
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加

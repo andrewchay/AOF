@@ -3998,6 +3998,18 @@ class SemanticCompilerRollbackReq(BaseModel):
     rationale: str = Field(min_length=1)
 
 
+class SemanticQueryReq(BaseModel):
+    channel: str = Field(min_length=1)
+    capability: str = Field(min_length=1)
+    query: str = Field(min_length=1)
+    purpose: str = Field(min_length=1)
+    policy_resource_id: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    waivers: list[dict[str, Any]] = Field(default_factory=list)
+    session_id: Optional[str] = None
+
+
 def _semantic_governance():
     from bridge.semantic_core.compilers import default_compiler_registry
     from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
@@ -4040,6 +4052,27 @@ def _semantic_compiler_control():
     )
 
 
+def _semantic_query_control():
+    from bridge.semantic_core import QueryControlPlane, SignedPrincipalVerifier
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    state_root = Path(
+        os.environ.get(
+            'AOF_COMPILER_STATE_DIR', str(AOF_ROOT / 'data' / 'semantic_compiler')
+        )
+    )
+    return QueryControlPlane(
+        state_root,
+        verifier=SignedPrincipalVerifier(
+            key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+            secret=secret,
+        ),
+        decision_store=_decision_store(),
+    )
+
+
 def _semantic_governance_error(exc: Exception) -> HTTPException:
     if isinstance(exc, HTTPException):
         return exc
@@ -4065,6 +4098,21 @@ def _semantic_compiler_error(exc: Exception) -> HTTPException:
         status_code = 404
     elif any(token in message for token in ('already exists:', 'cannot be overwritten:', 'already points', 'already been used', 'separation')):
         status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _semantic_query_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message or 'not in the trusted release:' in message:
+        status_code = 404
     else:
         status_code = 422
     return HTTPException(status_code=status_code, detail=message)
@@ -4293,6 +4341,18 @@ async def get_semantic_compilation_channel(channel: str, request: Request) -> di
         return _semantic_compiler_control().get_channel(channel, headers=request.headers)
     except Exception as exc:
         raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/query')
+async def execute_trusted_semantic_query(
+    req: SemanticQueryReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_query_control().execute(
+            req.model_dump(exclude_none=True), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_query_error(exc) from exc
 
 
 # ==================== Ontology governance & deterministic reasoning ====================

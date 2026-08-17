@@ -14,6 +14,7 @@ from .query_plans import (
 )
 from .query_execution import QueryExecutor, QueryResult
 from .query_audit import AuditedQueryResult, AuditedQueryService, QueryEvidencePackage
+from .query_control import QueryControlPlane, QueryControlPlaneError
 from .query_policy import (
     GovernedQueryExecutor,
     GovernedQueryResult,
@@ -57,6 +58,8 @@ __all__ = [
     "AuditedQueryResult",
     "AuditedQueryService",
     "QueryEvidencePackage",
+    "QueryControlPlane",
+    "QueryControlPlaneError",
     "GovernedQueryExecutor",
     "GovernedQueryResult",
     "QueryPolicy",

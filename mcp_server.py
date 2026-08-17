@@ -541,6 +541,35 @@ async def _tool_semantic_compile_get_channel(args: dict[str, Any]) -> dict[str, 
     return _semantic_compiler_control().get_channel(payload["channel"], headers=headers)
 
 
+def _semantic_query_control():
+    from bridge.decision_provenance import DecisionProvenanceStore
+    from bridge.semantic_core import QueryControlPlane, SignedPrincipalVerifier
+
+    secret = os.environ.get("AOF_SEMANTIC_IDENTITY_SECRET", "").encode("utf-8")
+    if not secret:
+        raise ValueError("semantic identity verifier is not configured")
+    state_root = Path(
+        os.environ.get(
+            "AOF_COMPILER_STATE_DIR", str(PROJECT_ROOT / "data" / "semantic_compiler")
+        )
+    )
+    return QueryControlPlane(
+        state_root,
+        verifier=SignedPrincipalVerifier(
+            key_id=os.environ.get(
+                "AOF_SEMANTIC_IDENTITY_KEY_ID", "identity-key-default"
+            ),
+            secret=secret,
+        ),
+        decision_store=DecisionProvenanceStore(),
+    )
+
+
+async def _tool_semantic_query(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_query_control().execute(payload, headers=headers)
+
+
 def _register_semantic_compiler_tools(server: McpServer) -> None:
     principal = {
         "type": "object",
@@ -628,6 +657,54 @@ def _register_semantic_compiler_tools(server: McpServer) -> None:
                 handler=handler,
             )
         )
+
+
+def _register_semantic_query_tools(server: McpServer) -> None:
+    server.register_tool(
+        McpTool(
+            name="aof_semantic_query",
+            description=(
+                "从可信 channel 加载已发布 QueryPolicy，以签名 Principal 执行统一语义查询，"
+                "并返回决策因果链与可验证证据包。"
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "channel": {"type": "string"},
+                    "capability": {
+                        "type": "string",
+                        "enum": [
+                            "semantic_search",
+                            "datalog",
+                            "sparql",
+                            "query_template",
+                        ],
+                    },
+                    "query": {"type": "string"},
+                    "purpose": {"type": "string"},
+                    "policy_resource_id": {"type": "string"},
+                    "rationale": {"type": "string"},
+                    "parameters": {"type": "object"},
+                    "waivers": {"type": "array", "items": {"type": "object"}},
+                    "session_id": {"type": "string"},
+                    "principal_headers": {
+                        "type": "object",
+                        "description": "Identity-gateway signed X-AOF principal headers.",
+                    },
+                },
+                "required": [
+                    "channel",
+                    "capability",
+                    "query",
+                    "purpose",
+                    "policy_resource_id",
+                    "rationale",
+                    "principal_headers",
+                ],
+            },
+            handler=_tool_semantic_query,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -947,6 +1024,7 @@ def build_server() -> McpServer:
     ))
 
     _register_semantic_compiler_tools(server)
+    _register_semantic_query_tools(server)
 
     return server
 
