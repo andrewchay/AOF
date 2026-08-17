@@ -11,6 +11,9 @@ from bridge.semantic_core import (
     KnowledgeRelease,
     QueryCapability,
     QueryExecutor,
+    GovernedQueryExecutor,
+    QueryPolicy,
+    QueryPolicyWaiver,
     QueryRequest,
     ResourceKind,
     SemanticResource,
@@ -235,3 +238,114 @@ def test_unified_executor_rejects_plan_content_with_a_stale_digest(tmp_path) -> 
 
     with pytest.raises(TrustedQueryError, match="query plan digest mismatch"):
         executor.execute(tampered)
+
+
+def test_query_policy_requires_exact_waiver_and_emits_field_evidence(tmp_path) -> None:
+    resolver, executor = _trusted_query_runtime(tmp_path)
+    plan = resolver.plan(
+        QueryRequest.create(
+            channel="production",
+            capability="semantic_search",
+            query="customer",
+            purpose="customer-support",
+            parameters={"limit": 3, "fields": ["resource_id", "name"]},
+        ),
+        tenant_id="acme",
+    )
+    policy_resource = SemanticResource.create(
+        resource_id="aof://acme/platform/policy/query-production",
+        kind=ResourceKind.POLICY,
+        name="query-production",
+        domain="platform",
+        owner="security-governance",
+        spec={
+            "policy_type": "query",
+            "role_capabilities": {"analyst": ["semantic_search"]},
+            "capability_rules": {
+                "semantic_search": {
+                    "allowed_purposes": ["customer-support"],
+                    "max_limit": 2,
+                    "allowed_fields": ["resource_id", "name"],
+                }
+            },
+            "waiver_allowed_codes": ["query_limit_exceeded"],
+        },
+    )
+    policy = QueryPolicy.from_resource(policy_resource)
+    rejected = policy.evaluate(plan, roles=["analyst"])
+    assert rejected.conforms is False
+    assert rejected.findings[0].code == "query_limit_exceeded"
+
+    waiver = QueryPolicyWaiver.create(
+        finding_id=rejected.findings[0].finding_id,
+        policy_revision=policy_resource.revision_id,
+        actor="risk-owner:alice",
+        rationale="Temporary support burst approved for incident INC-42.",
+        authority="INC-42",
+    )
+    governed = GovernedQueryExecutor(executor, policy).execute(
+        plan, roles=["analyst"], waivers=[waiver]
+    )
+
+    assert governed.result.status == "succeeded"
+    assert governed.policy_report.conforms is True
+    assert governed.policy_report.findings[0].waiver_id == waiver.waiver_id
+    assert [item["field"] for item in governed.policy_report.field_evidence] == [
+        "name",
+        "resource_id",
+    ]
+    assert governed.governed_result_digest.startswith("sha256:")
+
+
+def test_query_policy_blocks_role_purpose_resource_and_field_violations(tmp_path) -> None:
+    resolver, _ = _trusted_query_runtime(tmp_path)
+    denied_resource = "aof://acme/sales/concept/customer"
+    plan = resolver.plan(
+        QueryRequest.create(
+            channel="production",
+            capability="semantic_search",
+            query="customer",
+            purpose="bulk-export",
+            parameters={
+                "resource_ids": [denied_resource],
+                "fields": ["secret_note"],
+            },
+        ),
+        tenant_id="acme",
+    )
+    policy = QueryPolicy.from_resource(
+        SemanticResource.create(
+            resource_id="aof://acme/platform/policy/query-restricted",
+            kind=ResourceKind.POLICY,
+            name="query-restricted",
+            domain="platform",
+            owner="security-governance",
+            spec={
+                "policy_type": "query",
+                "role_capabilities": {"analyst": ["semantic_search"]},
+                "capability_rules": {
+                    "semantic_search": {
+                        "allowed_purposes": ["customer-support"],
+                        "denied_resource_ids": [denied_resource],
+                        "allowed_fields": ["resource_id", "name"],
+                    }
+                },
+                "waiver_allowed_codes": [
+                    "query_role_not_allowed",
+                    "query_purpose_not_allowed",
+                ],
+            },
+        )
+    )
+
+    report = policy.evaluate(plan, roles=["guest"])
+
+    assert {item.code for item in report.findings} == {
+        "query_field_not_allowed",
+        "query_purpose_not_allowed",
+        "query_resource_denied",
+        "query_role_not_allowed",
+    }
+    role_finding = next(item for item in report.findings if item.code == "query_role_not_allowed")
+    assert role_finding.waiver_allowed is False
+    assert report.conforms is False

@@ -13,6 +13,15 @@ from .query_plans import (
     TrustedSnapshotResolver,
 )
 from .query_execution import QueryExecutor, QueryResult
+from .query_policy import (
+    GovernedQueryExecutor,
+    GovernedQueryResult,
+    QueryPolicy,
+    QueryPolicyError,
+    QueryPolicyFinding,
+    QueryPolicyReport,
+    QueryPolicyWaiver,
+)
 from .keys import KeyringProvider, ReleaseKeyProvider, RotatingReleaseAttestor
 from .models import ResourceKind, SemanticModelError, SemanticResource, validate_resource_id
 from .governance import (
@@ -44,6 +53,13 @@ __all__ = [
     "TrustedSnapshotResolver",
     "QueryExecutor",
     "QueryResult",
+    "GovernedQueryExecutor",
+    "GovernedQueryResult",
+    "QueryPolicy",
+    "QueryPolicyError",
+    "QueryPolicyFinding",
+    "QueryPolicyReport",
+    "QueryPolicyWaiver",
     "KeyringProvider",
     "ReleaseKeyProvider",
     "RotatingReleaseAttestor",

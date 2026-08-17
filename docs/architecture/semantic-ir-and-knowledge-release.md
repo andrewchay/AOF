@@ -250,6 +250,18 @@ evidence 与 result digest：
 该统一执行层不自行解释自然语言，也不允许调用方指定 artifact 路径。QueryPolicy、字段级授权和执行决策
 溯源将在后续 Slice 包裹同一 QueryPlan/QueryResult，不改变各引擎的公共调用方式。
 
+## 查询策略门禁
+
+查询授权同样不是路由器中的硬编码。`QueryPolicy` 只接受 revision-addressed、`policy_type: query` 的 Policy
+resource，并以 `role_capabilities` 和逐 capability rules 约束允许的 purpose、最大 limit、resource ID 与
+requested fields。未授权 role、无效 Plan 与无效 limit 永远不可 waiver；其他风险只有被
+`waiver_allowed_codes` 明确列出，并提供绑定精确 finding ID 与 Policy revision 的 `QueryPolicyWaiver` 才能解除。
+
+`aof.query-policy-report/v1` 固定 plan、roles、全部 finding、waiver 状态与 report digest。每个获准 requested
+field 生成独立、内容寻址的 field evidence，绑定 capability、Plan 和 Policy revision。`GovernedQueryExecutor`
+只有在 report conforms 后才调用统一 QueryExecutor，并输出 `aof.governed-query-result/v1`，同时绑定原始
+QueryResult、完整 Policy report 与 governed result digest；策略拒绝不会触碰运行时 artifact。
+
 ## 生产运维闭环
 
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加
