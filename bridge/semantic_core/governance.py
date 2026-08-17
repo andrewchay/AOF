@@ -13,9 +13,10 @@ from typing import Any
 from bridge.decision_provenance import DecisionProvenanceStore
 
 from .canonical import canonical_json, content_digest
+from .attestations import HmacReleaseAttestor
 from .compilers import CompilerRegistry
 from .models import SemanticResource
-from .releases import FileReleaseRepository, KnowledgeRelease, ReleaseError
+from .releases import FileReleaseRepository, KnowledgeRelease, ReleaseError, SqliteReleaseRepository
 
 
 class SemanticGovernanceError(ValueError):
@@ -50,6 +51,29 @@ class SemanticFinding:
 SemanticValidator = Callable[[tuple[SemanticResource, ...]], Iterable[SemanticFinding]]
 
 
+class SemanticGovernancePolicy:
+    """Small deterministic RBAC policy for the release control plane."""
+
+    _ROLES = {
+        "create": {"editor", "owner", "admin"},
+        "validate": {"validator", "admin"},
+        "waive": {"risk-owner", "admin"},
+        "request_changes": {"reviewer", "admin"},
+        "approve": {"reviewer", "admin"},
+        "compile": {"compiler", "admin"},
+        "publish": {"publisher", "admin"},
+    }
+
+    def authorize(self, actor: str, action: str) -> None:
+        role = actor.split(":", 1)[0]
+        if role not in self._ROLES[action]:
+            raise SemanticGovernanceError(f"actor role '{role}' cannot {action}")
+
+    @staticmethod
+    def subject(actor: str) -> str:
+        return actor.split(":", 1)[-1]
+
+
 class SemanticGovernanceService:
     """File-backed P0 control plane; immutable evidence lives in the decision ledger."""
 
@@ -60,12 +84,17 @@ class SemanticGovernanceService:
         decision_store: DecisionProvenanceStore | None = None,
         compiler_registry: CompilerRegistry | None = None,
         validators: Iterable[SemanticValidator] = (),
+        release_repository: FileReleaseRepository | SqliteReleaseRepository | None = None,
+        access_policy: SemanticGovernancePolicy | None = None,
+        release_attestor: HmacReleaseAttestor | None = None,
     ) -> None:
         self.root = Path(root)
         self.decision_store = decision_store or DecisionProvenanceStore(self.root / "decisions.jsonl")
         self.compiler_registry = compiler_registry or CompilerRegistry()
         self.validators = tuple(validators)
-        self.release_repository = FileReleaseRepository(self.root / "releases")
+        self.release_repository = release_repository or FileReleaseRepository(self.root / "releases")
+        self.access_policy = access_policy
+        self.release_attestor = release_attestor
 
     def create_proposal(
         self,
@@ -78,18 +107,27 @@ class SemanticGovernanceService:
         parent_release: str | None = None,
         scope: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
+        self._authorize(actor, "create")
         if not _PROPOSAL_ID.fullmatch(proposal_id):
             raise SemanticGovernanceError("invalid proposal_id")
         path = self._proposal_path(proposal_id)
         if path.exists():
             raise SemanticGovernanceError(f"proposal already exists: {proposal_id}")
         frozen_resources = tuple(sorted(resources, key=lambda item: item.resource_id))
+        tenants = {resource.resource_id.split("/", 3)[2] for resource in frozen_resources}
+        if len(tenants) != 1:
+            raise SemanticGovernanceError("a proposal must contain resources from exactly one tenant")
+        tenant_id = next(iter(tenants))
+        normalized_scope = dict(scope or {})
+        if normalized_scope.get("tenant_id") not in (None, tenant_id):
+            raise SemanticGovernanceError("proposal scope tenant_id does not match resource tenant")
+        normalized_scope["tenant_id"] = tenant_id
         try:
             candidate = KnowledgeRelease.build(
                 release_id=release_id,
                 resources=frozen_resources,
                 parent_release=parent_release,
-                scope=scope,
+                scope=normalized_scope,
             )
         except ReleaseError as exc:
             raise SemanticGovernanceError(str(exc)) from exc
@@ -110,7 +148,9 @@ class SemanticGovernanceService:
             "proposal_id": proposal_id,
             "release_id": release_id,
             "parent_release": parent_release,
-            "scope": dict(scope or {}),
+            "scope": normalized_scope,
+            "tenant_id": tenant_id,
+            "created_by": actor,
             "state": "proposed",
             "resources": [resource.to_dict() for resource in frozen_resources],
             "candidate_digest": candidate.release_digest,
@@ -130,6 +170,7 @@ class SemanticGovernanceService:
 
     def validate(self, proposal_id: str, *, actor: str) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
+        self._authorize(actor, "validate")
         self._require_state(manifest, {"proposed"}, "validate")
         resources = self._resources(manifest)
         findings = []
@@ -144,6 +185,7 @@ class SemanticGovernanceService:
             "conforms": conforms,
             "findings": findings,
             "resource_count": len(resources),
+            "actor": actor,
         }
         review["review_hash"] = content_digest(review)
         decision = self.decision_store.record(
@@ -169,7 +211,7 @@ class SemanticGovernanceService:
         current = {resource.resource_id: resource.revision_id for resource in resources}
         previous: dict[str, str] = {}
         if manifest.get("parent_release"):
-            parent = self.release_repository.get(manifest["parent_release"])
+            parent = self._release_get(manifest["parent_release"], manifest["tenant_id"])
             if parent is None:
                 raise SemanticGovernanceError(f"parent release not found: {manifest['parent_release']}")
             previous = {item.resource_id: item.revision_id for item in parent.resources}
@@ -192,6 +234,7 @@ class SemanticGovernanceService:
         policy: str,
     ) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
+        self._authorize(actor, "waive")
         self._require_state(manifest, {"conflict_review"}, "waive finding")
         review = manifest.get("review") or {}
         finding = next((item for item in review.get("findings", []) if item["finding_id"] == finding_id), None)
@@ -227,6 +270,7 @@ class SemanticGovernanceService:
 
     def request_changes(self, proposal_id: str, *, actor: str, rationale: str) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
+        self._authorize(actor, "request_changes")
         self._require_state(manifest, {"review", "conflict_review"}, "request changes")
         review = manifest["review"]
         decision = self.decision_store.record(
@@ -246,7 +290,10 @@ class SemanticGovernanceService:
 
     def approve(self, proposal_id: str, *, actor: str, rationale: str) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
+        self._authorize(actor, "approve")
         self._require_state(manifest, {"review", "conflict_review"}, "approve")
+        if self._subject(actor) == self._subject(manifest["created_by"]):
+            raise SemanticGovernanceError("separation of duties forbids creator self-approval")
         review = manifest["review"]
         blocking = {
             item["finding_id"]
@@ -271,11 +318,13 @@ class SemanticGovernanceService:
         )
         manifest["state"] = "approved"
         manifest["approval_decision_id"] = decision["decision"]["id"]
+        manifest["approved_by"] = actor
         self._write(self._proposal_path(proposal_id), manifest)
         return manifest
 
     def compile(self, proposal_id: str, *, actor: str, targets: Iterable[str]) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
+        self._authorize(actor, "compile")
         self._require_state(manifest, {"approved"}, "compile")
         resources = self._resources(manifest)
         candidate = KnowledgeRelease.build(
@@ -332,9 +381,12 @@ class SemanticGovernanceService:
 
     def publish(self, proposal_id: str, *, actor: str) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
+        self._authorize(actor, "publish")
         self._require_state(manifest, {"ready"}, "publish")
+        if self._subject(actor) == self._subject(manifest["approved_by"]):
+            raise SemanticGovernanceError("separation of duties forbids approver self-publication")
         release = KnowledgeRelease.from_dict(manifest["release"])
-        self.release_repository.publish(release)
+        self._release_publish(release, manifest["tenant_id"])
         decision = self.decision_store.record(
             agent_id=actor,
             decision_type="semantic_publish",
@@ -348,6 +400,13 @@ class SemanticGovernanceService:
         )
         manifest["state"] = "published"
         manifest["publish_decision_id"] = decision["decision"]["id"]
+        if self.release_attestor is not None:
+            manifest["attestation"] = self.release_attestor.sign(
+                release,
+                actor=actor,
+                decision_id=decision["decision"]["id"],
+                tenant_id=manifest["tenant_id"],
+            )
         self._write(self._proposal_path(proposal_id), manifest)
         return manifest
 
@@ -355,6 +414,23 @@ class SemanticGovernanceService:
         if not _PROPOSAL_ID.fullmatch(proposal_id):
             raise SemanticGovernanceError("invalid proposal_id")
         return self.root / "proposals" / f"{proposal_id}.json"
+
+    def _authorize(self, actor: str, action: str) -> None:
+        if self.access_policy is not None:
+            self.access_policy.authorize(actor, action)
+
+    def _subject(self, actor: str) -> str:
+        return self.access_policy.subject(actor) if self.access_policy else actor
+
+    def _release_publish(self, release: KnowledgeRelease, tenant_id: str) -> KnowledgeRelease:
+        if isinstance(self.release_repository, SqliteReleaseRepository):
+            return self.release_repository.publish(release, tenant_id=tenant_id)
+        return self.release_repository.publish(release)
+
+    def _release_get(self, release_id: str, tenant_id: str) -> KnowledgeRelease | None:
+        if isinstance(self.release_repository, SqliteReleaseRepository):
+            return self.release_repository.get(release_id, tenant_id=tenant_id)
+        return self.release_repository.get(release_id)
 
     @staticmethod
     def _resources(manifest: Mapping[str, Any]) -> tuple[SemanticResource, ...]:

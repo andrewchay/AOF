@@ -163,14 +163,14 @@ def test_semantic_governance_rest_api_publishes_immutable_release(tmp_path, monk
     assert client.get(f"/v1/semantic/proposals/{proposal_id}/impact").json()["resource_count"] == 2
     assert client.post(
         f"/v1/semantic/proposals/{proposal_id}/approve",
-        json={"actor": "reviewer:api", "rationale": "Validation passed."},
+        json={"actor": "reviewer:bob", "rationale": "Validation passed."},
     ).json()["state"] == "approved"
     assert client.post(
         f"/v1/semantic/proposals/{proposal_id}/compile",
         json={"actor": "compiler:api", "targets": ["semantic-json"]},
     ).json()["state"] == "ready"
     published = client.post(
-        f"/v1/semantic/proposals/{proposal_id}/publish", json={"actor": "publisher:api"}
+        f"/v1/semantic/proposals/{proposal_id}/publish", json={"actor": "publisher:carol"}
     )
     assert published.status_code == 200
     assert published.json()["state"] == "published"
@@ -181,7 +181,7 @@ def test_semantic_governance_rest_api_publishes_immutable_release(tmp_path, monk
     assert release.json()["release_digest"] == published.json()["release"]["release_digest"]
     assert client.post(
         f"/v1/semantic/proposals/{proposal_id}/approve",
-        json={"actor": "reviewer:api", "rationale": "Replay stale transition."},
+        json={"actor": "reviewer:bob", "rationale": "Replay stale transition."},
     ).status_code == 409
 
 
@@ -263,7 +263,7 @@ def test_rest_proposal_runs_default_shacl_owl_skos_release_gate(tmp_path, monkey
     )
     approval = client.post(
         "/v1/semantic/proposals/people-invalid-shacl/approve",
-        json={"actor": "reviewer:api", "rationale": "Must remain blocked."},
+        json={"actor": "reviewer:bob", "rationale": "Must remain blocked."},
     )
     assert approval.status_code == 409
 

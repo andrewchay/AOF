@@ -3967,14 +3967,25 @@ class SemanticCompileReq(SemanticActorReq):
 
 def _semantic_governance():
     from bridge.semantic_core.compilers import default_compiler_registry
-    from bridge.semantic_core.governance import SemanticGovernanceService
+    from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
+    from bridge.semantic_core.releases import SqliteReleaseRepository
+    from bridge.semantic_core.attestations import HmacReleaseAttestor
     from bridge.semantic_core.validators import ontology_release_validator
 
+    governance_root = AOF_ROOT / 'data' / 'semantic_governance'
+    signing_secret = os.environ.get('AOF_RELEASE_SIGNING_SECRET', '').encode('utf-8')
+    attestor = HmacReleaseAttestor(
+        key_id=os.environ.get('AOF_RELEASE_SIGNING_KEY_ID', 'release-key-default'),
+        secret=signing_secret,
+    ) if signing_secret else None
     return SemanticGovernanceService(
-        AOF_ROOT / 'data' / 'semantic_governance',
+        governance_root,
         decision_store=_decision_store(),
         compiler_registry=default_compiler_registry(),
         validators=[ontology_release_validator],
+        release_repository=SqliteReleaseRepository(governance_root / 'releases.sqlite3'),
+        access_policy=SemanticGovernancePolicy(),
+        release_attestor=attestor,
     )
 
 
@@ -3982,7 +3993,7 @@ def _semantic_governance_error(exc: Exception) -> HTTPException:
     message = str(exc)
     if 'not found:' in message:
         status_code = 404
-    elif any(token in message for token in ('cannot ', 'already exists:', 'already waived:', 'blocked by', 'cannot be overwritten:')):
+    elif any(token in message for token in ('cannot ', 'already exists:', 'already waived:', 'blocked by', 'cannot be overwritten:', 'separation of duties')):
         status_code = 409
     else:
         status_code = 422
@@ -4066,9 +4077,16 @@ async def publish_semantic_proposal(proposal_id: str, req: SemanticActorReq) -> 
 
 
 @app.get('/v1/semantic/releases/{release_id}')
-async def get_semantic_release(release_id: str) -> dict[str, Any]:
+async def get_semantic_release(
+    release_id: str, tenant_id: Optional[str] = Query(default=None)
+) -> dict[str, Any]:
     try:
-        release = _semantic_governance().release_repository.get(release_id)
+        repository = _semantic_governance().release_repository
+        release = (
+            repository.get(release_id, tenant_id=tenant_id)
+            if tenant_id
+            else repository.get_unique(release_id)
+        )
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
     if release is None:

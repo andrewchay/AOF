@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
@@ -206,6 +207,96 @@ class FileReleaseRepository:
     def _path(self, release_id: str) -> Path:
         _validate_release_id(release_id)
         return self.root / f"{release_id.replace('@', '__')}.json"
+
+
+class SqliteReleaseRepository:
+    """Transactional, tenant-isolated release store with immutable identities."""
+
+    def __init__(self, database: str | Path) -> None:
+        self.database = Path(database)
+        self.database.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.execute("PRAGMA journal_mode=WAL")
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS knowledge_releases (
+                    tenant_id TEXT NOT NULL,
+                    release_id TEXT NOT NULL,
+                    release_digest TEXT NOT NULL,
+                    manifest_json TEXT NOT NULL,
+                    PRIMARY KEY (tenant_id, release_id)
+                )
+                """
+            )
+
+    def publish(self, release: KnowledgeRelease, *, tenant_id: str) -> KnowledgeRelease:
+        self._validate_tenant(release, tenant_id)
+        if not release.verify():
+            raise ReleaseError("cannot publish a release with invalid digest")
+        manifest = canonical_json(release.to_dict())
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT release_digest, manifest_json FROM knowledge_releases "
+                "WHERE tenant_id = ? AND release_id = ?",
+                (tenant_id, release.release_id),
+            ).fetchone()
+            if row is not None:
+                if row[0] != release.release_digest:
+                    raise ReleaseError(
+                        f"published release cannot be overwritten: {release.release_id}"
+                    )
+                connection.commit()
+                return KnowledgeRelease.from_dict(json.loads(row[1]))
+            connection.execute(
+                "INSERT INTO knowledge_releases "
+                "(tenant_id, release_id, release_digest, manifest_json) VALUES (?, ?, ?, ?)",
+                (tenant_id, release.release_id, release.release_digest, manifest),
+            )
+            connection.commit()
+            return release
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    def get(self, release_id: str, *, tenant_id: str) -> KnowledgeRelease | None:
+        _validate_release_id(release_id)
+        if not tenant_id.strip():
+            raise ReleaseError("tenant_id is required")
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT manifest_json FROM knowledge_releases "
+                "WHERE tenant_id = ? AND release_id = ?",
+                (tenant_id, release_id),
+            ).fetchone()
+        return None if row is None else KnowledgeRelease.from_dict(json.loads(row[0]))
+
+    def get_unique(self, release_id: str) -> KnowledgeRelease | None:
+        """Compatibility lookup; reject ambiguous cross-tenant release identities."""
+        _validate_release_id(release_id)
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT manifest_json FROM knowledge_releases WHERE release_id = ?",
+                (release_id,),
+            ).fetchall()
+        if len(rows) > 1:
+            raise ReleaseError("tenant_id is required for an ambiguous release_id")
+        return None if not rows else KnowledgeRelease.from_dict(json.loads(rows[0][0]))
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.database, timeout=30)
+        connection.execute("PRAGMA foreign_keys=ON")
+        return connection
+
+    @staticmethod
+    def _validate_tenant(release: KnowledgeRelease, tenant_id: str) -> None:
+        if not tenant_id.strip():
+            raise ReleaseError("tenant_id is required")
+        if release.scope.get("tenant_id") != tenant_id:
+            raise ReleaseError("release scope tenant_id does not match repository tenant_id")
 
 
 def _validate_release_id(release_id: str) -> None:

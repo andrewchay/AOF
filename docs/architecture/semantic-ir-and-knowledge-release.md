@@ -112,3 +112,18 @@ P0 的持久层是本地原子文件和 append-only 决策账本；生产替换�
 
 所有 target 都显式分类每一种 ResourceKind；目标所需资源为空时编译失败，避免生成貌似成功的空产物。
 产物使用 canonical JSON，输入资源顺序不影响字节摘要，并继续绑定候选 Release digest 与完整 Revision 集。
+
+## P0.5 事务、租户与发布证明
+
+REST 控制面默认使用 `SqliteReleaseRepository`。发布在 `BEGIN IMMEDIATE` 事务内完成，并以
+`(tenant_id, release_id)` 为唯一键：同租户同 ID 的相同摘要可幂等重试，不同摘要不可覆盖；同一
+release ID 可以在不同租户独立存在，读取时必须按租户定位，兼容性无租户读取遇到歧义会拒绝。
+Proposal 创建时从 `aof://` 身份推导唯一 tenant，并拒绝跨租户资源或 scope 冒充。
+
+`SemanticGovernancePolicy` 对 create、validate、waive、review、approve、compile、publish 分配明确
+角色，并执行 creator ≠ approver、approver ≠ publisher 的职责分离。REST 默认启用该策略；actor
+使用 `role:subject` 形式，生产身份网关应把已认证主体映射为同一契约，不能信任客户端自报角色。
+
+配置 `AOF_RELEASE_SIGNING_SECRET` 后，publish 会生成 detached `aof.release-attestation/v1`：它绑定
+tenant、Release ID/digest、发布决策、actor、时间、key ID 和 HMAC-SHA256 签名。密钥只存在于运行
+时配置，不进入 Release、Proposal、决策账本或 attestation；`AOF_RELEASE_SIGNING_KEY_ID` 支持轮换。
