@@ -14,6 +14,13 @@ from bridge.semantic_core.governance import (
 )
 
 
+def _principal_headers(role: str, subject: str, tenant: str = "acme") -> dict[str, str]:
+    from bridge.semantic_core.identity import SignedPrincipalVerifier
+    return SignedPrincipalVerifier(
+        key_id="identity-key-default", secret=b"identity-secret"
+    ).sign_headers(subject=subject, tenant_id=tenant, roles=[role])
+
+
 def _resources() -> list[SemanticResource]:
     dataset = SemanticResource.create(
         resource_id="aof://acme/sales/logical-dataset/order",
@@ -142,6 +149,7 @@ def test_semantic_governance_rest_api_publishes_immutable_release(tmp_path, monk
     import services.semantic_middle_layer_api.app as api_module
 
     monkeypatch.setattr(api_module, "AOF_ROOT", tmp_path)
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_SECRET", "identity-secret")
     client = TestClient(api_module.app)
     created = client.post(
         "/v1/semantic/proposals",
@@ -151,37 +159,37 @@ def test_semantic_governance_rest_api_publishes_immutable_release(tmp_path, monk
             "resources": [resource.to_dict() for resource in _resources()],
             "actor": "editor:api",
             "rationale": "Publish sales semantics through the governed API.",
-        },
+        }, headers=_principal_headers("editor", "alice"),
     )
     assert created.status_code == 201
     assert created.json()["state"] == "proposed"
 
     proposal_id = created.json()["proposal_id"]
     assert client.post(
-        f"/v1/semantic/proposals/{proposal_id}/validate", json={"actor": "validator:api"}
+        f"/v1/semantic/proposals/{proposal_id}/validate", json={}, headers=_principal_headers("validator", "gate")
     ).json()["conforms"] is True
-    assert client.get(f"/v1/semantic/proposals/{proposal_id}/impact").json()["resource_count"] == 2
+    assert client.get(f"/v1/semantic/proposals/{proposal_id}/impact", headers=_principal_headers("viewer", "auditor")).json()["resource_count"] == 2
     assert client.post(
         f"/v1/semantic/proposals/{proposal_id}/approve",
-        json={"actor": "reviewer:bob", "rationale": "Validation passed."},
+        json={"rationale": "Validation passed."}, headers=_principal_headers("reviewer", "bob"),
     ).json()["state"] == "approved"
     assert client.post(
         f"/v1/semantic/proposals/{proposal_id}/compile",
-        json={"actor": "compiler:api", "targets": ["semantic-json"]},
+        json={"targets": ["semantic-json"]}, headers=_principal_headers("compiler", "runtime"),
     ).json()["state"] == "ready"
     published = client.post(
-        f"/v1/semantic/proposals/{proposal_id}/publish", json={"actor": "publisher:carol"}
+        f"/v1/semantic/proposals/{proposal_id}/publish", json={}, headers=_principal_headers("publisher", "carol")
     )
     assert published.status_code == 200
     assert published.json()["state"] == "published"
 
     release_id = published.json()["release_id"]
-    release = client.get(f"/v1/semantic/releases/{release_id}")
+    release = client.get(f"/v1/semantic/releases/{release_id}", headers=_principal_headers("viewer", "auditor"))
     assert release.status_code == 200
     assert release.json()["release_digest"] == published.json()["release"]["release_digest"]
     assert client.post(
         f"/v1/semantic/proposals/{proposal_id}/approve",
-        json={"actor": "reviewer:bob", "rationale": "Replay stale transition."},
+        json={"rationale": "Replay stale transition."}, headers=_principal_headers("reviewer", "bob"),
     ).status_code == 409
 
 
@@ -240,6 +248,7 @@ def test_rest_proposal_runs_default_shacl_owl_skos_release_gate(tmp_path, monkey
     )
 
     monkeypatch.setattr(api_module, "AOF_ROOT", tmp_path)
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_SECRET", "identity-secret")
     client = TestClient(api_module.app)
     created = client.post("/v1/semantic/proposals", json={
         "proposal_id": "people-invalid-shacl",
@@ -247,12 +256,12 @@ def test_rest_proposal_runs_default_shacl_owl_skos_release_gate(tmp_path, monkey
         "resources": [item.to_dict() for item in (ontology, shapes, vocabulary)],
         "actor": "editor:api",
         "rationale": "Exercise the default ontology release gate.",
-    })
+    }, headers=_principal_headers("editor", "alice"))
     assert created.status_code == 201
 
     review = client.post(
         "/v1/semantic/proposals/people-invalid-shacl/validate",
-        json={"actor": "validator:api"},
+        json={}, headers=_principal_headers("validator", "gate"),
     )
     assert review.status_code == 200
     assert review.json()["state"] == "conflict_review"
@@ -263,7 +272,7 @@ def test_rest_proposal_runs_default_shacl_owl_skos_release_gate(tmp_path, monkey
     )
     approval = client.post(
         "/v1/semantic/proposals/people-invalid-shacl/approve",
-        json={"actor": "reviewer:bob", "rationale": "Must remain blocked."},
+        json={"rationale": "Must remain blocked."}, headers=_principal_headers("reviewer", "bob"),
     )
     assert approval.status_code == 409
 

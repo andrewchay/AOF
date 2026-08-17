@@ -103,3 +103,45 @@ def test_governance_enforces_roles_separation_and_signed_transactional_publish(t
     release = repository.get(published["release_id"], tenant_id="acme")
     assert release is not None
     assert attestor.verify(published["attestation"], release=release) is True
+
+
+def test_semantic_api_uses_signed_principal_not_body_actor(tmp_path, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+    import services.semantic_middle_layer_api.app as api_module
+    from bridge.semantic_core.identity import SignedPrincipalVerifier
+
+    monkeypatch.setattr(api_module, "AOF_ROOT", tmp_path)
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_SECRET", "identity-secret")
+    verifier = SignedPrincipalVerifier(
+        key_id="identity-key-default", secret=b"identity-secret"
+    )
+    headers = verifier.sign_headers(subject="alice", tenant_id="acme", roles=["editor"])
+    payload = {
+        "proposal_id": "trusted-identity",
+        "release_id": "trusted-identity@1.0.0",
+        "resources": [
+            SemanticResource.create(
+                resource_id="aof://acme/sales/concept/customer",
+                kind=ResourceKind.CONCEPT,
+                name="customer",
+                domain="sales",
+                owner="knowledge-team",
+            ).to_dict()
+        ],
+        "actor": "admin:attacker",
+        "rationale": "Authenticated editor creates the proposal.",
+    }
+    client = TestClient(api_module.app)
+
+    forged = client.post(
+        "/v1/semantic/proposals", json=payload, headers={**headers, "x-aof-principal-signature": "bad"}
+    )
+    assert forged.status_code == 401
+    created = client.post("/v1/semantic/proposals", json=payload, headers=headers)
+    assert created.status_code == 201
+    assert created.json()["created_by"] == "editor:alice"
+    assert created.json()["tenant_id"] == "acme"
+    beta_headers = verifier.sign_headers(subject="mallory", tenant_id="beta", roles=["viewer"])
+    assert client.get(
+        "/v1/semantic/proposals/trusted-identity", headers=beta_headers
+    ).status_code == 404

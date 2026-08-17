@@ -2,6 +2,7 @@
 
 from .canonical import CanonicalizationError, canonical_data, canonical_json, content_digest
 from .attestations import HmacReleaseAttestor
+from .identity import PrincipalVerificationError, SemanticPrincipal, SignedPrincipalVerifier
 from .models import ResourceKind, SemanticModelError, SemanticResource, validate_resource_id
 from .governance import (
     SemanticFinding,
@@ -20,6 +21,9 @@ from .releases import (
 __all__ = [
     "CanonicalizationError",
     "HmacReleaseAttestor",
+    "PrincipalVerificationError",
+    "SemanticPrincipal",
+    "SignedPrincipalVerifier",
     "ResourceKind",
     "ResourceRevisionRef",
     "ReleaseError",

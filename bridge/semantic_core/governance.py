@@ -162,11 +162,14 @@ class SemanticGovernanceService:
         self._write(path, manifest)
         return manifest
 
-    def get_proposal(self, proposal_id: str) -> dict[str, Any]:
+    def get_proposal(self, proposal_id: str, *, tenant_id: str | None = None) -> dict[str, Any]:
         path = self._proposal_path(proposal_id)
         if not path.exists():
             raise SemanticGovernanceError(f"proposal not found: {proposal_id}")
-        return json.loads(path.read_text(encoding="utf-8"))
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        if tenant_id is not None and manifest.get("tenant_id") != tenant_id:
+            raise SemanticGovernanceError(f"proposal not found: {proposal_id}")
+        return manifest
 
     def validate(self, proposal_id: str, *, actor: str) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
@@ -205,8 +208,8 @@ class SemanticGovernanceService:
         self._write(self._proposal_path(proposal_id), manifest)
         return {**review, "state": manifest["state"]}
 
-    def impact(self, proposal_id: str) -> dict[str, Any]:
-        manifest = self.get_proposal(proposal_id)
+    def impact(self, proposal_id: str, *, tenant_id: str | None = None) -> dict[str, Any]:
+        manifest = self.get_proposal(proposal_id, tenant_id=tenant_id)
         resources = self._resources(manifest)
         current = {resource.resource_id: resource.revision_id for resource in resources}
         previous: dict[str, str] = {}

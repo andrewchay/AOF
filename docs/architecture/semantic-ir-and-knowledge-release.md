@@ -122,7 +122,12 @@ Proposal 创建时从 `aof://` 身份推导唯一 tenant，并拒绝跨租户资
 
 `SemanticGovernancePolicy` 对 create、validate、waive、review、approve、compile、publish 分配明确
 角色，并执行 creator ≠ approver、approver ≠ publisher 的职责分离。REST 默认启用该策略；actor
-使用 `role:subject` 形式，生产身份网关应把已认证主体映射为同一契约，不能信任客户端自报角色。
+使用 `role:subject` 形式。
+
+REST 不再信任请求体 actor。身份网关必须提供 `X-AOF-Principal-Subject/Tenant/Roles/Timestamp/Key-Id`
+及其 HMAC 签名；服务端使用 `AOF_SEMANTIC_IDENTITY_SECRET` 验证完整 payload、时效和 key ID，然后
+按操作从已签名 roles 选择 actor。缺失配置返回 503，缺失、过期或错误签名返回 401；所有 Proposal
+和 Release 读取、写入都强制使用签名 Principal 的 tenant，跨租户访问表现为资源不存在。
 
 配置 `AOF_RELEASE_SIGNING_SECRET` 后，publish 会生成 detached `aof.release-attestation/v1`：它绑定
 tenant、Release ID/digest、发布决策、actor、时间、key ID 和 HMAC-SHA256 签名。密钥只存在于运行

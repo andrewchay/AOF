@@ -3942,14 +3942,14 @@ class SemanticProposalCreateReq(BaseModel):
     proposal_id: str = Field(min_length=1)
     release_id: str = Field(min_length=1)
     resources: list[dict[str, Any]] = Field(min_length=1)
-    actor: str = Field(min_length=1)
+    actor: Optional[str] = None  # deprecated; ignored in favor of signed principal
     rationale: str = Field(min_length=1)
     parent_release: Optional[str] = None
     scope: dict[str, Any] = Field(default_factory=dict)
 
 
 class SemanticActorReq(BaseModel):
-    actor: str = Field(min_length=1)
+    actor: Optional[str] = None  # deprecated; ignored in favor of signed principal
 
 
 class SemanticReviewReq(SemanticActorReq):
@@ -3990,6 +3990,8 @@ def _semantic_governance():
 
 
 def _semantic_governance_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, HTTPException):
+        return exc
     message = str(exc)
     if 'not found:' in message:
         status_code = 404
@@ -4000,93 +4002,126 @@ def _semantic_governance_error(exc: Exception) -> HTTPException:
     return HTTPException(status_code=status_code, detail=message)
 
 
+def _semantic_principal(request: Request, action: str):
+    from bridge.semantic_core.identity import PrincipalVerificationError, SignedPrincipalVerifier
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    verifier = SignedPrincipalVerifier(
+        key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+        secret=secret,
+    )
+    try:
+        principal = verifier.verify(request.headers)
+        return principal, principal.actor_for(action)
+    except PrincipalVerificationError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
 @app.post('/v1/semantic/proposals', status_code=201)
-async def create_semantic_proposal(req: SemanticProposalCreateReq) -> dict[str, Any]:
+async def create_semantic_proposal(req: SemanticProposalCreateReq, request: Request) -> dict[str, Any]:
     from bridge.semantic_core import SemanticResource
 
     try:
+        principal, actor = _semantic_principal(request, 'create')
         payload = req.model_dump()
+        payload.pop('actor', None)
         payload['resources'] = [SemanticResource.from_dict(item) for item in payload['resources']]
+        payload['actor'] = actor
+        payload['scope'] = {**payload['scope'], 'tenant_id': principal.tenant_id}
         return _semantic_governance().create_proposal(**payload)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
 
 
 @app.get('/v1/semantic/proposals/{proposal_id}')
-async def get_semantic_proposal(proposal_id: str) -> dict[str, Any]:
+async def get_semantic_proposal(proposal_id: str, request: Request) -> dict[str, Any]:
     try:
-        return _semantic_governance().get_proposal(proposal_id)
+        principal, _ = _semantic_principal(request, 'read')
+        return _semantic_governance().get_proposal(proposal_id, tenant_id=principal.tenant_id)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
 
 
 @app.post('/v1/semantic/proposals/{proposal_id}/validate')
-async def validate_semantic_proposal(proposal_id: str, req: SemanticActorReq) -> dict[str, Any]:
+async def validate_semantic_proposal(proposal_id: str, req: SemanticActorReq, request: Request) -> dict[str, Any]:
     try:
-        return _semantic_governance().validate(proposal_id, actor=req.actor)
+        principal, actor = _semantic_principal(request, 'validate')
+        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.validate(proposal_id, actor=actor)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
 
 
 @app.get('/v1/semantic/proposals/{proposal_id}/impact')
-async def semantic_proposal_impact(proposal_id: str) -> dict[str, Any]:
+async def semantic_proposal_impact(proposal_id: str, request: Request) -> dict[str, Any]:
     try:
-        return _semantic_governance().impact(proposal_id)
+        principal, _ = _semantic_principal(request, 'read')
+        return _semantic_governance().impact(proposal_id, tenant_id=principal.tenant_id)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
 
 
 @app.post('/v1/semantic/proposals/{proposal_id}/waivers', status_code=201)
-async def waive_semantic_finding(proposal_id: str, req: SemanticWaiverReq) -> dict[str, Any]:
+async def waive_semantic_finding(proposal_id: str, req: SemanticWaiverReq, request: Request) -> dict[str, Any]:
     try:
-        return _semantic_governance().waive_finding(proposal_id, **req.model_dump())
+        principal, actor = _semantic_principal(request, 'waive')
+        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        payload = req.model_dump(); payload.pop('actor', None); payload['actor'] = actor
+        return service.waive_finding(proposal_id, **payload)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
 
 
 @app.post('/v1/semantic/proposals/{proposal_id}/request-changes')
-async def request_semantic_changes(proposal_id: str, req: SemanticReviewReq) -> dict[str, Any]:
+async def request_semantic_changes(proposal_id: str, req: SemanticReviewReq, request: Request) -> dict[str, Any]:
     try:
-        return _semantic_governance().request_changes(proposal_id, **req.model_dump())
+        principal, actor = _semantic_principal(request, 'request_changes')
+        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.request_changes(proposal_id, actor=actor, rationale=req.rationale)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
 
 
 @app.post('/v1/semantic/proposals/{proposal_id}/approve')
-async def approve_semantic_proposal(proposal_id: str, req: SemanticReviewReq) -> dict[str, Any]:
+async def approve_semantic_proposal(proposal_id: str, req: SemanticReviewReq, request: Request) -> dict[str, Any]:
     try:
-        return _semantic_governance().approve(proposal_id, **req.model_dump())
+        principal, actor = _semantic_principal(request, 'approve')
+        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.approve(proposal_id, actor=actor, rationale=req.rationale)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
 
 
 @app.post('/v1/semantic/proposals/{proposal_id}/compile')
-async def compile_semantic_proposal(proposal_id: str, req: SemanticCompileReq) -> dict[str, Any]:
+async def compile_semantic_proposal(proposal_id: str, req: SemanticCompileReq, request: Request) -> dict[str, Any]:
     try:
-        return _semantic_governance().compile(proposal_id, **req.model_dump())
+        principal, actor = _semantic_principal(request, 'compile')
+        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.compile(proposal_id, actor=actor, targets=req.targets)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
 
 
 @app.post('/v1/semantic/proposals/{proposal_id}/publish')
-async def publish_semantic_proposal(proposal_id: str, req: SemanticActorReq) -> dict[str, Any]:
+async def publish_semantic_proposal(proposal_id: str, req: SemanticActorReq, request: Request) -> dict[str, Any]:
     try:
-        return _semantic_governance().publish(proposal_id, actor=req.actor)
+        principal, actor = _semantic_principal(request, 'publish')
+        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.publish(proposal_id, actor=actor)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
 
 
 @app.get('/v1/semantic/releases/{release_id}')
 async def get_semantic_release(
-    release_id: str, tenant_id: Optional[str] = Query(default=None)
+    release_id: str, request: Request
 ) -> dict[str, Any]:
     try:
+        principal, _ = _semantic_principal(request, 'read')
         repository = _semantic_governance().release_repository
-        release = (
-            repository.get(release_id, tenant_id=tenant_id)
-            if tenant_id
-            else repository.get_unique(release_id)
-        )
+        release = repository.get(release_id, tenant_id=principal.tenant_id)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
     if release is None:
