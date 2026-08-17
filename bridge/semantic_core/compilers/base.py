@@ -10,7 +10,7 @@ from types import MappingProxyType
 from typing import Any, Iterable, Mapping
 
 from ..canonical import canonical_data
-from ..models import ResourceKind
+from ..models import ResourceKind, SemanticResource
 from ..releases import KnowledgeRelease
 
 
@@ -46,6 +46,23 @@ class VerificationReport:
 
 
 @dataclass(frozen=True)
+class CompilationInput:
+    release: KnowledgeRelease
+    resources: tuple[SemanticResource, ...]
+
+    @classmethod
+    def create(
+        cls, release: KnowledgeRelease, resources: Iterable[SemanticResource]
+    ) -> "CompilationInput":
+        ordered = tuple(sorted(resources, key=lambda item: item.resource_id))
+        actual = tuple((item.resource_id, item.revision_id, item.kind.value) for item in ordered)
+        expected = tuple((item.resource_id, item.revision_id, item.kind) for item in release.resources)
+        if actual != expected:
+            raise CompilerError("compiler resources do not match the release revision set")
+        return cls(release=release, resources=ordered)
+
+
+@dataclass(frozen=True)
 class CompiledArtifact:
     target: str
     uri: str
@@ -77,9 +94,11 @@ class SemanticCompiler(ABC):
     supported_kinds: frozenset[ResourceKind] = frozenset()
     ignored_kinds: frozenset[ResourceKind] = frozenset()
 
-    def validate(self, release: KnowledgeRelease) -> VerificationReport:
+    def validate(self, compilation: CompilationInput) -> VerificationReport:
         classified = {kind.value for kind in self.supported_kinds | self.ignored_kinds}
-        unclassified = sorted({item.kind for item in release.resources if item.kind not in classified})
+        unclassified = sorted(
+            {item.kind.value for item in compilation.resources if item.kind.value not in classified}
+        )
         if unclassified:
             return VerificationReport(
                 False,
@@ -88,12 +107,12 @@ class SemanticCompiler(ABC):
         return VerificationReport(True)
 
     @abstractmethod
-    def compile(self, release: KnowledgeRelease, output_dir: Path) -> CompiledArtifact:
+    def compile(self, compilation: CompilationInput, output_dir: Path) -> CompiledArtifact:
         raise NotImplementedError
 
     def artifact(
         self,
-        release: KnowledgeRelease,
+        compilation: CompilationInput,
         path: Path,
         *,
         media_type: str,
@@ -108,8 +127,8 @@ class SemanticCompiler(ABC):
             media_type=media_type,
             content_hash=_file_digest(path),
             compiler=f"{self.target}@{self.version}",
-            release_digest=release.release_digest,
-            input_revisions=tuple(item.revision_id for item in release.resources),
+            release_digest=compilation.release.release_digest,
+            input_revisions=tuple(item.revision_id for item in compilation.release.resources),
             metadata=_frozen_mapping(metadata),
         )
 
@@ -133,16 +152,24 @@ class CompilerRegistry:
             )
         self._compilers[compiler.target] = compiler
 
-    def compile(self, target: str, release: KnowledgeRelease, output_dir: str | Path) -> CompiledArtifact:
+    def compile(
+        self,
+        target: str,
+        release: KnowledgeRelease,
+        output_dir: str | Path,
+        *,
+        resources: Iterable[SemanticResource],
+    ) -> CompiledArtifact:
         compiler = self._compilers.get(target)
         if compiler is None:
             raise CompilerError(f"compiler target is not registered: {target}")
-        validation = compiler.validate(release)
+        compilation = CompilationInput.create(release, resources)
+        validation = compiler.validate(compilation)
         if not validation.valid:
             raise CompilerError("; ".join(validation.findings))
         root = Path(output_dir)
         root.mkdir(parents=True, exist_ok=True)
-        artifact = compiler.compile(release, root)
+        artifact = compiler.compile(compilation, root)
         self._validate_artifact_contract(compiler, release, artifact)
         verification = self.verify(artifact, root, release=release)
         if not verification.valid:

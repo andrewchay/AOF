@@ -3936,6 +3936,144 @@ async def decision_audit_trail(decision_id: str) -> dict[str, Any]:
         raise _decision_error(exc) from exc
 
 
+# ==================== Semantic IR proposal & Knowledge Release governance ====================
+
+class SemanticProposalCreateReq(BaseModel):
+    proposal_id: str = Field(min_length=1)
+    release_id: str = Field(min_length=1)
+    resources: list[dict[str, Any]] = Field(min_length=1)
+    actor: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    parent_release: Optional[str] = None
+    scope: dict[str, Any] = Field(default_factory=dict)
+
+
+class SemanticActorReq(BaseModel):
+    actor: str = Field(min_length=1)
+
+
+class SemanticReviewReq(SemanticActorReq):
+    rationale: str = Field(min_length=1)
+
+
+class SemanticWaiverReq(SemanticReviewReq):
+    finding_id: str = Field(min_length=1)
+    policy: str = Field(min_length=1)
+
+
+class SemanticCompileReq(SemanticActorReq):
+    targets: list[str] = Field(min_length=1)
+
+
+def _semantic_governance():
+    from bridge.semantic_core.compilers import CompilerRegistry, SemanticBundleCompiler
+    from bridge.semantic_core.governance import SemanticGovernanceService
+
+    return SemanticGovernanceService(
+        AOF_ROOT / 'data' / 'semantic_governance',
+        decision_store=_decision_store(),
+        compiler_registry=CompilerRegistry([SemanticBundleCompiler()]),
+    )
+
+
+def _semantic_governance_error(exc: Exception) -> HTTPException:
+    message = str(exc)
+    if 'not found:' in message:
+        status_code = 404
+    elif any(token in message for token in ('cannot ', 'already exists:', 'already waived:', 'blocked by', 'cannot be overwritten:')):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+@app.post('/v1/semantic/proposals', status_code=201)
+async def create_semantic_proposal(req: SemanticProposalCreateReq) -> dict[str, Any]:
+    from bridge.semantic_core import SemanticResource
+
+    try:
+        payload = req.model_dump()
+        payload['resources'] = [SemanticResource.from_dict(item) for item in payload['resources']]
+        return _semantic_governance().create_proposal(**payload)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.get('/v1/semantic/proposals/{proposal_id}')
+async def get_semantic_proposal(proposal_id: str) -> dict[str, Any]:
+    try:
+        return _semantic_governance().get_proposal(proposal_id)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/validate')
+async def validate_semantic_proposal(proposal_id: str, req: SemanticActorReq) -> dict[str, Any]:
+    try:
+        return _semantic_governance().validate(proposal_id, actor=req.actor)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.get('/v1/semantic/proposals/{proposal_id}/impact')
+async def semantic_proposal_impact(proposal_id: str) -> dict[str, Any]:
+    try:
+        return _semantic_governance().impact(proposal_id)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/waivers', status_code=201)
+async def waive_semantic_finding(proposal_id: str, req: SemanticWaiverReq) -> dict[str, Any]:
+    try:
+        return _semantic_governance().waive_finding(proposal_id, **req.model_dump())
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/request-changes')
+async def request_semantic_changes(proposal_id: str, req: SemanticReviewReq) -> dict[str, Any]:
+    try:
+        return _semantic_governance().request_changes(proposal_id, **req.model_dump())
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/approve')
+async def approve_semantic_proposal(proposal_id: str, req: SemanticReviewReq) -> dict[str, Any]:
+    try:
+        return _semantic_governance().approve(proposal_id, **req.model_dump())
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/compile')
+async def compile_semantic_proposal(proposal_id: str, req: SemanticCompileReq) -> dict[str, Any]:
+    try:
+        return _semantic_governance().compile(proposal_id, **req.model_dump())
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/publish')
+async def publish_semantic_proposal(proposal_id: str, req: SemanticActorReq) -> dict[str, Any]:
+    try:
+        return _semantic_governance().publish(proposal_id, actor=req.actor)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.get('/v1/semantic/releases/{release_id}')
+async def get_semantic_release(release_id: str) -> dict[str, Any]:
+    try:
+        release = _semantic_governance().release_repository.get(release_id)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+    if release is None:
+        raise HTTPException(status_code=404, detail=f'release not found: {release_id}')
+    return release.to_dict()
+
+
 # ==================== Ontology governance & deterministic reasoning ====================
 
 class OntologyDraftCreateReq(BaseModel):

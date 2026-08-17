@@ -7,7 +7,13 @@ from pathlib import Path
 import pytest
 
 from bridge.semantic_core import KnowledgeRelease, ResourceKind, SemanticResource, canonical_json
-from bridge.semantic_core.compilers import CompiledArtifact, CompilerError, CompilerRegistry, SemanticCompiler
+from bridge.semantic_core.compilers import (
+    CompiledArtifact,
+    CompilationInput,
+    CompilerError,
+    CompilerRegistry,
+    SemanticCompiler,
+)
 
 
 class DemoCompiler(SemanticCompiler):
@@ -15,13 +21,15 @@ class DemoCompiler(SemanticCompiler):
     version = "1"
     supported_kinds = frozenset({ResourceKind.CONCEPT})
 
-    def compile(self, release: KnowledgeRelease, output_dir: Path) -> CompiledArtifact:
+    def compile(self, compilation: CompilationInput, output_dir: Path) -> CompiledArtifact:
         path = output_dir / "concepts.json"
-        path.write_text(canonical_json([item.to_dict() for item in release.resources]) + "\n", encoding="utf-8")
-        return self.artifact(release, path, media_type="application/json")
+        path.write_text(
+            canonical_json([item.to_dict() for item in compilation.resources]) + "\n", encoding="utf-8"
+        )
+        return self.artifact(compilation, path, media_type="application/json")
 
 
-def _release() -> KnowledgeRelease:
+def _release() -> tuple[KnowledgeRelease, list[SemanticResource]]:
     concept = SemanticResource.create(
         resource_id="aof://acme/sales/concept/customer",
         kind=ResourceKind.CONCEPT,
@@ -29,15 +37,15 @@ def _release() -> KnowledgeRelease:
         domain="sales",
         owner="knowledge-team",
     )
-    return KnowledgeRelease.build(release_id="sales-knowledge@2026.08.17.1", resources=[concept])
+    return KnowledgeRelease.build(release_id="sales-knowledge@2026.08.17.1", resources=[concept]), [concept]
 
 
 def test_compiler_artifact_is_bound_to_release_and_reproducible(tmp_path) -> None:
     registry = CompilerRegistry([DemoCompiler()])
-    release = _release()
+    release, resources = _release()
 
-    first = registry.compile("demo-json", release, tmp_path / "first")
-    second = registry.compile("demo-json", release, tmp_path / "second")
+    first = registry.compile("demo-json", release, tmp_path / "first", resources=resources)
+    second = registry.compile("demo-json", release, tmp_path / "second", resources=resources)
 
     assert first.content_hash == second.content_hash
     assert first.release_digest == release.release_digest
@@ -57,14 +65,30 @@ def test_compiler_must_classify_every_resource_kind(tmp_path) -> None:
     registry = CompilerRegistry([DemoCompiler()])
 
     with pytest.raises(CompilerError, match="unclassified resource kinds.*Metric"):
-        registry.compile("demo-json", release, tmp_path)
+        registry.compile("demo-json", release, tmp_path, resources=[metric])
+
+
+def test_compiler_requires_full_frozen_resource_revisions(tmp_path) -> None:
+    registry = CompilerRegistry([DemoCompiler()])
+    release, resources = _release()
+    replacement = SemanticResource.create(
+        resource_id=resources[0].resource_id,
+        kind=ResourceKind.CONCEPT,
+        name=resources[0].name,
+        domain=resources[0].domain,
+        owner=resources[0].owner,
+        description="A different revision must never compile under the old manifest.",
+    )
+
+    with pytest.raises(CompilerError, match="do not match the release revision set"):
+        registry.compile("demo-json", release, tmp_path, resources=[replacement])
 
 
 def test_artifact_verification_rejects_tampering_and_path_escape(tmp_path) -> None:
     registry = CompilerRegistry([DemoCompiler()])
-    release = _release()
+    release, resources = _release()
     output_dir = tmp_path / "output"
-    artifact = registry.compile("demo-json", release, output_dir)
+    artifact = registry.compile("demo-json", release, output_dir, resources=resources)
 
     (output_dir / artifact.uri).write_text("tampered\n", encoding="utf-8")
     report = registry.verify(artifact, output_dir, release=release)
