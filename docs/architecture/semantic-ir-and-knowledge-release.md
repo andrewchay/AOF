@@ -127,3 +127,22 @@ Proposal 创建时从 `aof://` 身份推导唯一 tenant，并拒绝跨租户资
 配置 `AOF_RELEASE_SIGNING_SECRET` 后，publish 会生成 detached `aof.release-attestation/v1`：它绑定
 tenant、Release ID/digest、发布决策、actor、时间、key ID 和 HMAC-SHA256 签名。密钥只存在于运行
 时配置，不进入 Release、Proposal、决策账本或 attestation；`AOF_RELEASE_SIGNING_KEY_ID` 支持轮换。
+
+## 仓库资产端到端验收
+
+`tests/test_semantic_release_e2e.py` 使用仓库中的真实资产而不是内存假对象：
+
+- `ontologies/genshin_ontology.owl`；
+- `data/middle_layer/api_demo_topic/mapping/*.yaml`；
+- `examples/semantic-release/rules/entity-search.dl`；
+- `examples/semantic-release/okf/index.md`。
+
+测试通过 adapters 形成同租户依赖闭包，运行默认本体 gate、独立审批、六目标编译、SQLite 发布、
+HMAC 验签和决策审计完整性检查。真实 mapping 同时覆盖“不同物理表存在同名维度”的迁移情况；
+适配器仅在发生重名时使用物理字段限定 Resource ID，避免把不同维度压成同一身份。
+
+验收命令：
+
+```bash
+.venv/bin/python -m pytest tests/test_semantic_release_e2e.py -q
+```

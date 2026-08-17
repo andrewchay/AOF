@@ -39,6 +39,11 @@ def adapt_mapping_library(
     datasets: dict[str, SemanticResource] = {}
     resources: list[SemanticResource] = []
     metric_ids: dict[str, str] = {}
+    dimension_name_counts: dict[str, int] = {}
+    for row in dimensions:
+        dimension_name = str(row.get("business_dim") or row.get("name") or "").strip()
+        if dimension_name:
+            dimension_name_counts[dimension_name] = dimension_name_counts.get(dimension_name, 0) + 1
 
     def ensure_dataset(table_name: str) -> SemanticResource:
         resource_id = context.resource_id("physical-dataset", table_name)
@@ -84,11 +89,16 @@ def adapt_mapping_library(
         physical_field = str(row.get("physical_field") or "").strip()
         table_name = _table_from_field(physical_field)
         dependencies = [ensure_dataset(table_name).resource_id] if table_name else []
+        identity_name = (
+            f"{dimension_name}-{physical_field}"
+            if dimension_name_counts[dimension_name] > 1
+            else dimension_name
+        )
         resources.append(
             SemanticResource.create(
-                resource_id=context.resource_id("dimension", dimension_name),
+                resource_id=context.resource_id("dimension", identity_name),
                 kind=ResourceKind.DIMENSION,
-                name=safe_segment(dimension_name),
+                name=safe_segment(identity_name),
                 display_name=str(row.get("display_name") or dimension_name),
                 domain=context.domain,
                 owner=context.owner,
