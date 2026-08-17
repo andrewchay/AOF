@@ -196,6 +196,23 @@ Policy report 与 waiver，在独立 run 目录重新编译；所有 `(target, c
 可复现 Run、独立 approver 与 publisher；rollback 只能指向该 channel 历史上提升过且仍可验证的 Run。
 每次执行、回放、提升和回滚都写入决策溯源账本，channel 保留带摘要的完整 pointer history。
 
+## 签名编译控制面
+
+REST 与 MCP 不各自实现编译逻辑，而是共同调用 `CompilerControlPlane`。边界只信任经
+`SignedPrincipalVerifier` 验证的 subject、tenant 和 roles；请求体不能指定 actor。Release scope、所有
+Resource ID 和 Policy ID 必须属于签名 tenant，Run repository 按 tenant 分区，所有编译、回放、审批、
+提升和回滚决策也写入同一 tenant，避免跨租户先例与审计轨迹串线。
+
+REST 提供 `/v1/semantic/compiler/{plan,evaluate,runs,runs/replay}` 与
+`/v1/semantic/compiler/channels/{approvals,promote,rollback}`，并可读取不可变 Run 和 channel。MCP 提供
+对应的 `aof_semantic_compile_*` tools，要求 gateway 将签名 Principal headers 放入
+`principal_headers`。Run 请求必须回传 plan 阶段的 `expected_plan_digest`；promotion 必须引用由独立签名
+reviewer 创建、且精确绑定 run/channel 的 approval decision，publisher 不能用请求体伪造审批人。
+
+真实资产 E2E 会把仓库中的 Genshin OWL、mapping YAML、Datalog ruleset 与 OKF 文档编入同一个 Release，
+通过签名 REST 完成六目标 plan、Policy gate、run、独立 replay、审批和 production pointer 提升，并检查
+回放目录中的每一个实际产物文件。
+
 ## 生产运维闭环
 
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加

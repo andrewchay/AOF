@@ -30,6 +30,7 @@ _RUN_FIELDS = {
     "plan_digest",
     "release_id",
     "release_digest",
+    "tenant_id",
     "requested_targets",
     "compiler_lock",
     "policy_resource_id",
@@ -70,6 +71,7 @@ class CompilationRun:
     plan_digest: str
     release_id: str
     release_digest: str
+    tenant_id: str | None
     requested_targets: tuple[str, ...]
     compiler_lock: Mapping[str, str]
     policy_resource_id: str
@@ -109,6 +111,7 @@ class CompilationRun:
             "plan_digest": plan.plan_digest,
             "release_id": release.release_id,
             "release_digest": release.release_digest,
+            "tenant_id": release.scope.get("tenant_id"),
             "requested_targets": list(plan.requested_targets),
             "compiler_lock": canonical_data(plan.compiler_lock),
             "policy_resource_id": policy.resource_id,
@@ -145,6 +148,9 @@ class CompilationRun:
             plan_digest=str(payload.get("plan_digest", "")),
             release_id=str(payload.get("release_id", "")),
             release_digest=str(payload.get("release_digest", "")),
+            tenant_id=(
+                str(payload["tenant_id"]) if payload.get("tenant_id") is not None else None
+            ),
             requested_targets=tuple(str(item) for item in payload.get("requested_targets", ())),
             compiler_lock=_freeze(payload.get("compiler_lock", {})),
             policy_resource_id=str(payload.get("policy_resource_id", "")),
@@ -165,6 +171,7 @@ class CompilationRun:
             "plan_digest": self.plan_digest,
             "release_id": self.release_id,
             "release_digest": self.release_digest,
+            "tenant_id": self.tenant_id,
             "requested_targets": list(self.requested_targets),
             "compiler_lock": canonical_data(self.compiler_lock),
             "policy_resource_id": self.policy_resource_id,
@@ -331,6 +338,93 @@ class CompilationRunService:
         approved_by: str,
         rationale: str,
     ) -> dict[str, Any]:
+        """Trusted in-process promotion; external boundaries use promote_with_approval."""
+        return self._promote(
+            run_id,
+            channel=channel,
+            actor=actor,
+            approved_by=approved_by,
+            approval_decision_id=None,
+            rationale=rationale,
+        )
+
+    def approve_promotion(
+        self,
+        run_id: str,
+        *,
+        channel: str,
+        actor: str,
+        rationale: str,
+    ) -> dict[str, Any]:
+        run = self._require_run(run_id)
+        if not run.reproducible:
+            raise CompilationRunError("promotion approval requires an independent replay")
+        _validate_id(channel, "channel")
+        actor = _non_empty(actor, "actor")
+        rationale = _non_empty(rationale, "rationale")
+        return self.decision_store.record(
+            agent_id=actor,
+            decision_type="semantic_compile_promotion_approval",
+            conclusion=f"approved {run_id} for {channel}",
+            rationale=rationale,
+            parent_decision_ids=[run.decision_id],
+            evidence=[
+                {"id": f"run:{run_id}", "type": "compilation_run", "content_hash": run.run_digest}
+            ],
+            policies=[f"{run.policy_resource_id}@{run.policy_revision}"],
+            tags=["semantic", "compile", "promotion", "approval"],
+            output_entities=[
+                {"id": f"promotion-approval:{channel}:{run_id}", "type": "promotion_approval"}
+            ],
+            tenant_id=run.tenant_id,
+            metadata={"run_id": run_id, "channel": channel},
+        )
+
+    def promote_with_approval(
+        self,
+        run_id: str,
+        *,
+        channel: str,
+        actor: str,
+        approval_decision_id: str,
+        rationale: str,
+    ) -> dict[str, Any]:
+        approval = self.decision_store.get(_non_empty(approval_decision_id, "approval_decision_id"))
+        if approval is None:
+            raise CompilationRunError(f"promotion approval not found: {approval_decision_id}")
+        decision = approval["decision"]
+        if (
+            decision.get("decision_type") != "semantic_compile_promotion_approval"
+            or decision.get("status") != "completed"
+            or decision.get("metadata", {}).get("run_id") != run_id
+            or decision.get("metadata", {}).get("channel") != channel
+        ):
+            raise CompilationRunError("promotion approval does not match the run and channel")
+        current = self.repository.get_channel(channel)
+        if current and any(
+            event.get("approval_decision_id") == approval_decision_id
+            for event in current["history"]
+        ):
+            raise CompilationRunError("promotion approval has already been used")
+        return self._promote(
+            run_id,
+            channel=channel,
+            actor=actor,
+            approved_by=decision["agent_id"],
+            approval_decision_id=approval_decision_id,
+            rationale=rationale,
+        )
+
+    def _promote(
+        self,
+        run_id: str,
+        *,
+        channel: str,
+        actor: str,
+        approved_by: str,
+        approval_decision_id: str | None,
+        rationale: str,
+    ) -> dict[str, Any]:
         run = self._require_run(run_id)
         if not run.reproducible:
             raise CompilationRunError("promotion requires an independent replay")
@@ -347,13 +441,16 @@ class CompilationRunService:
             decision_type="semantic_compile_promotion",
             conclusion=f"promoted {run_id} to {channel}",
             rationale=rationale,
-            parent_decision_ids=[run.decision_id],
+            parent_decision_ids=list(
+                dict.fromkeys([run.decision_id, *([approval_decision_id] if approval_decision_id else [])])
+            ),
             evidence=[
                 {"id": f"run:{run_id}", "type": "compilation_run", "content_hash": run.run_digest}
             ],
             policies=[f"{run.policy_resource_id}@{run.policy_revision}"],
             tags=["semantic", "compile", "promotion"],
             output_entities=[{"id": f"channel:{channel}", "type": "compilation_channel"}],
+            tenant_id=run.tenant_id,
         )
         return self.repository.advance_channel(
             channel,
@@ -363,6 +460,7 @@ class CompilationRunService:
                 "previous_run_id": current["run_id"] if current else None,
                 "actor": actor,
                 "approved_by": approved_by,
+                "approval_decision_id": approval_decision_id,
                 "decision_id": decision["decision"]["id"],
             },
         )
@@ -402,6 +500,7 @@ class CompilationRunService:
             policies=[f"{target.policy_resource_id}@{target.policy_revision}"],
             tags=["semantic", "compile", "rollback"],
             output_entities=[{"id": f"channel:{channel}", "type": "compilation_channel"}],
+            tenant_id=target.tenant_id,
         )
         return self.repository.advance_channel(
             channel,
@@ -493,6 +592,7 @@ class CompilationRunService:
             policies=[f"{policy.resource_id}@{policy.revision_id}"],
             tags=["semantic", "compile", "replay" if replay_of else "run"],
             status="failed" if replay_of and not reproducible else "completed",
+            tenant_id=(str(release.scope["tenant_id"]) if release.scope.get("tenant_id") else None),
             output_entities=[{"id": f"run:{run_id}", "type": "compilation_run"}],
         )
         run = CompilationRun.build(

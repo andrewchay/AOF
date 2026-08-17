@@ -59,6 +59,20 @@ class CompilationWaiver:
         }
         return cls(**{key: value for key, value in payload.items() if key != "api_version"}, waiver_id=content_digest(payload))
 
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "CompilationWaiver":
+        waiver = cls.create(
+            finding_id=str(value.get("finding_id", "")),
+            policy_revision=str(value.get("policy_revision", "")),
+            actor=str(value.get("actor", "")),
+            rationale=str(value.get("rationale", "")),
+            authority=str(value.get("authority", "")),
+        )
+        supplied = value.get("waiver_id")
+        if supplied is not None and supplied != waiver.waiver_id:
+            raise CompilerPolicyError("waiver_id does not match compilation waiver content")
+        return waiver
+
     def to_dict(self) -> dict[str, str]:
         return {
             "api_version": "aof.compilation-waiver/v1",

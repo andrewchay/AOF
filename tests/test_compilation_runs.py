@@ -25,7 +25,9 @@ def _inputs():
         domain="sales",
         owner="knowledge-team",
     )
-    release = KnowledgeRelease.build(release_id="sales-knowledge@1.0.0", resources=[concept])
+    release = KnowledgeRelease.build(
+        release_id="sales-knowledge@1.0.0", resources=[concept], scope={"tenant_id": "acme"}
+    )
     registry = default_compiler_registry()
     plan = registry.plan(release, resources=[concept], targets=["mcp"])
     policy = CompilerPolicy.from_resource(
@@ -91,11 +93,17 @@ def test_compilation_runs_require_replay_before_promotion_and_support_rollback(t
     assert [item["content_hash"] for item in replay.artifacts] == [
         item["content_hash"] for item in first.artifacts
     ]
-    promoted = service.promote(
+    approval = service.approve_promotion(
+        replay.run_id,
+        channel="production",
+        actor="reviewer:alice",
+        rationale="The reproduced artifacts satisfy the production policy.",
+    )
+    promoted = service.promote_with_approval(
         replay.run_id,
         channel="production",
         actor="publisher:bob",
-        approved_by="reviewer:alice",
+        approval_decision_id=approval["decision"]["id"],
         rationale="Promote the independently reproduced run.",
     )
     assert promoted["run_id"] == replay.run_id

@@ -3965,6 +3965,39 @@ class SemanticCompileReq(SemanticActorReq):
     targets: list[str] = Field(min_length=1)
 
 
+class SemanticCompilerContextReq(BaseModel):
+    release: dict[str, Any]
+    resources: list[dict[str, Any]] = Field(min_length=1)
+    policy: dict[str, Any]
+    targets: list[str] = Field(default_factory=list)
+    waivers: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class SemanticCompilerRunReq(SemanticCompilerContextReq):
+    run_id: str = Field(min_length=1)
+    expected_plan_digest: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+class SemanticCompilerReplayReq(SemanticCompilerContextReq):
+    source_run_id: str = Field(min_length=1)
+    run_id: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+class SemanticCompilerChannelReq(BaseModel):
+    run_id: str = Field(min_length=1)
+    channel: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    approval_decision_id: Optional[str] = None
+
+
+class SemanticCompilerRollbackReq(BaseModel):
+    channel: str = Field(min_length=1)
+    to_run_id: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
 def _semantic_governance():
     from bridge.semantic_core.compilers import default_compiler_registry
     from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
@@ -3989,6 +4022,24 @@ def _semantic_governance():
     )
 
 
+def _semantic_compiler_control():
+    from bridge.semantic_core.compilers import CompilerControlPlane, default_compiler_registry
+    from bridge.semantic_core.identity import SignedPrincipalVerifier
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    return CompilerControlPlane(
+        AOF_ROOT / 'data' / 'semantic_compiler',
+        verifier=SignedPrincipalVerifier(
+            key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+            secret=secret,
+        ),
+        registry=default_compiler_registry(),
+        decision_store=_decision_store(),
+    )
+
+
 def _semantic_governance_error(exc: Exception) -> HTTPException:
     if isinstance(exc, HTTPException):
         return exc
@@ -3996,6 +4047,23 @@ def _semantic_governance_error(exc: Exception) -> HTTPException:
     if 'not found:' in message:
         status_code = 404
     elif any(token in message for token in ('cannot ', 'already exists:', 'already waived:', 'blocked by', 'cannot be overwritten:', 'separation of duties')):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _semantic_compiler_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core.identity import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif any(token in message for token in ('already exists:', 'cannot be overwritten:', 'already points', 'already been used', 'separation')):
         status_code = 409
     else:
         status_code = 422
@@ -4048,7 +4116,8 @@ async def get_semantic_proposal(proposal_id: str, request: Request) -> dict[str,
 async def validate_semantic_proposal(proposal_id: str, req: SemanticActorReq, request: Request) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'validate')
-        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
         return service.validate(proposal_id, actor=actor)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
@@ -4067,8 +4136,11 @@ async def semantic_proposal_impact(proposal_id: str, request: Request) -> dict[s
 async def waive_semantic_finding(proposal_id: str, req: SemanticWaiverReq, request: Request) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'waive')
-        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
-        payload = req.model_dump(); payload.pop('actor', None); payload['actor'] = actor
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        payload = req.model_dump()
+        payload.pop('actor', None)
+        payload['actor'] = actor
         return service.waive_finding(proposal_id, **payload)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
@@ -4078,7 +4150,8 @@ async def waive_semantic_finding(proposal_id: str, req: SemanticWaiverReq, reque
 async def request_semantic_changes(proposal_id: str, req: SemanticReviewReq, request: Request) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'request_changes')
-        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
         return service.request_changes(proposal_id, actor=actor, rationale=req.rationale)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
@@ -4088,7 +4161,8 @@ async def request_semantic_changes(proposal_id: str, req: SemanticReviewReq, req
 async def approve_semantic_proposal(proposal_id: str, req: SemanticReviewReq, request: Request) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'approve')
-        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
         return service.approve(proposal_id, actor=actor, rationale=req.rationale)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
@@ -4098,7 +4172,8 @@ async def approve_semantic_proposal(proposal_id: str, req: SemanticReviewReq, re
 async def compile_semantic_proposal(proposal_id: str, req: SemanticCompileReq, request: Request) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'compile')
-        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
         return service.compile(proposal_id, actor=actor, targets=req.targets)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
@@ -4108,7 +4183,8 @@ async def compile_semantic_proposal(proposal_id: str, req: SemanticCompileReq, r
 async def publish_semantic_proposal(proposal_id: str, req: SemanticActorReq, request: Request) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'publish')
-        service = _semantic_governance(); service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
         return service.publish(proposal_id, actor=actor)
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
@@ -4127,6 +4203,96 @@ async def get_semantic_release(
     if release is None:
         raise HTTPException(status_code=404, detail=f'release not found: {release_id}')
     return release.to_dict()
+
+
+@app.post('/v1/semantic/compiler/plan')
+async def plan_semantic_compilation(
+    req: SemanticCompilerContextReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().plan(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/evaluate')
+async def evaluate_semantic_compilation(
+    req: SemanticCompilerContextReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().evaluate(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/runs', status_code=201)
+async def execute_semantic_compilation(
+    req: SemanticCompilerRunReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().execute(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/runs/replay', status_code=201)
+async def replay_semantic_compilation(
+    req: SemanticCompilerReplayReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().replay(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.get('/v1/semantic/compiler/runs/{run_id}')
+async def get_semantic_compilation_run(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().get_run(run_id, headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/channels/approvals', status_code=201)
+async def approve_semantic_compilation_promotion(
+    req: SemanticCompilerChannelReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().approve_promotion(
+            req.model_dump(exclude_none=True), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/channels/promote')
+async def promote_semantic_compilation(
+    req: SemanticCompilerChannelReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().promote(
+            req.model_dump(exclude_none=True), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/channels/rollback')
+async def rollback_semantic_compilation(
+    req: SemanticCompilerRollbackReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().rollback(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.get('/v1/semantic/compiler/channels/{channel}')
+async def get_semantic_compilation_channel(channel: str, request: Request) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().get_channel(channel, headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
 
 
 # ==================== Ontology governance & deterministic reasoning ====================

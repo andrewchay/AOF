@@ -19,6 +19,7 @@ from .governance import (
     CompilerPolicyReport,
 )
 from .runtime_targets import DatalogCompiler, McpCompiler, OwlCompiler, RagCompiler, ShaclCompiler
+from .control_plane import CompilerControlPlane, CompilerControlPlaneError
 from .runs import (
     CompilationRun,
     CompilationRunError,
@@ -49,6 +50,8 @@ __all__ = [
     "CompilationRunService",
     "CompilationWaiver",
     "CompilerError",
+    "CompilerControlPlane",
+    "CompilerControlPlaneError",
     "CompilerRegistry",
     "CompilerPolicy",
     "CompilerPolicyError",

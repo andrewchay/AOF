@@ -466,6 +466,170 @@ async def _tool_document_parse(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _semantic_compiler_control():
+    from bridge.decision_provenance import DecisionProvenanceStore
+    from bridge.semantic_core.compilers import CompilerControlPlane, default_compiler_registry
+    from bridge.semantic_core.identity import SignedPrincipalVerifier
+
+    secret = os.environ.get("AOF_SEMANTIC_IDENTITY_SECRET", "").encode("utf-8")
+    if not secret:
+        raise ValueError("semantic identity verifier is not configured")
+    state_root = Path(
+        os.environ.get("AOF_COMPILER_STATE_DIR", str(PROJECT_ROOT / "data" / "semantic_compiler"))
+    )
+    return CompilerControlPlane(
+        state_root,
+        verifier=SignedPrincipalVerifier(
+            key_id=os.environ.get("AOF_SEMANTIC_IDENTITY_KEY_ID", "identity-key-default"),
+            secret=secret,
+        ),
+        registry=default_compiler_registry(),
+        decision_store=DecisionProvenanceStore(),
+    )
+
+
+def _compiler_request(args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str]]:
+    payload = dict(args)
+    headers = payload.pop("principal_headers", None)
+    if not isinstance(headers, dict):
+        raise ValueError("principal_headers must contain signed principal headers")
+    return payload, {str(key): str(value) for key, value in headers.items()}
+
+
+async def _tool_semantic_compile_plan(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_compiler_control().plan(payload, headers=headers)
+
+
+async def _tool_semantic_compile_evaluate(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_compiler_control().evaluate(payload, headers=headers)
+
+
+async def _tool_semantic_compile_run(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_compiler_control().execute(payload, headers=headers)
+
+
+async def _tool_semantic_compile_replay(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_compiler_control().replay(payload, headers=headers)
+
+
+async def _tool_semantic_compile_approve_promotion(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_compiler_control().approve_promotion(payload, headers=headers)
+
+
+async def _tool_semantic_compile_promote(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_compiler_control().promote(payload, headers=headers)
+
+
+async def _tool_semantic_compile_rollback(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_compiler_control().rollback(payload, headers=headers)
+
+
+async def _tool_semantic_compile_get_run(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_compiler_control().get_run(payload["run_id"], headers=headers)
+
+
+async def _tool_semantic_compile_get_channel(args: dict[str, Any]) -> dict[str, Any]:
+    payload, headers = _compiler_request(args)
+    return _semantic_compiler_control().get_channel(payload["channel"], headers=headers)
+
+
+def _register_semantic_compiler_tools(server: McpServer) -> None:
+    principal = {
+        "type": "object",
+        "description": "Identity-gateway signed X-AOF principal headers.",
+    }
+    context = {
+        "release": {"type": "object"},
+        "resources": {"type": "array", "items": {"type": "object"}},
+        "policy": {"type": "object"},
+        "targets": {"type": "array", "items": {"type": "string"}},
+        "waivers": {"type": "array", "items": {"type": "object"}},
+        "principal_headers": principal,
+    }
+    definitions = [
+        (
+            "aof_semantic_compile_plan",
+            "生成无副作用、依赖闭合且版本锁定的语义编译计划。",
+            context,
+            ["release", "resources", "policy", "targets", "principal_headers"],
+            _tool_semantic_compile_plan,
+        ),
+        (
+            "aof_semantic_compile_evaluate",
+            "用 revision-addressed Policy 评估编译计划与精确 waiver。",
+            context,
+            ["release", "resources", "policy", "targets", "principal_headers"],
+            _tool_semantic_compile_evaluate,
+        ),
+        (
+            "aof_semantic_compile_run",
+            "执行已确认 digest 的编译计划并写入不可变 CompilationRun。",
+            {**context, "run_id": {"type": "string"}, "expected_plan_digest": {"type": "string"}, "rationale": {"type": "string"}},
+            ["release", "resources", "policy", "targets", "run_id", "expected_plan_digest", "rationale", "principal_headers"],
+            _tool_semantic_compile_run,
+        ),
+        (
+            "aof_semantic_compile_replay",
+            "独立回放不可变编译运行并核对全部产物摘要。",
+            {**context, "source_run_id": {"type": "string"}, "run_id": {"type": "string"}, "rationale": {"type": "string"}},
+            ["release", "resources", "policy", "source_run_id", "run_id", "rationale", "principal_headers"],
+            _tool_semantic_compile_replay,
+        ),
+        (
+            "aof_semantic_compile_approve_promotion",
+            "以签名 reviewer Principal 审批可复现 Run 的环境提升。",
+            {"run_id": {"type": "string"}, "channel": {"type": "string"}, "rationale": {"type": "string"}, "principal_headers": principal},
+            ["run_id", "channel", "rationale", "principal_headers"],
+            _tool_semantic_compile_approve_promotion,
+        ),
+        (
+            "aof_semantic_compile_promote",
+            "以签名 publisher Principal 和独立 approval 移动环境指针。",
+            {"run_id": {"type": "string"}, "channel": {"type": "string"}, "approval_decision_id": {"type": "string"}, "rationale": {"type": "string"}, "principal_headers": principal},
+            ["run_id", "channel", "approval_decision_id", "rationale", "principal_headers"],
+            _tool_semantic_compile_promote,
+        ),
+        (
+            "aof_semantic_compile_rollback",
+            "把环境指针回滚到该 channel 历史上已提升的不可变 Run。",
+            {"channel": {"type": "string"}, "to_run_id": {"type": "string"}, "rationale": {"type": "string"}, "principal_headers": principal},
+            ["channel", "to_run_id", "rationale", "principal_headers"],
+            _tool_semantic_compile_rollback,
+        ),
+        (
+            "aof_semantic_compile_get_run",
+            "读取当前签名 tenant 下的不可变 CompilationRun。",
+            {"run_id": {"type": "string"}, "principal_headers": principal},
+            ["run_id", "principal_headers"],
+            _tool_semantic_compile_get_run,
+        ),
+        (
+            "aof_semantic_compile_get_channel",
+            "读取当前签名 tenant 下的环境指针及完整历史。",
+            {"channel": {"type": "string"}, "principal_headers": principal},
+            ["channel", "principal_headers"],
+            _tool_semantic_compile_get_channel,
+        ),
+    ]
+    for name, description, properties, required, handler in definitions:
+        server.register_tool(
+            McpTool(
+                name=name,
+                description=description,
+                input_schema={"type": "object", "properties": properties, "required": required},
+                handler=handler,
+            )
+        )
+
+
 # ---------------------------------------------------------------------------
 # Build and run server
 # ---------------------------------------------------------------------------
@@ -781,6 +945,8 @@ def build_server() -> McpServer:
         },
         handler=_tool_document_parse,
     ))
+
+    _register_semantic_compiler_tools(server)
 
     return server
 
