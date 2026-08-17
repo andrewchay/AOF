@@ -546,7 +546,9 @@ def _semantic_query_control():
     from bridge.semantic_core import (
         HmacQueryEvidenceAttestor,
         QueryControlPlane,
+        QueryExecutor,
         SignedPrincipalVerifier,
+        SqliteSemanticSqlExecutor,
     )
 
     secret = os.environ.get("AOF_SEMANTIC_IDENTITY_SECRET", "").encode("utf-8")
@@ -557,6 +559,28 @@ def _semantic_query_control():
             "AOF_COMPILER_STATE_DIR", str(PROJECT_ROOT / "data" / "semantic_compiler")
         )
     )
+    sqlite_database = os.environ.get("AOF_QUERY_SQLITE_DATABASE", "").strip()
+    raw_attachments = os.environ.get("AOF_QUERY_SQLITE_ATTACHMENTS", "{}")
+    try:
+        sqlite_attachments = json.loads(raw_attachments)
+    except json.JSONDecodeError as exc:
+        raise ValueError("AOF_QUERY_SQLITE_ATTACHMENTS must be JSON") from exc
+    if not isinstance(sqlite_attachments, dict):
+        raise ValueError("AOF_QUERY_SQLITE_ATTACHMENTS must be an object")
+
+    def executor_factory(resolver):
+        executor = QueryExecutor(resolver)
+        if sqlite_database:
+            executor.registry.replace(
+                "semantic_sql",
+                SqliteSemanticSqlExecutor(
+                    resolver,
+                    database=sqlite_database,
+                    attachments=sqlite_attachments,
+                ),
+            )
+        return executor
+
     return QueryControlPlane(
         state_root,
         verifier=SignedPrincipalVerifier(
@@ -574,6 +598,7 @@ def _semantic_query_control():
                 "AOF_QUERY_EVIDENCE_SIGNING_SECRET", secret.decode("utf-8")
             ).encode("utf-8"),
         ),
+        executor_factory=executor_factory,
     )
 
 

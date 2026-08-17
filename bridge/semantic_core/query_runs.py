@@ -38,6 +38,7 @@ _FIELDS = {
     "governed_result",
     "decisions",
     "evidence_package",
+    "error",
     "replay_of",
     "recorded_at",
     "run_digest",
@@ -55,6 +56,13 @@ def _safe_id(value: str, field: str) -> str:
     normalized = _required(value, field)
     if not _SAFE_ID.fullmatch(normalized):
         raise QueryRunError(f"{field} must use safe characters")
+    return normalized
+
+
+def _status(value: str) -> str:
+    normalized = _required(value, "status")
+    if normalized not in {"succeeded", "failed"}:
+        raise QueryRunError(f"unsupported query run status: {normalized}")
     return normalized
 
 
@@ -83,6 +91,7 @@ class QueryRun:
     governed_result: Mapping[str, Any]
     decisions: Mapping[str, Any]
     evidence_package: Mapping[str, Any]
+    error: Mapping[str, Any] | None
     replay_of: str | None
     recorded_at: str
     run_digest: str
@@ -108,6 +117,7 @@ class QueryRun:
         replay_of: str | None,
         recorded_at: str,
         status: str = "succeeded",
+        error: Mapping[str, Any] | None = None,
     ) -> "QueryRun":
         query_run_id = _safe_id(query_run_id, "query_run_id")
         if replay_of is not None:
@@ -120,7 +130,7 @@ class QueryRun:
             "query_run_id": query_run_id,
             "tenant_id": _required(tenant_id, "tenant_id"),
             "actor": _required(actor, "actor"),
-            "status": _required(status, "status"),
+            "status": _status(status),
             "request": normalized_request,
             "request_digest": content_digest(normalized_request),
             "compilation_run_id": _required(compilation_run_id, "compilation_run_id"),
@@ -136,10 +146,55 @@ class QueryRun:
             "governed_result": canonical_data(dict(governed_result)),
             "decisions": canonical_data(dict(decisions)),
             "evidence_package": canonical_data(dict(evidence_package)),
+            "error": canonical_data(dict(error)) if error is not None else None,
             "replay_of": replay_of,
             "recorded_at": _required(recorded_at, "recorded_at"),
         }
         return cls._from_payload(payload, content_digest(payload), None)
+
+    @classmethod
+    def build_failure(
+        cls,
+        *,
+        query_run_id: str,
+        tenant_id: str,
+        actor: str,
+        request: Mapping[str, Any],
+        decision_id: str,
+        error: Mapping[str, Any],
+        recorded_at: str,
+    ) -> "QueryRun":
+        normalized_request = canonical_data(dict(request))
+        normalized_error = canonical_data(dict(error))
+        evidence_payload = {
+            "api_version": "aof.query-failure-evidence/v1",
+            "request_digest": content_digest(normalized_request),
+            "failure_decision_id": decision_id,
+            "error": normalized_error,
+        }
+        unresolved = content_digest({"state": "unresolved"})
+        return cls.build(
+            query_run_id=query_run_id,
+            tenant_id=tenant_id,
+            actor=actor,
+            request=normalized_request,
+            compilation_run_id="unresolved",
+            compilation_run_digest=unresolved,
+            release_id="unresolved",
+            release_digest=unresolved,
+            plan_digest=unresolved,
+            policy_report_digest=unresolved,
+            governed_result={"status": "failed", "error": normalized_error},
+            decisions={"failure": decision_id},
+            evidence_package={
+                **evidence_payload,
+                "package_digest": content_digest(evidence_payload),
+            },
+            replay_of=None,
+            recorded_at=recorded_at,
+            status="failed",
+            error=normalized_error,
+        )
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "QueryRun":
@@ -177,7 +232,7 @@ class QueryRun:
             query_run_id=_safe_id(str(payload.get("query_run_id", "")), "query_run_id"),
             tenant_id=_required(str(payload.get("tenant_id", "")), "tenant_id"),
             actor=_required(str(payload.get("actor", "")), "actor"),
-            status=_required(str(payload.get("status", "")), "status"),
+            status=_status(str(payload.get("status", ""))),
             request=_freeze(payload.get("request", {})),
             request_digest=str(payload.get("request_digest", "")),
             compilation_run_id=str(payload.get("compilation_run_id", "")),
@@ -189,6 +244,11 @@ class QueryRun:
             governed_result=_freeze(payload.get("governed_result", {})),
             decisions=_freeze(payload.get("decisions", {})),
             evidence_package=_freeze(payload.get("evidence_package", {})),
+            error=(
+                _freeze(payload["error"])
+                if isinstance(payload.get("error"), Mapping)
+                else None
+            ),
             replay_of=str(replay_of) if replay_of is not None else None,
             recorded_at=str(payload.get("recorded_at", "")),
             run_digest=digest,
@@ -216,6 +276,7 @@ class QueryRun:
             "governed_result": canonical_data(self.governed_result),
             "decisions": canonical_data(self.decisions),
             "evidence_package": canonical_data(self.evidence_package),
+            "error": canonical_data(self.error) if self.error is not None else None,
             "replay_of": self.replay_of,
             "recorded_at": self.recorded_at,
             "run_digest": self.run_digest,

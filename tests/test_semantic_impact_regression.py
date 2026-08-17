@@ -133,7 +133,7 @@ def test_semantic_sql_contract_blocks_regressing_release(tmp_path) -> None:
             "intent": intent.to_dict(),
             "expected_sql": (
                 'SELECT "order_date" AS "order_date", SUM("paid_amount") AS "gmv" '
-                'FROM "dwd"."orders" GROUP BY "order_date"'
+                'FROM "dwd"."orders" GROUP BY "order_date" ORDER BY "order_date"'
             ),
         },
     )

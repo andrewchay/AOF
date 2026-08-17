@@ -60,6 +60,11 @@ LLM_ENDPOINT=https://api.deepseek.com/v1
 | `/v1/semantic/compile` | POST | 已退役；固定返回 410 并指向统一入口 |
 | `/v1/semantic/evaluate` | POST | 查询评估 |
 
+真实 SQLite 语义 SQL 执行可设置 `AOF_QUERY_SQLITE_DATABASE=/path/main.sqlite3`；如发布的
+`PhysicalDataset.physical_name` 含 schema，使用
+`AOF_QUERY_SQLITE_ATTACHMENTS='{"schema":"/path/schema.sqlite3"}'` 显式挂载。连接始终为只读，
+数据文件摘要会进入 QueryRun 证据。
+
 ## Docker 镜像
 
 ### 构建镜像

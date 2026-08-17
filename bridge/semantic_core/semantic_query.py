@@ -261,9 +261,10 @@ class SemanticSqlCompiler:
         if predicates:
             sql += " WHERE " + " AND ".join(predicates)
         if dimensions:
-            sql += " GROUP BY " + ", ".join(
+            grouping = ", ".join(
                 self._identifier(self._dimension_field(item)) for item in dimensions
             )
+            sql += f" GROUP BY {grouping} ORDER BY {grouping}"
         if intent.limit is not None:
             sql += f" LIMIT {intent.limit}"
         used_by_id = {
@@ -306,7 +307,15 @@ class SemanticSqlCompiler:
         function = self._AGGREGATIONS.get(aggregation.lower())
         if function is None:
             raise SemanticQueryCompileError(f"unsupported metric aggregation: {aggregation}")
-        measure = self._identifier(_non_empty(resource.spec.get("measure"), "metric measure"))
+        raw_measure = _non_empty(resource.spec.get("measure"), "metric measure")
+        if raw_measure == "*":
+            if function != "COUNT":
+                raise SemanticQueryCompileError(
+                    "wildcard metric measure is only valid for count aggregation"
+                )
+            measure = "*"
+        else:
+            measure = self._identifier(raw_measure)
         alias = self._identifier(resource.name.replace("-", "_"))
         if function == "COUNT_DISTINCT":
             return f"COUNT(DISTINCT {measure}) AS {alias}"

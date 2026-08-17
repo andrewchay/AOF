@@ -17,6 +17,7 @@ from .query_execution import (
     QueryExecutor,
     QueryExecutorRegistry,
     QueryResult,
+    SqliteSemanticSqlExecutor,
 )
 from .query_audit import AuditedQueryResult, AuditedQueryService, QueryEvidencePackage
 from .query_control import QueryControlPlane, QueryControlPlaneError
@@ -85,6 +86,7 @@ __all__ = [
     "QueryExecutionScope",
     "QueryExecutorRegistry",
     "QueryResult",
+    "SqliteSemanticSqlExecutor",
     "AuditedQueryResult",
     "AuditedQueryService",
     "QueryEvidencePackage",

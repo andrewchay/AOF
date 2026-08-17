@@ -5,14 +5,14 @@ from __future__ import annotations
 import json
 import hashlib
 import uuid
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from bridge.decision_provenance import DecisionProvenanceStore
 
-from .canonical import canonical_data
+from .canonical import canonical_data, content_digest
 from .identity import SemanticPrincipal, SignedPrincipalVerifier
 from .models import SemanticResource
 from .query_audit import AuditedQueryService
@@ -43,6 +43,7 @@ class QueryControlPlane:
         decision_store: DecisionProvenanceStore,
         query_runs: SqliteQueryRunRepository | None = None,
         evidence_attestor: HmacQueryEvidenceAttestor | None = None,
+        executor_factory: Callable[[TrustedSnapshotResolver], QueryExecutor] | None = None,
     ) -> None:
         self.root = Path(root)
         self.verifier = verifier
@@ -54,12 +55,24 @@ class QueryControlPlane:
             key_id=f"{verifier.key_id}:query-evidence",
             secret=hashlib.sha256(b"aof-query-evidence\0" + verifier.secret).digest(),
         )
+        self.executor_factory = executor_factory or QueryExecutor
 
     def execute(
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
     ) -> dict[str, Any]:
         principal = self.verifier.verify(headers)
-        return self._execute(payload, principal=principal, replay_of=None)
+        normalized = dict(payload)
+        normalized["query_run_id"] = self._query_run_id(payload)
+        try:
+            return self._execute(normalized, principal=principal, replay_of=None)
+        except Exception as exc:
+            try:
+                self._persist_failure(normalized, principal=principal, error=exc)
+            except Exception as audit_exc:
+                raise QueryControlPlaneError(
+                    f"{exc}; failure audit persistence failed: {audit_exc}"
+                ) from exc
+            raise
 
     def _execute(
         self,
@@ -67,6 +80,7 @@ class QueryControlPlane:
         *,
         principal: SemanticPrincipal,
         replay_of: str | None,
+        expected_governed_result_digest: str | None = None,
     ) -> dict[str, Any]:
         repository = CompilationRunRepository(self.root / principal.tenant_id)
         resolver = TrustedSnapshotResolver(repository)
@@ -87,7 +101,7 @@ class QueryControlPlane:
         waivers = tuple(self._waiver(item) for item in raw_waivers)
         result = AuditedQueryService(
             resolver=resolver,
-            governed_executor=GovernedQueryExecutor(QueryExecutor(resolver), policy),
+            governed_executor=GovernedQueryExecutor(self.executor_factory(resolver), policy),
             decision_store=self.decision_store,
         ).execute(
             request,
@@ -99,16 +113,16 @@ class QueryControlPlane:
             session_id=self._optional(payload, "session_id"),
         )
         result_value = result.to_dict()
+        if (
+            expected_governed_result_digest is not None
+            and result.governed_result.governed_result_digest
+            != expected_governed_result_digest
+        ):
+            raise QueryControlPlaneError(
+                "strict replay result no longer matches the persisted query run"
+            )
         query_result = result.governed_result.result
-        request_value = {
-            "channel": request.channel,
-            "capability": request.capability.value,
-            "query": request.query,
-            "purpose": request.purpose,
-            "parameters": canonical_data(request.parameters),
-            "policy_resource_id": policy.resource_id,
-            "waivers": [canonical_data(item) for item in raw_waivers],
-        }
+        request_value = self._request_value(payload)
         query_run = QueryRun.build(
             query_run_id=self._query_run_id(payload),
             tenant_id=principal.tenant_id,
@@ -128,6 +142,68 @@ class QueryControlPlane:
         )
         query_run = query_run.with_attestation(self.evidence_attestor.sign(query_run))
         return self.query_runs.put(query_run).to_dict()
+
+    def _persist_failure(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        principal: SemanticPrincipal,
+        error: Exception,
+    ) -> None:
+        request_value = self._request_value(payload)
+        request_digest = content_digest(request_value)
+        error_value = {"type": type(error).__name__, "message": str(error)}
+        decision_id = self.decision_store.record(
+            agent_id=f"principal:{principal.subject}",
+            decision_type="semantic_query_failed",
+            conclusion="failed",
+            rationale=str(payload.get("rationale") or "Governed query failed."),
+            evidence=[
+                {
+                    "id": request_digest,
+                    "type": "query_request",
+                    "content_hash": request_digest,
+                }
+            ],
+            output_entities=[
+                {
+                    "id": str(payload["query_run_id"]),
+                    "type": "failed_query_run",
+                }
+            ],
+            tags=[
+                str(payload.get("capability", "unknown")),
+                str(payload.get("purpose", "unknown")),
+                "query-failure",
+            ],
+            tenant_id=principal.tenant_id,
+            metadata={"error": error_value},
+        )["decision"]["id"]
+        run = QueryRun.build_failure(
+            query_run_id=str(payload["query_run_id"]),
+            tenant_id=principal.tenant_id,
+            actor=f"principal:{principal.subject}",
+            request=request_value,
+            decision_id=decision_id,
+            error=error_value,
+            recorded_at=datetime.now(timezone.utc).isoformat(),
+        )
+        run = run.with_attestation(self.evidence_attestor.sign(run))
+        self.query_runs.put(run)
+
+    @staticmethod
+    def _request_value(payload: Mapping[str, Any]) -> dict[str, Any]:
+        return canonical_data(
+            {
+                "channel": payload.get("channel"),
+                "capability": payload.get("capability"),
+                "query": payload.get("query"),
+                "purpose": payload.get("purpose"),
+                "parameters": payload.get("parameters", {}),
+                "policy_resource_id": payload.get("policy_resource_id"),
+                "waivers": payload.get("waivers", []),
+            }
+        )
 
     def get_run(
         self, query_run_id: str, *, headers: Mapping[str, str]
@@ -181,7 +257,14 @@ class QueryControlPlane:
             "rationale": self._required(payload, "rationale"),
             "session_id": self._optional(payload, "session_id"),
         }
-        return self._execute(replay_payload, principal=principal, replay_of=source_id)
+        return self._execute(
+            replay_payload,
+            principal=principal,
+            replay_of=source_id,
+            expected_governed_result_digest=str(
+                source.governed_result.get("governed_result_digest", "")
+            ),
+        )
 
     def _verify_attestation(self, run: QueryRun) -> None:
         if run.attestation is None or not self.evidence_attestor.verify(

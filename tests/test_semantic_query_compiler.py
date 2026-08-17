@@ -68,7 +68,7 @@ def test_typed_intent_compiles_to_deterministic_revision_bound_sql() -> None:
 
     assert first.sql == (
         'SELECT "order_date" AS "order_date", SUM("paid_amount") AS "gmv" '
-        'FROM "dwd"."order_detail" GROUP BY "order_date"'
+        'FROM "dwd"."order_detail" GROUP BY "order_date" ORDER BY "order_date"'
     )
     assert first.plan_digest == second.plan_digest
     assert first.intent_digest == intent.intent_digest
@@ -117,7 +117,7 @@ def test_semantic_filters_are_parameterized_and_canonicalized() -> None:
         'SELECT "order_date" AS "order_date", SUM("paid_amount") AS "gmv" '
         'FROM "dwd"."order_detail" '
         'WHERE "order_date" >= :p1 AND "region" = :p2 '
-        'GROUP BY "order_date" LIMIT 100'
+        'GROUP BY "order_date" ORDER BY "order_date" LIMIT 100'
     )
     assert first.parameter_values == ("2026-08-01", "east' OR 1=1 --")
     assert "OR 1=1" not in first.sql
@@ -179,5 +179,30 @@ def test_legacy_mapping_assets_compile_through_canonical_semantic_fields() -> No
 
     assert plan.sql == (
         'SELECT "order_date" AS "order_date", SUM("paid_amount") AS "gmv" '
-        'FROM "dwd"."order_detail" GROUP BY "order_date"'
+        'FROM "dwd"."order_detail" GROUP BY "order_date" ORDER BY "order_date"'
+    )
+
+
+def test_legacy_count_star_is_the_only_safe_wildcard_measure() -> None:
+    dataset, _, dimension, _ = _sales_resources()
+    count_metric = SemanticResource.create(
+        resource_id="aof://acme/sales/metric/order-count",
+        kind=ResourceKind.METRIC,
+        name="order-count",
+        domain="sales",
+        owner="data-platform",
+        depends_on=[dataset.resource_id],
+        spec={"aggregation": "count", "measure": "*"},
+    )
+    intent = SemanticIntent.create(
+        metrics=[count_metric.resource_id],
+        dimensions=[dimension.resource_id],
+        purpose="legacy-count-verification",
+    )
+
+    plan = SemanticSqlCompiler([dataset, count_metric, dimension]).compile(intent)
+
+    assert plan.sql == (
+        'SELECT "order_date" AS "order_date", COUNT(*) AS "order_count" '
+        'FROM "dwd"."order_detail" GROUP BY "order_date" ORDER BY "order_date"'
     )

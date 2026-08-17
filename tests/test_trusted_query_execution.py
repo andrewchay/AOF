@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import sqlite3
 from dataclasses import replace
 
 import pytest
@@ -28,6 +29,7 @@ from bridge.semantic_core import (
     SemanticResource,
     SemanticIntent,
     SignedPrincipalVerifier,
+    SqliteSemanticSqlExecutor,
     TrustedQueryError,
     TrustedSnapshotResolver,
 )
@@ -235,6 +237,59 @@ def test_unified_executor_returns_digest_bound_semantic_search_result(tmp_path) 
     assert result.to_dict()["api_version"] == "aof.query-result/v1"
 
 
+def test_sqlite_executor_runs_deterministic_semantic_sql_against_real_data(tmp_path) -> None:
+    resolver, _ = _trusted_query_runtime(tmp_path)
+    main_database = tmp_path / "warehouse-main.sqlite3"
+    attached_database = tmp_path / "dwd.sqlite3"
+    sqlite3.connect(main_database).close()
+    with sqlite3.connect(attached_database) as connection:
+        connection.execute(
+            "CREATE TABLE order_detail "
+            "(order_date TEXT NOT NULL, paid_amount REAL NOT NULL)"
+        )
+        connection.executemany(
+            "INSERT INTO order_detail VALUES (?, ?)",
+            [
+                ("2026-08-17", 10.0),
+                ("2026-08-17", 15.5),
+                ("2026-08-18", 7.0),
+            ],
+        )
+    intent = SemanticIntent.create(
+        metrics=["aof://acme/sales/metric/gmv"],
+        dimensions=["aof://acme/sales/dimension/order-date"],
+        purpose="daily-sales-report",
+    )
+    registry = QueryExecutorRegistry()
+    registry.register(
+        "semantic_sql",
+        SqliteSemanticSqlExecutor(
+            resolver,
+            database=main_database,
+            attachments={"dwd": attached_database},
+        ),
+    )
+    plan = resolver.plan(
+        QueryRequest.create(
+            channel="production",
+            capability="semantic_sql",
+            query=intent.intent_digest,
+            purpose="daily-sales-report",
+            parameters={"intent": intent.to_dict()},
+        ),
+        tenant_id="acme",
+    )
+
+    result = QueryExecutor(resolver, registry=registry).execute(plan)
+
+    assert result.data["executed"] is True
+    assert result.to_dict()["data"]["rows"] == [
+        {"gmv": 25.5, "order_date": "2026-08-17"},
+        {"gmv": 7.0, "order_date": "2026-08-18"},
+    ]
+    assert result.data["data_snapshot"]["snapshot_digest"].startswith("sha256:")
+
+
 def test_unified_executor_runs_datalog_from_the_same_query_contract(tmp_path) -> None:
     resolver, executor = _trusted_query_runtime(tmp_path)
     plan = resolver.plan(
@@ -323,7 +378,7 @@ def test_unified_executor_compiles_published_semantic_intent_to_sql(tmp_path) ->
     assert result.data["sql_plan"]["intent_digest"] == intent.intent_digest
     assert result.data["sql_plan"]["sql"] == (
         'SELECT "order_date" AS "order_date", SUM("paid_amount") AS "gmv" '
-        'FROM "dwd"."order_detail" GROUP BY "order_date"'
+        'FROM "dwd"."order_detail" GROUP BY "order_date" ORDER BY "order_date"'
     )
     assert result.evidence[0]["target"] == "semantic-json"
 
@@ -1002,3 +1057,105 @@ def test_query_control_plane_persists_and_strictly_replays_signed_runs(tmp_path)
             },
             headers=_query_headers(),
         )
+
+
+def test_strict_query_replay_rejects_changed_data_snapshot(tmp_path) -> None:
+    _trusted_query_runtime(tmp_path)
+    main_database = tmp_path / "replay-main.sqlite3"
+    attached_database = tmp_path / "replay-dwd.sqlite3"
+    sqlite3.connect(main_database).close()
+    with sqlite3.connect(attached_database) as connection:
+        connection.execute(
+            "CREATE TABLE order_detail "
+            "(order_date TEXT NOT NULL, paid_amount REAL NOT NULL)"
+        )
+        connection.execute(
+            "INSERT INTO order_detail VALUES (?, ?)", ("2026-08-18", 10.0)
+        )
+
+    def executor_factory(resolver):
+        executor = QueryExecutor(resolver)
+        executor.registry.replace(
+            "semantic_sql",
+            SqliteSemanticSqlExecutor(
+                resolver,
+                database=main_database,
+                attachments={"dwd": attached_database},
+            ),
+        )
+        return executor
+
+    control = QueryControlPlane(
+        tmp_path / "compiler",
+        verifier=SignedPrincipalVerifier(
+            key_id="query-identity", secret=b"query-identity-secret"
+        ),
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+        executor_factory=executor_factory,
+    )
+    intent = SemanticIntent.create(
+        metrics=["aof://acme/sales/metric/gmv"],
+        dimensions=["aof://acme/sales/dimension/order-date"],
+        purpose="daily-sales-report",
+    )
+    first = control.execute(
+        {
+            "query_run_id": "snapshot-query-001",
+            "channel": "production",
+            "capability": "semantic_sql",
+            "query": intent.intent_digest,
+            "purpose": "daily-sales-report",
+            "parameters": {"intent": intent.to_dict()},
+            "policy_resource_id": "aof://acme/platform/policy/query-trusted",
+            "rationale": "Bind the first warehouse snapshot.",
+        },
+        headers=_query_headers(),
+    )
+    with sqlite3.connect(attached_database) as connection:
+        connection.execute(
+            "INSERT INTO order_detail VALUES (?, ?)", ("2026-08-18", 5.0)
+        )
+
+    with pytest.raises(ValueError, match="result no longer matches"):
+        control.replay(
+            {
+                "source_query_run_id": "snapshot-query-001",
+                "expected_source_digest": first["run_digest"],
+                "query_run_id": "snapshot-query-002",
+                "rationale": "Do not disguise a refreshed warehouse as strict replay.",
+            },
+            headers=_query_headers(),
+        )
+    assert control.query_runs.get("snapshot-query-002", tenant_id="acme") is None
+
+
+def test_failed_governed_query_is_persisted_as_signed_terminal_run(tmp_path) -> None:
+    _trusted_query_runtime(tmp_path)
+    control = QueryControlPlane(
+        tmp_path / "compiler",
+        verifier=SignedPrincipalVerifier(
+            key_id="query-identity", secret=b"query-identity-secret"
+        ),
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+    )
+
+    with pytest.raises(ValueError, match="graph direction"):
+        control.execute(
+            {
+                "query_run_id": "failed-query-001",
+                "channel": "production",
+                "capability": "graph",
+                "query": "https://example.test/Customer",
+                "purpose": "ontology-audit",
+                "parameters": {"direction": "sideways"},
+                "policy_resource_id": "aof://acme/platform/policy/query-trusted",
+                "rationale": "Capture a deterministic executor failure.",
+            },
+            headers=_query_headers(),
+        )
+
+    failed = control.get_run("failed-query-001", headers=_query_headers())
+    assert failed["status"] == "failed"
+    assert failed["error"]["type"] == "TrustedQueryError"
+    assert failed["decisions"]["failure"].startswith("decision:")
+    assert failed["attestation"]["signature"]

@@ -312,6 +312,16 @@ Policy report、governed result、决策链和 evidence package，并由独立 k
 `run_digest`；控制面还会重新解析 channel，并要求 plan、CompilationRun 和 Release 摘要与源 Run 完全一致，
 因此环境指针移动后不会把“刷新执行”伪装成“原快照回放”。
 
+`SqliteSemanticSqlExecutor` 是首个真实 SQL Executor SPI：只接受编译器生成的参数化 SQL，以只读连接执行，
+支持显式 schema attachment，并对主库与 attachment 文件计算 `data_snapshot` 摘要。该摘要进入统一 evidence
+envelope 和 QueryRun；严格回放除验证 Release/plan 外，还要求 governed result 与源 Run 一致，数据变化会被
+识别为 refresh 而不是 replay。服务可通过 `AOF_QUERY_SQLITE_DATABASE` 和 JSON 对象形式的
+`AOF_QUERY_SQLITE_ATTACHMENTS` 启用该后端，REST 与 MCP 仍共用同一个 Executor factory。
+
+已通过身份验证的查询若在规划、策略或执行阶段失败，控制面写入签名的终态 `failed` QueryRun，并记录
+`semantic_query_failed` 决策和规范化错误证据；失败记录不可覆盖。联邦执行器按拓扑顺序 fail-fast，并在错误中
+固定失败 step ID，避免把部分结果表示为成功。
+
 QueryPlan 还会从 Intent、QueryTemplate 或 capability 制品解析传递依赖闭包；非搜索能力在执行前对闭包中的
 每个 Resource 做策略检查，semantic search 则在执行前形成可见 Resource/field scope，并在结果摘要计算前
 执行投影。旧 `/v1/semantic/compile` 未锁定 Release、未执行 Policy 且允许 LLM 直接生成 SQL，因此所有服务

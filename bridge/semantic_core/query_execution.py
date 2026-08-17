@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import sqlite3
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
@@ -22,7 +25,12 @@ from .query_plans import (
     TrustedSnapshotResolver,
 )
 from .models import SemanticResource
-from .semantic_query import SemanticIntent, SemanticQueryCompileError, SemanticSqlCompiler
+from .semantic_query import (
+    SemanticIntent,
+    SemanticQueryCompileError,
+    SemanticSqlCompiler,
+    SemanticSqlPlan,
+)
 
 
 def _freeze(value: Any) -> Any:
@@ -98,6 +106,25 @@ class QueryExecutorRegistry:
             raise TrustedQueryError("query executor handler must be callable")
         self._handlers[normalized] = handler
 
+    def replace(
+        self,
+        capability: QueryCapability | str,
+        handler: Callable[[QueryPlan], Mapping[str, Any]],
+    ) -> None:
+        """Replace an existing backend without changing the query contract."""
+        normalized = (
+            capability
+            if isinstance(capability, QueryCapability)
+            else QueryCapability(capability)
+        )
+        if normalized not in self._handlers:
+            raise TrustedQueryError(
+                f"query executor is not registered: {normalized.value}"
+            )
+        if not callable(handler):
+            raise TrustedQueryError("query executor handler must be callable")
+        self._handlers[normalized] = handler
+
     def execute(self, plan: QueryPlan) -> Mapping[str, Any]:
         handler = self._handlers.get(plan.capability)
         if handler is None:
@@ -153,7 +180,7 @@ class QueryExecutor:
         data = self.registry.execute(plan)
         if scope is not None:
             data = self._apply_scope(plan, data, scope)
-        evidence = tuple(
+        evidence_values = [
             {
                 "evidence_id": f"artifact:{artifact.target}:{artifact.content_hash}",
                 "type": "compiled_artifact",
@@ -163,7 +190,28 @@ class QueryExecutor:
                 "release_digest": artifact.release_digest,
             }
             for artifact in plan.artifacts
-        )
+        ]
+        snapshot = data.get("data_snapshot")
+        if snapshot is not None:
+            if not isinstance(snapshot, Mapping):
+                raise TrustedQueryError("executor data_snapshot must be a semantic object")
+            snapshot_payload = {
+                key: value for key, value in snapshot.items() if key != "snapshot_digest"
+            }
+            snapshot_digest = snapshot.get("snapshot_digest")
+            if snapshot_digest != content_digest(snapshot_payload):
+                raise TrustedQueryError("executor data_snapshot digest mismatch")
+            evidence_values.append(
+                {
+                    "evidence_id": f"data-snapshot:{snapshot_digest}",
+                    "type": "data_snapshot",
+                    "target": "data-snapshot",
+                    "content_hash": snapshot_digest,
+                    "release_digest": plan.release_digest,
+                    "metadata": canonical_data(snapshot_payload),
+                }
+            )
+        evidence = tuple(evidence_values)
         payload = {
             "api_version": "aof.query-result/v1",
             "status": "succeeded",
@@ -244,6 +292,11 @@ class QueryExecutor:
         return {"query": plan.query, "hits": selected, "count": len(selected)}
 
     def _semantic_sql(self, plan: QueryPlan) -> dict[str, Any]:
+        sql_plan = self.compile_semantic_sql(plan)
+        return {"executed": False, "sql_plan": sql_plan.to_dict()}
+
+    def compile_semantic_sql(self, plan: QueryPlan) -> SemanticSqlPlan:
+        """Compile a trusted semantic SQL plan for a replaceable executor backend."""
         raw_intent = plan.parameters.get("intent")
         if not isinstance(raw_intent, Mapping):
             raise TrustedQueryError("semantic_sql requires a typed intent object")
@@ -258,7 +311,7 @@ class QueryExecutor:
             sql_plan = SemanticSqlCompiler(resources).compile(intent)
         except SemanticQueryCompileError as exc:
             raise TrustedQueryError(str(exc)) from exc
-        return {"executed": False, "sql_plan": sql_plan.to_dict()}
+        return sql_plan
 
     def _graph(self, plan: QueryPlan) -> dict[str, Any]:
         direction = plan.parameters.get("direction", "both")
@@ -420,3 +473,78 @@ class QueryExecutor:
         if source_digest != plan.release_digest:
             raise TrustedQueryError(f"runtime artifact source release mismatch: {target}")
         return payload
+
+
+class SqliteSemanticSqlExecutor:
+    """Read-only SQLite adapter for deterministic semantic SQL plans."""
+
+    _ALIAS = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+    def __init__(
+        self,
+        resolver: TrustedSnapshotResolver,
+        *,
+        database: str | Path,
+        attachments: Mapping[str, str | Path] | None = None,
+    ) -> None:
+        self.compiler = QueryExecutor(resolver)
+        self.database = Path(database).resolve()
+        self.attachments = {
+            self._alias(alias): Path(path).resolve()
+            for alias, path in (attachments or {}).items()
+        }
+
+    def __call__(self, plan: QueryPlan) -> Mapping[str, Any]:
+        sql_plan = self.compiler.compile_semantic_sql(plan)
+        snapshot = self._snapshot()
+        parameters = {
+            f"p{index}": value
+            for index, value in enumerate(sql_plan.parameter_values, start=1)
+        }
+        try:
+            with sqlite3.connect(
+                f"file:{self.database}?mode=ro", uri=True
+            ) as connection:
+                connection.row_factory = sqlite3.Row
+                for alias, path in sorted(self.attachments.items()):
+                    connection.execute(
+                        f'ATTACH DATABASE ? AS "{alias}"',
+                        (f"file:{path}?mode=ro",),
+                    )
+                connection.execute("PRAGMA query_only = ON")
+                cursor = connection.execute(sql_plan.sql, parameters)
+                columns = tuple(item[0] for item in (cursor.description or ()))
+                rows = [dict(row) for row in cursor.fetchall()]
+        except sqlite3.Error as exc:
+            raise TrustedQueryError(f"semantic SQL execution failed: {exc}") from exc
+        return {
+            "executed": True,
+            "backend": "sqlite",
+            "sql_plan": sql_plan.to_dict(),
+            "data_snapshot": snapshot,
+            "columns": list(columns),
+            "rows": canonical_data(rows),
+            "row_count": len(rows),
+        }
+
+    def _snapshot(self) -> dict[str, Any]:
+        sources = {"main": self._file_digest(self.database)}
+        sources.update(
+            {alias: self._file_digest(path) for alias, path in self.attachments.items()}
+        )
+        payload = {"backend": "sqlite", "sources": sources}
+        return {**payload, "snapshot_digest": content_digest(payload)}
+
+    @classmethod
+    def _alias(cls, value: str) -> str:
+        if value in {"main", "temp"} or not cls._ALIAS.fullmatch(value):
+            raise TrustedQueryError(f"unsafe SQLite attachment alias: {value}")
+        return value
+
+    @staticmethod
+    def _file_digest(path: Path) -> str:
+        try:
+            content = path.read_bytes()
+        except OSError as exc:
+            raise TrustedQueryError(f"SQLite snapshot is unreadable: {path.name}") from exc
+        return f"sha256:{hashlib.sha256(content).hexdigest()}"

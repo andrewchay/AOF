@@ -312,9 +312,14 @@ class FederatedQueryExecutor:
     def execute(self, plan: FederatedQueryPlan) -> FederatedQueryResult:
         if not plan.verify():
             raise TrustedQueryError("federated query plan digest mismatch")
-        results = {
-            item.step_id: self.executor.execute(item.query_plan) for item in plan.steps
-        }
+        results: dict[str, QueryResult] = {}
+        for item in plan.steps:
+            try:
+                results[item.step_id] = self.executor.execute(item.query_plan)
+            except Exception as exc:
+                raise TrustedQueryError(
+                    f"federated query step failed: {item.step_id}: {exc}"
+                ) from exc
         evidence_by_id = {
             str(item["evidence_id"]): canonical_data(item)
             for result in results.values()
