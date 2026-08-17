@@ -183,6 +183,19 @@ rationale 和外部 authority；策略 revision 变化后旧 waiver 自动失效
 风险 finding 可被豁免，CompilePlan 自身无效始终不可豁免。该报告是后续不可变 CompilationRun 的强制输入，
 不会直接触发编译或发布副作用。
 
+## 不可变编译运行与环境指针
+
+`CompilationRunService` 在执行前重新生成 CompilePlan，并重新评估精确 Policy revision 与 waiver；调用方
+传入的 plan 不能绕过 registry 或 Policy gate。`aof.compilation-run/v1` 固定 release/plan/policy/report
+摘要、compiler lock、实际生效的 waiver、拓扑顺序产物、决策 ID 和 run digest。Run ID 写入后不可覆盖，
+manifest 被修改会在读取时因摘要不匹配而拒绝。
+
+首次 Run 只证明一次确定性编译，不能直接进入环境。`replay()` 必须使用相同 Release revisions、plan、
+Policy report 与 waiver，在独立 run 目录重新编译；所有 `(target, compiler, content_hash)` 一致时，新 Run
+才标记 `reproducible`。环境使用 `aof.compilation-channel/v1` 指针，不复制或覆盖产物：promotion 要求
+可复现 Run、独立 approver 与 publisher；rollback 只能指向该 channel 历史上提升过且仍可验证的 Run。
+每次执行、回放、提升和回滚都写入决策溯源账本，channel 保留带摘要的完整 pointer history。
+
 ## 生产运维闭环
 
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加

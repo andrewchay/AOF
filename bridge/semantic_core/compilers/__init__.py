@@ -19,6 +19,12 @@ from .governance import (
     CompilerPolicyReport,
 )
 from .runtime_targets import DatalogCompiler, McpCompiler, OwlCompiler, RagCompiler, ShaclCompiler
+from .runs import (
+    CompilationRun,
+    CompilationRunError,
+    CompilationRunRepository,
+    CompilationRunService,
+)
 
 
 def default_compiler_registry() -> CompilerRegistry:
@@ -37,6 +43,10 @@ __all__ = [
     "CompilePlan",
     "CompileStep",
     "CompilationInput",
+    "CompilationRun",
+    "CompilationRunError",
+    "CompilationRunRepository",
+    "CompilationRunService",
     "CompilationWaiver",
     "CompilerError",
     "CompilerRegistry",
