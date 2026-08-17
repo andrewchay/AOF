@@ -2,6 +2,8 @@
 
 from .base import (
     CompiledArtifact,
+    CompilePlan,
+    CompileStep,
     CompilationInput,
     CompilerError,
     CompilerRegistry,
@@ -25,6 +27,8 @@ def default_compiler_registry() -> CompilerRegistry:
 
 __all__ = [
     "CompiledArtifact",
+    "CompilePlan",
+    "CompileStep",
     "CompilationInput",
     "CompilerError",
     "CompilerRegistry",

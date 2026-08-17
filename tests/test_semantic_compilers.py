@@ -165,3 +165,22 @@ def test_default_registry_compiles_governed_release_to_all_runtime_targets(tmp_p
     assert all(artifact.release_digest == release.release_digest for artifact in artifacts.values())
     assert all(artifacts[target].content_hash == repeated[target].content_hash for target in artifacts)
     assert (tmp_path / "first" / "datalog" / artifacts["datalog"].uri).read_text().endswith("\n")
+
+
+def test_compile_plan_is_deterministic_dependency_closed_and_version_locked() -> None:
+    release, resources = _release()
+    registry = default_compiler_registry()
+
+    first = registry.plan(release, resources=resources, targets=["mcp", "semantic-json"])
+    second = registry.plan(release, resources=reversed(resources), targets=["semantic-json", "mcp"])
+
+    assert first.valid is True
+    assert first.plan_digest == second.plan_digest
+    assert [step.target for step in first.steps] == ["semantic-json", "mcp"]
+    assert first.compiler_lock == {"mcp": "mcp@1", "semantic-json": "semantic-json@1"}
+    assert first.steps[1].depends_on == ("semantic-json",)
+    assert first.steps[1].input_revisions == tuple(item.revision_id for item in release.resources)
+
+    invalid = registry.plan(release, resources=resources, targets=["unknown-runtime"])
+    assert invalid.valid is False
+    assert invalid.diagnostics[0]["code"] == "compiler_target_not_registered"

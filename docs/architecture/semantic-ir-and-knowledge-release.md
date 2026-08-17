@@ -159,6 +159,14 @@ Revision。通过后，OWL/SHACL bundle 会实际解析为 RDF 图，Datalog bun
 RAG bundle 可按统一资源内容检索，MCP bundle 会生成可枚举的 resources/tools catalog。运行时不接受
 未注册 target，也不会在摘要失败时降级读取。
 
+## 可治理编译计划
+
+`CompilerRegistry.plan()` 是编译前的无副作用 dry-run。它解析 target 依赖 DAG、补齐传递 target、
+执行每个 compiler 的资源兼容检查，并输出 `aof.compile-plan/v1`。计划固定 Release digest、请求目标、
+拓扑步骤、每步资源与输入 Revision、精确 `target@version` compiler lock 和结构化 diagnostics；全部
+内容生成 `plan_digest`。调用顺序和资源顺序不会改变计划，未注册 target、空输入能力或依赖环都会
+形成 blocking diagnostic，不能进入实际编译。
+
 ## 生产运维闭环
 
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加

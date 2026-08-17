@@ -108,6 +108,7 @@ class McpCompiler(_RuntimeJsonCompiler):
     filename = "mcp-catalog.json"
     media_type = "application/vnd.aof.mcp-catalog+json"
     supported_kinds = frozenset(ResourceKind)
+    requires_targets = ("semantic-json",)
 
     def payload(
         self, compilation: CompilationInput, resources: tuple[SemanticResource, ...]

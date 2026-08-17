@@ -9,7 +9,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Iterable, Mapping
 
-from ..canonical import canonical_data
+from ..canonical import canonical_data, content_digest
 from ..models import ResourceKind, SemanticResource
 from ..releases import KnowledgeRelease
 
@@ -43,6 +43,33 @@ def _frozen_mapping(value: Mapping[str, Any] | None = None) -> Mapping[str, Any]
 class VerificationReport:
     valid: bool
     findings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class CompileStep:
+    target: str
+    compiler: str
+    depends_on: tuple[str, ...]
+    resource_ids: tuple[str, ...]
+    input_revisions: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"target": self.target, "compiler": self.compiler, "depends_on": list(self.depends_on), "resource_ids": list(self.resource_ids), "input_revisions": list(self.input_revisions)}
+
+
+@dataclass(frozen=True)
+class CompilePlan:
+    release_id: str
+    release_digest: str
+    requested_targets: tuple[str, ...]
+    steps: tuple[CompileStep, ...]
+    compiler_lock: Mapping[str, str]
+    diagnostics: tuple[Mapping[str, Any], ...]
+    valid: bool
+    plan_digest: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"api_version": "aof.compile-plan/v1", "release_id": self.release_id, "release_digest": self.release_digest, "requested_targets": list(self.requested_targets), "steps": [step.to_dict() for step in self.steps], "compiler_lock": canonical_data(self.compiler_lock), "diagnostics": [canonical_data(item) for item in self.diagnostics], "valid": self.valid, "plan_digest": self.plan_digest}
 
 
 @dataclass(frozen=True)
@@ -93,6 +120,7 @@ class SemanticCompiler(ABC):
     version: str = ""
     supported_kinds: frozenset[ResourceKind] = frozenset()
     ignored_kinds: frozenset[ResourceKind] = frozenset()
+    requires_targets: tuple[str, ...] = ()
 
     def validate(self, compilation: CompilationInput) -> VerificationReport:
         classified = {kind.value for kind in self.supported_kinds | self.ignored_kinds}
@@ -175,6 +203,56 @@ class CompilerRegistry:
         if not verification.valid:
             raise CompilerError("; ".join(verification.findings))
         return artifact
+
+    def plan(
+        self,
+        release: KnowledgeRelease,
+        *,
+        resources: Iterable[SemanticResource],
+        targets: Iterable[str],
+    ) -> CompilePlan:
+        compilation = CompilationInput.create(release, resources)
+        requested = tuple(sorted(set(targets)))
+        diagnostics: list[dict[str, Any]] = []
+        ordered: list[str] = []
+        visiting: set[str] = set()
+
+        def visit(target: str) -> None:
+            compiler = self._compilers.get(target)
+            if compiler is None:
+                diagnostics.append({"code": "compiler_target_not_registered", "severity": "blocking", "target": target, "message": f"compiler target is not registered: {target}"})
+                return
+            if target in visiting:
+                diagnostics.append({"code": "compiler_dependency_cycle", "severity": "blocking", "target": target, "message": f"compiler dependency cycle includes: {target}"})
+                return
+            if target in ordered:
+                return
+            visiting.add(target)
+            for dependency in sorted(compiler.requires_targets):
+                visit(dependency)
+            visiting.remove(target)
+            ordered.append(target)
+
+        for target in requested:
+            visit(target)
+        steps = []
+        compiler_lock = {}
+        for target in ordered:
+            compiler = self._compilers[target]
+            report = compiler.validate(compilation)
+            for finding in report.findings:
+                diagnostics.append({"code": "compiler_validation_failed", "severity": "blocking", "target": target, "message": finding})
+            identity = f"{target}@{compiler.version}"
+            compiler_lock[target] = identity
+            steps.append(CompileStep(
+                target=target,
+                compiler=identity,
+                depends_on=tuple(sorted(compiler.requires_targets)),
+                resource_ids=tuple(item.resource_id for item in compilation.resources if item.kind in compiler.supported_kinds),
+                input_revisions=tuple(item.revision_id for item in release.resources),
+            ))
+        payload = {"api_version": "aof.compile-plan/v1", "release_id": release.release_id, "release_digest": release.release_digest, "requested_targets": list(requested), "steps": [step.to_dict() for step in steps], "compiler_lock": compiler_lock, "diagnostics": diagnostics, "valid": not diagnostics}
+        return CompilePlan(release.release_id, release.release_digest, requested, tuple(steps), MappingProxyType(compiler_lock), tuple(MappingProxyType(item) for item in diagnostics), not diagnostics, content_digest(payload))
 
     def verify(
         self,
