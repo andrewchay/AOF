@@ -66,6 +66,14 @@ def _trusted_query_runtime(tmp_path, compiler_root=None):
         owner="knowledge-team",
         description="A customer account.",
     )
+    secret_concept = SemanticResource.create(
+        resource_id="aof://acme/sales/concept/customer-secret",
+        kind=ResourceKind.CONCEPT,
+        name="customer-secret",
+        domain="sales",
+        owner="restricted-team",
+        description="A restricted customer risk profile.",
+    )
     profile = SemanticResource.create(
         resource_id="aof://acme/sales/retrieval-profile/default",
         kind=ResourceKind.RETRIEVAL_PROFILE,
@@ -135,6 +143,7 @@ def _trusted_query_runtime(tmp_path, compiler_root=None):
         ontology,
         rules,
         concept,
+        secret_concept,
         profile,
         template,
         dataset,
@@ -547,6 +556,95 @@ def test_query_policy_blocks_role_purpose_resource_and_field_violations(tmp_path
     role_finding = next(item for item in report.findings if item.code == "query_role_not_allowed")
     assert role_finding.waiver_allowed is False
     assert report.conforms is False
+
+
+def test_query_policy_scope_hides_unauthorized_resources_and_fields(tmp_path) -> None:
+    resolver, executor = _trusted_query_runtime(tmp_path)
+    public_resource = "aof://acme/sales/concept/customer"
+    plan = resolver.plan(
+        QueryRequest.create(
+            channel="production",
+            capability="semantic_search",
+            query="customer",
+            purpose="customer-support",
+        ),
+        tenant_id="acme",
+    )
+    policy = QueryPolicy.from_resource(
+        SemanticResource.create(
+            resource_id="aof://acme/platform/policy/query-visible-customer",
+            kind=ResourceKind.POLICY,
+            name="query-visible-customer",
+            domain="platform",
+            owner="security-governance",
+            spec={
+                "policy_type": "query",
+                "role_capabilities": {"analyst": ["semantic_search"]},
+                "capability_rules": {
+                    "semantic_search": {
+                        "allowed_resource_ids": [public_resource],
+                        "allowed_fields": ["name"],
+                    }
+                },
+            },
+        )
+    )
+
+    governed = GovernedQueryExecutor(executor, policy).execute(
+        plan, roles=["analyst"]
+    )
+
+    assert governed.policy_report.resource_scope == (public_resource,)
+    assert governed.policy_report.field_scope == ("name",)
+    assert governed.result.to_dict()["data"]["hits"] == [{"name": "customer"}]
+
+
+def test_query_policy_checks_resolved_semantic_sql_dependency_closure(tmp_path) -> None:
+    resolver, _ = _trusted_query_runtime(tmp_path)
+    metric_id = "aof://acme/sales/metric/gmv"
+    dimension_id = "aof://acme/sales/dimension/order-date"
+    dataset_id = "aof://acme/sales/physical-dataset/order-detail"
+    intent = SemanticIntent.create(
+        metrics=[metric_id],
+        dimensions=[dimension_id],
+        purpose="daily-sales-report",
+    )
+    plan = resolver.plan(
+        QueryRequest.create(
+            channel="production",
+            capability="semantic_sql",
+            query=intent.intent_digest,
+            purpose="daily-sales-report",
+            parameters={"intent": intent.to_dict()},
+        ),
+        tenant_id="acme",
+    )
+    policy = QueryPolicy.from_resource(
+        SemanticResource.create(
+            resource_id="aof://acme/platform/policy/query-sql-limited",
+            kind=ResourceKind.POLICY,
+            name="query-sql-limited",
+            domain="platform",
+            owner="security-governance",
+            spec={
+                "policy_type": "query",
+                "role_capabilities": {"analyst": ["semantic_sql"]},
+                "capability_rules": {
+                    "semantic_sql": {
+                        "allowed_resource_ids": [metric_id, dimension_id],
+                    }
+                },
+            },
+        )
+    )
+
+    report = policy.evaluate(plan, roles=["analyst"])
+
+    assert plan.resolved_resource_ids == (dimension_id, metric_id, dataset_id)
+    assert report.conforms is False
+    assert [(item.code, item.subject) for item in report.findings] == [
+        ("query_resource_not_allowed", dataset_id)
+    ]
 
 
 def test_audited_query_emits_verifiable_causal_evidence_package(tmp_path) -> None:

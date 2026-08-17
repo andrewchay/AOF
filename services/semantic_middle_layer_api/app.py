@@ -664,33 +664,16 @@ def _calculate_relevance(query: str, key: str, data: Any) -> float:
 
 @app.post('/v1/semantic/compile')
 def semantic_compile(req: CompileReq) -> dict[str, Any]:
-    """
-    Enhanced SQL compilation with LLM assistance.
-    
-    - Uses mapping library for context
-    - Generates SQL based on intent and available mappings
-    - Returns generated SQL with explanation
-    """
-    mf = _load_latest_manifest(req.topic)
-    library = _load_mapping_library(req.topic)
-    
-    # Build context from mapping library
-    context = _build_sql_context(library, req.intent)
-    
-    # Generate SQL using LLM
-    sql = _generate_sql(req.intent, context, req.target)
-    
-    return {
-        'topic': _slugify(req.topic),
-        'target': req.target,
-        'intent': req.intent,
-        'generated_sql': sql,
-        'context': context,
-        'artifacts': {
-            'ontology_file': mf['artifacts'].get('ontology_file', ''),
-            'mapping_dir': mf['artifacts'].get('mapping_dir', ''),
-        }
-    }
+    """Reject the pre-Release SQL generator at the public API boundary."""
+    raise HTTPException(
+        status_code=410,
+        detail={
+            'code': 'legacy_semantic_compile_retired',
+            'message': 'Ungoverned semantic compilation is retired',
+            'replacement': '/v1/semantic/query',
+            'capability': 'semantic_sql',
+        },
+    )
 
 
 def _build_sql_context(library: dict, intent: str) -> dict[str, Any]:

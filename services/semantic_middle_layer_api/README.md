@@ -54,7 +54,8 @@ LLM_ENDPOINT=https://api.deepseek.com/v1
 | `/v1/ingest/docs` | POST | 摄取文档 |
 | `/v1/build/topic` | POST | 构建主题本体 |
 | `/v1/semantic/retrieve` | POST | 语义检索 |
-| `/v1/semantic/compile` | POST | SQL 生成 |
+| `/v1/semantic/query` | POST | Release 锁定、策略治理的统一查询入口 |
+| `/v1/semantic/compile` | POST | 已退役；固定返回 410 并指向统一入口 |
 | `/v1/semantic/evaluate` | POST | 查询评估 |
 
 ## Docker 镜像

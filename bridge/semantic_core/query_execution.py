@@ -66,6 +66,14 @@ class QueryResult:
         }
 
 
+@dataclass(frozen=True)
+class QueryExecutionScope:
+    """Policy-derived visibility applied to standardized executor output."""
+
+    resource_ids: tuple[str, ...] | None = None
+    fields: tuple[str, ...] | None = None
+
+
 class QueryExecutorRegistry:
     """Capability-keyed SPI for deterministic query execution backends."""
 
@@ -122,7 +130,12 @@ class QueryExecutor:
             registry.register(QueryCapability.QUERY_TEMPLATE, self._query_template)
         self.registry = registry
 
-    def execute(self, plan: QueryPlan) -> QueryResult:
+    def execute(
+        self,
+        plan: QueryPlan,
+        *,
+        scope: QueryExecutionScope | None = None,
+    ) -> QueryResult:
         if not plan.verify():
             raise TrustedQueryError("query plan digest mismatch")
         request = QueryRequest.create(
@@ -138,6 +151,8 @@ class QueryExecutor:
         if current.plan_digest != plan.plan_digest:
             raise TrustedQueryError("query plan no longer matches the trusted channel snapshot")
         data = self.registry.execute(plan)
+        if scope is not None:
+            data = self._apply_scope(plan, data, scope)
         evidence = tuple(
             {
                 "evidence_id": f"artifact:{artifact.target}:{artifact.content_hash}",
@@ -177,6 +192,35 @@ class QueryExecutor:
             evidence=tuple(_freeze(item) for item in evidence),
             result_digest=content_digest(payload),
         )
+
+    @staticmethod
+    def _apply_scope(
+        plan: QueryPlan,
+        data: Mapping[str, Any],
+        scope: QueryExecutionScope,
+    ) -> Mapping[str, Any]:
+        normalized = canonical_data(data)
+        if plan.capability is not QueryCapability.SEMANTIC_SEARCH:
+            return normalized
+        hits = normalized.get("hits", [])
+        if not isinstance(hits, list):
+            raise TrustedQueryError("semantic_search executor returned invalid hits")
+        visible = set(scope.resource_ids) if scope.resource_ids is not None else None
+        fields = set(scope.fields) if scope.fields is not None else None
+        projected = []
+        for hit in hits:
+            if not isinstance(hit, Mapping):
+                raise TrustedQueryError("semantic_search hits must be semantic objects")
+            if visible is not None and hit.get("resource_id") not in visible:
+                continue
+            projected.append(
+                {
+                    key: value
+                    for key, value in hit.items()
+                    if fields is None or key in fields
+                }
+            )
+        return {**normalized, "hits": projected, "count": len(projected)}
 
     def _semantic_search(self, plan: QueryPlan) -> dict[str, Any]:
         payload = self._artifact_payload(plan, "rag")

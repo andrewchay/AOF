@@ -9,7 +9,7 @@ from typing import Any
 
 from .canonical import canonical_data, content_digest
 from .models import ResourceKind, SemanticResource
-from .query_execution import QueryExecutor, QueryResult
+from .query_execution import QueryExecutionScope, QueryExecutor, QueryResult
 from .query_plans import QueryCapability, QueryPlan
 
 
@@ -118,6 +118,8 @@ class QueryPolicyReport:
     conforms: bool
     findings: tuple[QueryPolicyFinding, ...]
     field_evidence: tuple[Mapping[str, Any], ...]
+    resource_scope: tuple[str, ...] | None
+    field_scope: tuple[str, ...] | None
     report_digest: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -130,6 +132,10 @@ class QueryPolicyReport:
             "conforms": self.conforms,
             "findings": [item.to_dict() for item in self.findings],
             "field_evidence": [canonical_data(item) for item in self.field_evidence],
+            "resource_scope": (
+                list(self.resource_scope) if self.resource_scope is not None else None
+            ),
+            "field_scope": list(self.field_scope) if self.field_scope is not None else None,
             "report_digest": self.report_digest,
         }
 
@@ -275,9 +281,12 @@ class QueryPolicy:
                     f"query limit {raw_limit} exceeds policy maximum {max_limit}",
                 )
             )
-        resource_ids = self._requested_values(plan, "resource_ids", "resource_id")
+        explicitly_requested = self._requested_values(plan, "resource_ids", "resource_id")
         if plan.query.startswith("aof://"):
-            resource_ids.add(plan.query)
+            explicitly_requested.add(plan.query)
+        resource_ids = set(explicitly_requested)
+        if plan.capability is not QueryCapability.SEMANTIC_SEARCH:
+            resource_ids.update(plan.resolved_resource_ids)
         allowed_resources = set(rule.get("allowed_resource_ids", ()))
         denied_resources = set(rule.get("denied_resource_ids", ()))
         for resource_id in sorted(resource_ids):
@@ -352,6 +361,16 @@ class QueryPolicy:
                 finding = replace(finding, resolved=True, waiver_id=waiver.waiver_id)
             resolved.append(finding)
         conforms = plan.verify() and all(item.resolved for item in resolved)
+        resource_scope: tuple[str, ...] | None = None
+        if plan.capability is QueryCapability.SEMANTIC_SEARCH and (
+            allowed_resources or denied_resources
+        ):
+            visible = set(plan.resolved_resource_ids) - denied_resources
+            if allowed_resources:
+                visible.intersection_update(allowed_resources)
+            resource_scope = tuple(sorted(visible))
+        elif allowed_resources:
+            resource_scope = tuple(sorted(allowed_resources))
         payload = {
             "api_version": "aof.query-policy-report/v1",
             "policy_resource_id": self.resource_id,
@@ -361,6 +380,8 @@ class QueryPolicy:
             "conforms": conforms,
             "findings": [item.to_dict() for item in resolved],
             "field_evidence": field_evidence,
+            "resource_scope": list(resource_scope) if resource_scope is not None else None,
+            "field_scope": sorted(allowed_fields) if allowed_fields else None,
         }
         return QueryPolicyReport(
             policy_resource_id=self.resource_id,
@@ -370,6 +391,8 @@ class QueryPolicy:
             conforms=conforms,
             findings=tuple(resolved),
             field_evidence=tuple(_freeze(item) for item in field_evidence),
+            resource_scope=resource_scope,
+            field_scope=tuple(sorted(allowed_fields)) if allowed_fields else None,
             report_digest=content_digest(payload),
         )
 
@@ -417,7 +440,13 @@ class GovernedQueryExecutor:
         if not report.conforms:
             codes = ", ".join(item.code for item in report.findings if not item.resolved)
             raise QueryPolicyError(f"query policy rejected the plan: {codes}")
-        result = self.executor.execute(plan)
+        result = self.executor.execute(
+            plan,
+            scope=QueryExecutionScope(
+                resource_ids=report.resource_scope,
+                fields=report.field_scope,
+            ),
+        )
         payload = {
             "api_version": "aof.governed-query-result/v1",
             "result": result.to_dict(),

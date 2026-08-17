@@ -306,6 +306,11 @@ REST `POST /v1/semantic/query` 与 MCP `aof_semantic_query` 使用同一控制�
 确定性 semantic SQL、结构化 Graph traversal、Datalog、只读 SPARQL 和 QueryTemplate。每种能力均消费真实编译制品，并返回相同的 governed result、决策链与
 `aof.query-evidence-package/v1`；签名错误、跨 tenant snapshot、未发布 Policy 或制品摘要不一致都会在执行前阻断。
 
+QueryPlan 还会从 Intent、QueryTemplate 或 capability 制品解析传递依赖闭包；非搜索能力在执行前对闭包中的
+每个 Resource 做策略检查，semantic search 则在执行前形成可见 Resource/field scope，并在结果摘要计算前
+执行投影。旧 `/v1/semantic/compile` 未锁定 Release、未执行 Policy 且允许 LLM 直接生成 SQL，因此所有服务
+变体都固定返回 `410 Gone`，不提供可重新开启的公网旁路。
+
 `QueryExecutorRegistry` 是 capability-keyed Executor SPI。默认执行器均通过同一注册接口接入，企业实现可替换
 具体 SQL、图或检索后端而不改变 QueryPlan、Release pinning 和结果证据契约。`FederatedQueryRequest` 将多个
 capability step 组织为显式依赖 DAG；Planner 拒绝未知依赖和环，并要求所有 step 锁定同一 CompilationRun 与

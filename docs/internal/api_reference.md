@@ -810,30 +810,24 @@ POST /v1/semantic/retrieve
 }
 ```
 
-#### SQL 编译
+#### SQL 编译（已退役）
 ```http
 POST /v1/semantic/compile
 ```
 
-**请求体**
+该入口不再接受自然语言直接生成 SQL，固定返回 `410 Gone`：
+
 ```json
 {
-  "topic": "my_topic",
-  "intent": "Calculate total revenue by quarter for 2024",
-  "target": "sql",
-  "context": {}
+  "detail": {
+    "code": "legacy_semantic_compile_retired",
+    "replacement": "/v1/semantic/query",
+    "capability": "semantic_sql"
+  }
 }
 ```
 
-**响应**
-```json
-{
-  "topic": "my_topic",
-  "intent": "Calculate total revenue by quarter for 2024",
-  "generated_sql": "SELECT quarter, SUM(revenue) FROM sales WHERE year=2024 GROUP BY quarter",
-  "context": {...}
-}
-```
+确定性 SQL 编译统一使用 `/v1/semantic/query`，并引用已发布的类型化 Intent resource ID。
 
 #### 查询评估
 ```http

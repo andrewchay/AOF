@@ -47,7 +47,7 @@ class TestEnhancedCompile:
     """Tests for enhanced SQL compilation."""
 
     def test_compile_endpoint_structure(self) -> None:
-        """Test compile endpoint accepts context parameter."""
+        """Legacy compilation cannot bypass the trusted query boundary."""
         response = client.post(
             '/v1/semantic/compile',
             json={
@@ -57,7 +57,10 @@ class TestEnhancedCompile:
                 'context': {'filters': ['date_range']}
             }
         )
-        assert response.status_code == 404  # No manifest
+        assert response.status_code == 410
+        detail = response.json()['detail']
+        assert detail['code'] == 'legacy_semantic_compile_retired'
+        assert detail['replacement'] == '/v1/semantic/query'
 
 
 @pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")

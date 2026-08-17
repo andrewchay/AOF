@@ -109,26 +109,18 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8787 --reload
 ```
 
 #### POST /v1/semantic/compile
-生成 SQL（LLM 驱动）。
+旧版未治理 SQL 生成入口已退役，固定返回 `410 Gone`。调用方必须迁移到
+`POST /v1/semantic/query`，使用 `capability: "semantic_sql"` 和已发布 Release 中的
+类型化 Intent resource ID；SQL、依赖闭包、权限与证据由可信查询控制面确定。
 
 ```json
 {
-  "topic": "users",
-  "intent": "get active users in last 7 days",
-  "target": "sql",
-  "context": {"filters": ["date_range"]}
-}
-```
-
-**响应**:
-```json
-{
-  "topic": "users",
-  "target": "sql",
-  "intent": "get active users in last 7 days",
-  "generated_sql": "SELECT * FROM users WHERE status = 'active' AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY);",
-  "context": {...},
-  "artifacts": {...}
+  "detail": {
+    "code": "legacy_semantic_compile_retired",
+    "message": "Ungoverned semantic compilation is retired",
+    "replacement": "/v1/semantic/query",
+    "capability": "semantic_sql"
+  }
 }
 ```
 

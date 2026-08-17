@@ -12,7 +12,12 @@ from .query_plans import (
     TrustedQueryError,
     TrustedSnapshotResolver,
 )
-from .query_execution import QueryExecutor, QueryExecutorRegistry, QueryResult
+from .query_execution import (
+    QueryExecutionScope,
+    QueryExecutor,
+    QueryExecutorRegistry,
+    QueryResult,
+)
 from .query_audit import AuditedQueryResult, AuditedQueryService, QueryEvidencePackage
 from .query_control import QueryControlPlane, QueryControlPlaneError
 from .semantic_query import (
@@ -71,6 +76,7 @@ __all__ = [
     "TrustedQueryError",
     "TrustedSnapshotResolver",
     "QueryExecutor",
+    "QueryExecutionScope",
     "QueryExecutorRegistry",
     "QueryResult",
     "AuditedQueryResult",

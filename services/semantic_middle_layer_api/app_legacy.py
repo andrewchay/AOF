@@ -236,17 +236,16 @@ def semantic_retrieve(req: RetrieveReq) -> dict[str, Any]:
 
 @app.post('/v1/semantic/compile')
 def semantic_compile(req: CompileReq) -> dict[str, Any]:
-    mf = _load_latest_manifest(req.topic)
-    return {
-        'topic': _slugify(req.topic),
-        'target': req.target,
-        'intent': req.intent,
-        'plan': {
-            'ontology_file': mf['artifacts'].get('ontology_file', ''),
-            'mapping_dir': mf['artifacts'].get('mapping_dir', ''),
-            'strategy': 'mapping+ontology+pattern_constrained',
+    """Reject the pre-Release compiler even when the legacy module is run."""
+    raise HTTPException(
+        status_code=410,
+        detail={
+            'code': 'legacy_semantic_compile_retired',
+            'message': 'Ungoverned semantic compilation is retired',
+            'replacement': '/v1/semantic/query',
+            'capability': 'semantic_sql',
         },
-    }
+    )
 
 
 @app.post('/v1/semantic/evaluate')

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
@@ -12,6 +13,7 @@ from typing import Any
 
 from .canonical import canonical_data, content_digest
 from .compilers import CompilationRunRepository
+from .semantic_query import SemanticIntent, SemanticQueryCompileError
 
 
 class TrustedQueryError(ValueError):
@@ -152,6 +154,7 @@ class QueryPlan:
     release_digest: str
     compiler_policy_resource_id: str
     compiler_policy_revision: str
+    resolved_resource_ids: tuple[str, ...]
     artifacts: tuple[QueryArtifactRef, ...]
     plan_digest: str
 
@@ -173,6 +176,7 @@ class QueryPlan:
             "release_digest": self.release_digest,
             "compiler_policy_resource_id": self.compiler_policy_resource_id,
             "compiler_policy_revision": self.compiler_policy_revision,
+            "resolved_resource_ids": list(self.resolved_resource_ids),
             "artifacts": [artifact.to_dict() for artifact in self.artifacts],
         }
 
@@ -214,6 +218,7 @@ class TrustedSnapshotResolver:
         artifacts = tuple(
             self._verify_artifact(run, artifacts_by_target[target]) for target in required_targets
         )
+        resolved_resource_ids = self._resolved_resource_ids(request, run, artifacts)
         payload = {
             "api_version": "aof.query-plan/v1",
             "tenant_id": tenant_id,
@@ -231,6 +236,7 @@ class TrustedSnapshotResolver:
             "release_digest": run.release_digest,
             "compiler_policy_resource_id": run.policy_resource_id,
             "compiler_policy_revision": run.policy_revision,
+            "resolved_resource_ids": list(resolved_resource_ids),
             "artifacts": [artifact.to_dict() for artifact in artifacts],
         }
         return QueryPlan(
@@ -249,9 +255,92 @@ class TrustedSnapshotResolver:
             release_digest=run.release_digest,
             compiler_policy_resource_id=run.policy_resource_id,
             compiler_policy_revision=run.policy_revision,
+            resolved_resource_ids=resolved_resource_ids,
             artifacts=artifacts,
             plan_digest=content_digest(payload),
         )
+
+    def _resolved_resource_ids(
+        self,
+        request: QueryRequest,
+        run: Any,
+        artifacts: tuple[QueryArtifactRef, ...],
+    ) -> tuple[str, ...]:
+        payloads = {
+            artifact.target: self._artifact_payload(run, artifact) for artifact in artifacts
+        }
+        resources = [
+            item
+            for payload in payloads.values()
+            for item in payload.get("resources", ())
+            if isinstance(item, Mapping) and isinstance(item.get("resource_id"), str)
+        ]
+        by_id = {str(item["resource_id"]): item for item in resources}
+        selected: set[str] = set()
+        if request.capability is QueryCapability.SEMANTIC_SQL:
+            raw_intent = request.parameters.get("intent")
+            if not isinstance(raw_intent, Mapping):
+                raise TrustedQueryError("semantic_sql requires a typed intent object")
+            try:
+                intent = SemanticIntent.from_dict(raw_intent)
+            except SemanticQueryCompileError as exc:
+                raise TrustedQueryError(str(exc)) from exc
+            selected.update(intent.metrics)
+            selected.update(intent.dimensions)
+            selected.update(item.dimension for item in intent.filters)
+        elif request.capability is QueryCapability.QUERY_TEMPLATE:
+            matches = [
+                resource_id
+                for resource_id, item in by_id.items()
+                if item.get("kind") == "QueryTemplate"
+                and (resource_id == request.query or item.get("name") == request.query)
+            ]
+            if len(matches) != 1:
+                raise TrustedQueryError(
+                    f"governed query template resolution is ambiguous or missing: {request.query}"
+                )
+            selected.add(matches[0])
+        else:
+            selected.update(by_id)
+        queue = list(selected)
+        while queue:
+            resource_id = queue.pop()
+            resource = by_id.get(resource_id)
+            if resource is None:
+                raise TrustedQueryError(
+                    f"query references a resource absent from the trusted artifact: {resource_id}"
+                )
+            dependencies = resource.get("depends_on", ())
+            if not isinstance(dependencies, list | tuple):
+                raise TrustedQueryError("compiled semantic resource has invalid depends_on")
+            for dependency in dependencies:
+                dependency_id = str(dependency)
+                if dependency_id not in selected:
+                    selected.add(dependency_id)
+                    queue.append(dependency_id)
+        return tuple(sorted(selected))
+
+    def _artifact_payload(
+        self, run: Any, artifact: QueryArtifactRef
+    ) -> Mapping[str, Any]:
+        path = (
+            self.repository.root
+            / "artifacts"
+            / run.run_id
+            / artifact.target
+            / artifact.uri
+        )
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise TrustedQueryError(
+                f"query artifact is not valid JSON: {artifact.target}"
+            ) from exc
+        if not isinstance(payload, Mapping):
+            raise TrustedQueryError(
+                f"query artifact must contain a semantic object: {artifact.target}"
+            )
+        return payload
 
     def verify_artifact(self, plan: QueryPlan, target: str) -> QueryArtifactRef:
         """Verify a supplemental artifact from the exact run pinned by a query plan."""
