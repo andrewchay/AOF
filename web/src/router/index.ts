@@ -30,6 +30,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '知识图谱', icon: 'Share' },
       },
       {
+        path: 'ontology',
+        name: 'ontology',
+        component: () => import('@/views/OntologyGovernanceView.vue'),
+        meta: { title: '本体治理', icon: 'Connection' },
+      },
+      {
         path: 'agent',
         name: 'agent',
         component: () => import('@/views/AgentTestView.vue'),

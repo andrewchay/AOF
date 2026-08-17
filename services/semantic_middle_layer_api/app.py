@@ -3840,6 +3840,329 @@ class RagRetrieveReq(BaseModel):
     include_graph: bool = Field(default=True, description='是否包含图谱路径召回（第三路）')
 
 
+# ==================== Decision provenance (PROV-O-inspired) ====================
+
+class DecisionEvidenceReq(BaseModel):
+    id: str = Field(min_length=1, description='不可变证据实体 ID，例如 document:abc#chunk-3')
+    type: str = 'evidence'
+    uri: Optional[str] = None
+    content_hash: Optional[str] = None
+    description: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DecisionRecordReq(BaseModel):
+    agent_id: str = Field(min_length=1)
+    decision_type: str = Field(min_length=1)
+    conclusion: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    evidence: list[DecisionEvidenceReq] = Field(default_factory=list)
+    parent_decision_ids: list[str] = Field(default_factory=list)
+    output_entities: list[dict[str, Any]] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    policies: list[str] = Field(default_factory=list)
+    status: str = 'completed'
+    tenant_id: Optional[str] = None
+    session_id: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    decision_id: Optional[str] = None
+
+
+class DecisionPrecedentReq(BaseModel):
+    decision_type: str = Field(min_length=1)
+    tags: list[str] = Field(default_factory=list)
+    tenant_id: Optional[str] = None
+    limit: int = Field(default=20, ge=1, le=100)
+
+
+class DecisionImpactReq(BaseModel):
+    decision_id: str = Field(min_length=1)
+    max_depth: int = Field(default=8, ge=1, le=50)
+
+
+def _decision_store():
+    from bridge.decision_provenance import DecisionProvenanceStore
+    return DecisionProvenanceStore(AOF_ROOT / 'data' / 'audit' / 'decision_provenance.jsonl')
+
+
+def _decision_error(exc: Exception) -> HTTPException:
+    message = str(exc)
+    return HTTPException(status_code=404 if message.startswith('decision not found:') else 422, detail=message)
+
+
+@app.post('/v1/decisions', status_code=201)
+async def record_decision(req: DecisionRecordReq) -> dict[str, Any]:
+    """Record an Agent Decision Activity and its evidence/causal predecessors."""
+    try:
+        return _decision_store().record(**req.model_dump())
+    except Exception as exc:
+        raise _decision_error(exc) from exc
+
+
+@app.get('/v1/decisions/{decision_id}')
+async def get_decision(decision_id: str) -> dict[str, Any]:
+    entry = _decision_store().get(decision_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
+    return entry
+
+
+@app.get('/v1/decisions/{decision_id}/causal-chain')
+async def decision_causal_chain(decision_id: str, direction: str = Query('ancestors'), max_depth: int = Query(8, ge=1, le=50)) -> dict[str, Any]:
+    try:
+        return _decision_store().causal_chain(decision_id, direction=direction, max_depth=max_depth)
+    except Exception as exc:
+        raise _decision_error(exc) from exc
+
+
+@app.post('/v1/decisions/precedents/search')
+async def search_decision_precedents(req: DecisionPrecedentReq) -> dict[str, Any]:
+    return {'results': _decision_store().find_precedents(**req.model_dump())}
+
+
+@app.post('/v1/decisions/impact')
+async def decision_impact(req: DecisionImpactReq) -> dict[str, Any]:
+    try:
+        return _decision_store().impact(**req.model_dump())
+    except Exception as exc:
+        raise _decision_error(exc) from exc
+
+
+@app.get('/v1/decisions/{decision_id}/audit-trail')
+async def decision_audit_trail(decision_id: str) -> dict[str, Any]:
+    try:
+        return _decision_store().audit_trail(decision_id)
+    except Exception as exc:
+        raise _decision_error(exc) from exc
+
+
+# ==================== Ontology governance & deterministic reasoning ====================
+
+class OntologyDraftCreateReq(BaseModel):
+    ontology_id: str = Field(min_length=1)
+    created_by: str = Field(min_length=1)
+    ontology_text: str = Field(min_length=1)
+    shapes_text: str = Field(min_length=1)
+    skos_text: str = ''
+    base_version: Optional[str] = None
+
+
+class OntologyDraftUpdateReq(BaseModel):
+    actor: str = Field(min_length=1)
+    ontology_text: Optional[str] = None
+    shapes_text: Optional[str] = None
+    skos_text: Optional[str] = None
+
+
+class OntologyActorReq(BaseModel):
+    actor: str = Field(min_length=1)
+
+
+class OntologyWaiverReq(BaseModel):
+    finding_id: str = Field(min_length=1)
+    actor: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    policy: str = Field(min_length=1)
+    expires_at: Optional[str] = None
+
+
+class OntologyApprovalReq(BaseModel):
+    approver: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    policies: list[str] = Field(default_factory=list)
+
+
+class OntologyChangesReq(BaseModel):
+    reviewer: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+class DatalogRunReq(BaseModel):
+    program: str = Field(min_length=1)
+    ruleset_id: str = 'ruleset:default'
+    facts: list[dict[str, Any]] = Field(default_factory=list)
+    agent_id: str = 'engine:datalog'
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class DatalogRuleSetPublishReq(BaseModel):
+    ruleset_id: str = Field(min_length=1)
+    program: str = Field(min_length=1)
+    actor: str = Field(min_length=1)
+    description: str = ''
+
+
+class DatalogRuleSetRunReq(BaseModel):
+    facts: list[dict[str, Any]] = Field(default_factory=list)
+    agent_id: str = 'engine:datalog'
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class SparqlQueryReq(BaseModel):
+    query: str = Field(min_length=1)
+
+
+def _ontology_governance():
+    from bridge.ontology_governance import OntologyGovernanceService
+    return OntologyGovernanceService(AOF_ROOT / 'data' / 'ontology_governance', _decision_store())
+
+
+def _datalog_rulesets():
+    from bridge.ontology_governance import RuleSetRepository
+    return RuleSetRepository(AOF_ROOT / 'data' / 'ontology_governance' / 'rulesets', _decision_store())
+
+
+def _ontology_error(exc: Exception) -> HTTPException:
+    message = str(exc)
+    return HTTPException(status_code=404 if 'not found:' in message else 409 if any(word in message for word in ('blocked', 'cannot be edited', 'only an approved')) else 422, detail=message)
+
+
+@app.post('/v1/ontology/drafts', status_code=201)
+async def create_ontology_draft(req: OntologyDraftCreateReq) -> dict[str, Any]:
+    try:
+        return _ontology_governance().create_draft(**req.model_dump())
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/drafts')
+async def list_ontology_drafts() -> dict[str, Any]:
+    drafts = _ontology_governance().list_drafts()
+    return {'drafts': drafts, 'count': len(drafts)}
+
+
+@app.get('/v1/ontology/drafts/{draft_id}')
+async def get_ontology_draft(draft_id: str) -> dict[str, Any]:
+    try:
+        return _ontology_governance().get_draft_bundle(draft_id)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.put('/v1/ontology/drafts/{draft_id}')
+async def update_ontology_draft(draft_id: str, req: OntologyDraftUpdateReq) -> dict[str, Any]:
+    try:
+        return _ontology_governance().update_draft(draft_id, **req.model_dump())
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/validate')
+async def validate_ontology_draft(draft_id: str, req: OntologyActorReq) -> dict[str, Any]:
+    try:
+        return _ontology_governance().validate_draft(draft_id, actor=req.actor)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/waivers', status_code=201)
+async def waive_ontology_finding(draft_id: str, req: OntologyWaiverReq) -> dict[str, Any]:
+    try:
+        return _ontology_governance().waive_finding(draft_id, **req.model_dump())
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/approve')
+async def approve_ontology_draft(draft_id: str, req: OntologyApprovalReq) -> dict[str, Any]:
+    try:
+        return _ontology_governance().approve(draft_id, **req.model_dump())
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/request-changes')
+async def request_ontology_changes(draft_id: str, req: OntologyChangesReq) -> dict[str, Any]:
+    try:
+        return _ontology_governance().request_changes(draft_id, **req.model_dump())
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/publish')
+async def publish_ontology_draft(draft_id: str, req: OntologyActorReq) -> dict[str, Any]:
+    try:
+        return _ontology_governance().publish(draft_id, actor=req.actor)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/drafts/{draft_id}/impact')
+async def preview_ontology_impact(draft_id: str) -> dict[str, Any]:
+    try:
+        return _ontology_governance().impact_preview(draft_id)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/releases')
+async def list_ontology_releases(ontology_id: Optional[str] = None) -> dict[str, Any]:
+    releases = _ontology_governance().list_releases(ontology_id)
+    return {'releases': releases, 'count': len(releases)}
+
+
+@app.get('/v1/ontology/releases/{ontology_id}/{version}')
+async def get_ontology_release(ontology_id: str, version: str) -> dict[str, Any]:
+    try:
+        return _ontology_governance().get_release(ontology_id, version)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/reasoning/datalog/run')
+async def run_datalog(req: DatalogRunReq) -> dict[str, Any]:
+    from bridge.ontology_governance import DatalogEngine
+    try:
+        facts = [(item['predicate'], item.get('terms', [])) for item in req.facts]
+        return DatalogEngine(req.program, ruleset_id=req.ruleset_id).run(
+            facts, decision_store=_decision_store(), agent_id=req.agent_id, evidence=req.evidence,
+        )
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/reasoning/rulesets', status_code=201)
+async def publish_datalog_ruleset(req: DatalogRuleSetPublishReq) -> dict[str, Any]:
+    try:
+        return _datalog_rulesets().publish(**req.model_dump())
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/reasoning/rulesets')
+async def list_datalog_rulesets(ruleset_id: Optional[str] = None) -> dict[str, Any]:
+    rulesets = _datalog_rulesets().list(ruleset_id)
+    return {'rulesets': rulesets, 'count': len(rulesets)}
+
+
+@app.get('/v1/reasoning/rulesets/{ruleset_id}/{version}')
+async def get_datalog_ruleset(ruleset_id: str, version: str) -> dict[str, Any]:
+    try:
+        return _datalog_rulesets().get(ruleset_id, version)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/reasoning/rulesets/{ruleset_id}/{version}/run')
+async def run_datalog_ruleset(ruleset_id: str, version: str, req: DatalogRuleSetRunReq) -> dict[str, Any]:
+    try:
+        facts = [(item['predicate'], item.get('terms', [])) for item in req.facts]
+        return _datalog_rulesets().run(ruleset_id, version, facts, agent_id=req.agent_id, evidence=req.evidence)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/releases/{ontology_id}/{version}/sparql')
+async def query_ontology_release(ontology_id: str, version: str, req: SparqlQueryReq) -> dict[str, Any]:
+    from bridge.ontology_governance import SparqlService
+    try:
+        release = _ontology_governance().get_release(ontology_id, version)
+        rdf_text = release['ontology_text'] + '\n' + release['skos_text']
+        return SparqlService(rdf_text, snapshot_id=f'ontology:{ontology_id}:{version}').query(req.query)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
 @app.post('/v1/rag/retrieve')
 async def rag_retrieve(req: RagRetrieveReq) -> dict[str, Any]:
     """RAG 统一检索：关键词 + 向量 + 图谱路径多路召回，RRF 融合，带命中溯源.

@@ -20,6 +20,7 @@
 
 from .logger import AuditLogger, AuditEvent, AuditLevel
 from .query import AuditQuery, AuditReportGenerator
+from bridge.decision_provenance import DecisionProvenanceStore, DecisionProvenanceError
 
 __all__ = [
     "AuditLogger",
@@ -27,4 +28,6 @@ __all__ = [
     "AuditLevel",
     "AuditQuery",
     "AuditReportGenerator",
+    "DecisionProvenanceStore",
+    "DecisionProvenanceError",
 ]

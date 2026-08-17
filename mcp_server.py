@@ -347,6 +347,94 @@ async def _tool_rag_retrieve(args: dict[str, Any]) -> dict[str, Any]:
     return result.to_dict()
 
 
+async def _tool_record_decision(args: dict[str, Any]) -> dict[str, Any]:
+    """Persist an Agent decision with its PROV-style causal metadata."""
+    from bridge.decision_provenance import DecisionProvenanceStore
+    return DecisionProvenanceStore().record(**args)
+
+
+async def _tool_decision_audit_trail(args: dict[str, Any]) -> dict[str, Any]:
+    """Return a causally complete, integrity-checked compliance trail."""
+    from bridge.decision_provenance import DecisionProvenanceStore
+    return DecisionProvenanceStore().audit_trail(args["decision_id"])
+
+
+async def _tool_find_decision_precedents(args: dict[str, Any]) -> dict[str, Any]:
+    """Find earlier decisions of the same type, ranked by tag overlap."""
+    from bridge.decision_provenance import DecisionProvenanceStore
+    return {"results": DecisionProvenanceStore().find_precedents(
+        decision_type=args["decision_type"], tags=args.get("tags", []),
+        tenant_id=args.get("tenant_id"), limit=int(args.get("limit", 20)),
+    )}
+
+
+def _ontology_governance_service():
+    from bridge.decision_provenance import DecisionProvenanceStore
+    from bridge.ontology_governance import OntologyGovernanceService
+    return OntologyGovernanceService(
+        PROJECT_ROOT / "data" / "ontology_governance",
+        DecisionProvenanceStore(PROJECT_ROOT / "data" / "audit" / "decision_provenance.jsonl"),
+    )
+
+
+async def _tool_ontology_create_draft(args: dict[str, Any]) -> dict[str, Any]:
+    return _ontology_governance_service().create_draft(**args)
+
+
+async def _tool_ontology_validate_draft(args: dict[str, Any]) -> dict[str, Any]:
+    return _ontology_governance_service().validate_draft(args["draft_id"], actor=args["actor"])
+
+
+async def _tool_ontology_waive_finding(args: dict[str, Any]) -> dict[str, Any]:
+    payload = {key: value for key, value in args.items() if key != "draft_id"}
+    return _ontology_governance_service().waive_finding(args["draft_id"], **payload)
+
+
+async def _tool_ontology_approve_draft(args: dict[str, Any]) -> dict[str, Any]:
+    payload = {key: value for key, value in args.items() if key != "draft_id"}
+    return _ontology_governance_service().approve(args["draft_id"], **payload)
+
+
+async def _tool_ontology_request_changes(args: dict[str, Any]) -> dict[str, Any]:
+    return _ontology_governance_service().request_changes(args["draft_id"], reviewer=args["reviewer"], rationale=args["rationale"])
+
+
+async def _tool_ontology_publish_draft(args: dict[str, Any]) -> dict[str, Any]:
+    return _ontology_governance_service().publish(args["draft_id"], actor=args["actor"])
+
+
+async def _tool_datalog_reason(args: dict[str, Any]) -> dict[str, Any]:
+    from bridge.decision_provenance import DecisionProvenanceStore
+    from bridge.ontology_governance import DatalogEngine
+    facts = [(item["predicate"], item.get("terms", [])) for item in args.get("facts", [])]
+    return DatalogEngine(args["program"], ruleset_id=args.get("ruleset_id", "ruleset:default")).run(
+        facts,
+        decision_store=DecisionProvenanceStore(PROJECT_ROOT / "data" / "audit" / "decision_provenance.jsonl"),
+        agent_id=args.get("agent_id", "engine:datalog"), evidence=args.get("evidence", []),
+    )
+
+
+def _datalog_ruleset_repository():
+    from bridge.decision_provenance import DecisionProvenanceStore
+    from bridge.ontology_governance import RuleSetRepository
+    return RuleSetRepository(
+        PROJECT_ROOT / "data" / "ontology_governance" / "rulesets",
+        DecisionProvenanceStore(PROJECT_ROOT / "data" / "audit" / "decision_provenance.jsonl"),
+    )
+
+
+async def _tool_publish_datalog_ruleset(args: dict[str, Any]) -> dict[str, Any]:
+    return _datalog_ruleset_repository().publish(**args)
+
+
+async def _tool_run_datalog_ruleset(args: dict[str, Any]) -> dict[str, Any]:
+    facts = [(item["predicate"], item.get("terms", [])) for item in args.get("facts", [])]
+    return _datalog_ruleset_repository().run(
+        args["ruleset_id"], args["version"], facts,
+        agent_id=args.get("agent_id", "engine:datalog"), evidence=args.get("evidence", []),
+    )
+
+
 async def _tool_document_parse(args: dict[str, Any]) -> dict[str, Any]:
     """把本地文件解析为干净 Markdown + 元数据（document_parser 阶段 3）。"""
     path = args.get("path")
@@ -555,6 +643,129 @@ def build_server() -> McpServer:
             "required": ["query"],
         },
         handler=_tool_rag_retrieve,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_record_decision",
+        description="记录 Agent 决策及其证据、前序决策、输出实体和适用策略，生成带哈希链的 PROV-O 风格审计记录。",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "agent_id": {"type": "string", "description": "作出决策的 Agent ID"},
+                "decision_type": {"type": "string", "description": "决策类型，如 deployment_approval"},
+                "conclusion": {"type": "string", "description": "最终结论"},
+                "rationale": {"type": "string", "description": "可审计的理由"},
+                "evidence": {"type": "array", "description": "输入证据实体，每项至少含 id"},
+                "parent_decision_ids": {"type": "array", "description": "因果前序 Decision ID"},
+                "output_entities": {"type": "array", "description": "本决策生成或改变的实体"},
+                "tags": {"type": "array", "description": "用于先例匹配的稳定标签"},
+                "policies": {"type": "array", "description": "适用的治理/合规策略引用"},
+                "tenant_id": {"type": "string"}, "session_id": {"type": "string"},
+                "metadata": {"type": "object"}, "decision_id": {"type": "string"},
+            },
+            "required": ["agent_id", "decision_type", "conclusion", "rationale"],
+        },
+        handler=_tool_record_decision,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_decision_audit_trail",
+        description="追溯一个决策的因果链，返回 PROV-O 风格 JSON-LD、策略引用、证据完整性和账本哈希链校验结果。",
+        input_schema={"type": "object", "properties": {"decision_id": {"type": "string"}}, "required": ["decision_id"]},
+        handler=_tool_decision_audit_trail,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_find_decision_precedents",
+        description="按决策类型和标签检索已记录先例，供 Agent 在新决策前比对历史做法。",
+        input_schema={
+            "type": "object",
+            "properties": {"decision_type": {"type": "string"}, "tags": {"type": "array"}, "tenant_id": {"type": "string"}, "limit": {"type": "integer", "default": 20}},
+            "required": ["decision_type"],
+        },
+        handler=_tool_find_decision_precedents,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_ontology_create_draft",
+        description="创建版本化 OWL + SHACL + SKOS 本体草稿；草稿必须经过校验、审查、审批后才能发布。",
+        input_schema={"type": "object", "properties": {
+            "ontology_id": {"type": "string"}, "created_by": {"type": "string"},
+            "ontology_text": {"type": "string"}, "shapes_text": {"type": "string"},
+            "skos_text": {"type": "string"}, "base_version": {"type": "string"},
+        }, "required": ["ontology_id", "created_by", "ontology_text", "shapes_text"]},
+        handler=_tool_ontology_create_draft,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_ontology_validate_draft",
+        description="运行 SHACL/OWL/SKOS 发布门禁，生成不可变审查实体；不静默修正违规。",
+        input_schema={"type": "object", "properties": {"draft_id": {"type": "string"}, "actor": {"type": "string"}}, "required": ["draft_id", "actor"]},
+        handler=_tool_ontology_validate_draft,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_ontology_waive_finding",
+        description="按策略与理由记录不可变治理豁免；豁免保留在审计链中，不删除原违规。",
+        input_schema={"type": "object", "properties": {
+            "draft_id": {"type": "string"}, "finding_id": {"type": "string"}, "actor": {"type": "string"},
+            "rationale": {"type": "string"}, "policy": {"type": "string"}, "expires_at": {"type": "string"},
+        }, "required": ["draft_id", "finding_id", "actor", "rationale", "policy"]},
+        handler=_tool_ontology_waive_finding,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_ontology_approve_draft",
+        description="审批已校验的本体草稿；存在未豁免 Violation 时强制阻断。",
+        input_schema={"type": "object", "properties": {
+            "draft_id": {"type": "string"}, "approver": {"type": "string"}, "rationale": {"type": "string"}, "policies": {"type": "array"},
+        }, "required": ["draft_id", "approver", "rationale"]},
+        handler=_tool_ontology_approve_draft,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_ontology_request_changes",
+        description="在校验或冲突审查后请求修改，记录审查决策并把草稿转入可编辑的新修订流程。",
+        input_schema={"type": "object", "properties": {
+            "draft_id": {"type": "string"}, "reviewer": {"type": "string"}, "rationale": {"type": "string"},
+        }, "required": ["draft_id", "reviewer", "rationale"]},
+        handler=_tool_ontology_request_changes,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_ontology_publish_draft",
+        description="发布已审批草稿，生成 ontologyVersion、shapeVersion、SKOS 版本、变更集与发布决策。",
+        input_schema={"type": "object", "properties": {"draft_id": {"type": "string"}, "actor": {"type": "string"}}, "required": ["draft_id", "actor"]},
+        handler=_tool_ontology_publish_draft,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_datalog_reason",
+        description="运行安全、分层、确定性的 Datalog 固定点推理；每个派生事实携带规则版本、绑定和输入证明，并记录决策溯源。",
+        input_schema={"type": "object", "properties": {
+            "program": {"type": "string"}, "ruleset_id": {"type": "string"}, "facts": {"type": "array"},
+            "agent_id": {"type": "string"}, "evidence": {"type": "array"},
+        }, "required": ["program", "facts"]},
+        handler=_tool_datalog_reason,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_publish_datalog_ruleset",
+        description="校验并发布内容寻址、不可变的 Datalog 规则集版本，同时记录发布决策。",
+        input_schema={"type": "object", "properties": {
+            "ruleset_id": {"type": "string"}, "program": {"type": "string"}, "actor": {"type": "string"}, "description": {"type": "string"},
+        }, "required": ["ruleset_id", "program", "actor"]},
+        handler=_tool_publish_datalog_ruleset,
+    ))
+
+    server.register_tool(McpTool(
+        name="aof_run_datalog_ruleset",
+        description="按不可变规则集版本运行确定性推理，并输出逐事实证明链与决策溯源 ID。",
+        input_schema={"type": "object", "properties": {
+            "ruleset_id": {"type": "string"}, "version": {"type": "string"}, "facts": {"type": "array"},
+            "agent_id": {"type": "string"}, "evidence": {"type": "array"},
+        }, "required": ["ruleset_id", "version", "facts"]},
+        handler=_tool_run_datalog_ruleset,
     ))
 
     server.register_tool(McpTool(
