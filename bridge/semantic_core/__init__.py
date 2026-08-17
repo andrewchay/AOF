@@ -4,6 +4,7 @@ from .canonical import CanonicalizationError, canonical_data, canonical_json, co
 from .attestations import HmacReleaseAttestor
 from .identity import PrincipalVerificationError, SemanticPrincipal, SignedPrincipalVerifier
 from .runtime import SemanticRuntimeConsumer
+from .keys import KeyringProvider, ReleaseKeyProvider, RotatingReleaseAttestor
 from .models import ResourceKind, SemanticModelError, SemanticResource, validate_resource_id
 from .governance import (
     SemanticFinding,
@@ -26,6 +27,9 @@ __all__ = [
     "SemanticPrincipal",
     "SignedPrincipalVerifier",
     "SemanticRuntimeConsumer",
+    "KeyringProvider",
+    "ReleaseKeyProvider",
+    "RotatingReleaseAttestor",
     "ResourceKind",
     "ResourceRevisionRef",
     "ReleaseError",

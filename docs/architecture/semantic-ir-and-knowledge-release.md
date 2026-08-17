@@ -158,3 +158,13 @@ HMAC 验签和决策审计完整性检查。真实 mapping 同时覆盖“不同
 Revision。通过后，OWL/SHACL bundle 会实际解析为 RDF 图，Datalog bundle 会进入确定性推理引擎，
 RAG bundle 可按统一资源内容检索，MCP bundle 会生成可枚举的 resources/tools catalog。运行时不接受
 未注册 target，也不会在摘要失败时降级读取。
+
+## 生产运维闭环
+
+`SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加
+逐 Manifest 摘要/租户/索引一致性扫描，以及 SQLite online backup。备份文件可直接由新 Repository
+实例恢复并再次执行完整性验证；同一 tenant/release 的冲突摘要仍由事务唯一键阻断。
+
+签名层通过 `ReleaseKeyProvider` 与具体密钥来源解耦。`RotatingReleaseAttestor` 总是使用 provider 的
+current key 签名，并按 attestation 中的 key ID 获取历史密钥验签，因此轮换不会让旧 Release 失去
+可验证性。`KeyringProvider` 用于本地和测试；生产可用相同协议对接 KMS/HSM，业务层不接触主密钥。

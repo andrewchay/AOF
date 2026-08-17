@@ -228,6 +228,7 @@ class SqliteReleaseRepository:
                 )
                 """
             )
+            connection.execute("PRAGMA user_version=1")
 
     def publish(self, release: KnowledgeRelease, *, tenant_id: str) -> KnowledgeRelease:
         self._validate_tenant(release, tenant_id)
@@ -285,6 +286,41 @@ class SqliteReleaseRepository:
         if len(rows) > 1:
             raise ReleaseError("tenant_id is required for an ambiguous release_id")
         return None if not rows else KnowledgeRelease.from_dict(json.loads(rows[0][0]))
+
+    def schema_version(self) -> int:
+        with self._connect() as connection:
+            return int(connection.execute("PRAGMA user_version").fetchone()[0])
+
+    def verify_all(self) -> dict[str, Any]:
+        errors = []
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT tenant_id, release_id, release_digest, manifest_json FROM knowledge_releases"
+            ).fetchall()
+            integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+        if integrity != "ok":
+            errors.append(f"sqlite integrity check failed: {integrity}")
+        for tenant_id, release_id, digest, manifest in rows:
+            try:
+                release = KnowledgeRelease.from_dict(json.loads(manifest))
+                if release.release_id != release_id or release.release_digest != digest:
+                    raise ReleaseError("indexed release identity does not match manifest")
+                if release.scope.get("tenant_id") != tenant_id:
+                    raise ReleaseError("indexed tenant does not match manifest")
+            except Exception as exc:
+                errors.append(f"{tenant_id}/{release_id}: {exc}")
+        return {"valid": not errors, "release_count": len(rows), "errors": errors}
+
+    def backup_to(self, destination: str | Path) -> Path:
+        target = Path(destination)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source = self._connect()
+        backup = sqlite3.connect(target)
+        try:
+            source.backup(backup)
+        finally:
+            backup.close(); source.close()
+        return target
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.database, timeout=30)

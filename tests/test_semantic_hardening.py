@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from concurrent.futures import ThreadPoolExecutor
 
 from bridge.semantic_core import KnowledgeRelease, ResourceKind, SemanticResource
 from bridge.semantic_core.attestations import HmacReleaseAttestor
+from bridge.semantic_core.keys import KeyringProvider, RotatingReleaseAttestor
 from bridge.semantic_core.compilers import default_compiler_registry
 from bridge.semantic_core.governance import (
     SemanticGovernanceError,
@@ -145,3 +147,29 @@ def test_semantic_api_uses_signed_principal_not_body_actor(tmp_path, monkeypatch
     assert client.get(
         "/v1/semantic/proposals/trusted-identity", headers=beta_headers
     ).status_code == 404
+
+
+def test_repository_operations_and_key_rotation_are_recoverable(tmp_path) -> None:
+    repository = SqliteReleaseRepository(tmp_path / "live.sqlite3")
+    release = _release("acme")
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        digests = list(pool.map(
+            lambda _: repository.publish(release, tenant_id="acme").release_digest,
+            range(16),
+        ))
+    assert set(digests) == {release.release_digest}
+    assert repository.schema_version() == 1
+    assert repository.verify_all() == {"valid": True, "release_count": 1, "errors": []}
+
+    backup = tmp_path / "backup.sqlite3"
+    repository.backup_to(backup)
+    restored = SqliteReleaseRepository(backup)
+    assert restored.get(release.release_id, tenant_id="acme").release_digest == release.release_digest
+
+    keys = KeyringProvider({"key-v1": b"old", "key-v2": b"new"}, current_key_id="key-v1")
+    attestor = RotatingReleaseAttestor(keys)
+    old = attestor.sign(release, actor="publisher:carol", decision_id="decision:1", tenant_id="acme")
+    keys.current_key_id = "key-v2"
+    new = attestor.sign(release, actor="publisher:dave", decision_id="decision:2", tenant_id="acme")
+    assert attestor.verify(old, release=release) is True
+    assert attestor.verify(new, release=release) is True
