@@ -151,7 +151,7 @@ class QueryPlan:
     artifacts: tuple[QueryArtifactRef, ...]
     plan_digest: str
 
-    def to_dict(self) -> dict[str, Any]:
+    def _payload(self) -> dict[str, Any]:
         return {
             "api_version": "aof.query-plan/v1",
             "tenant_id": self.tenant_id,
@@ -170,8 +170,13 @@ class QueryPlan:
             "compiler_policy_resource_id": self.compiler_policy_resource_id,
             "compiler_policy_revision": self.compiler_policy_revision,
             "artifacts": [artifact.to_dict() for artifact in self.artifacts],
-            "plan_digest": self.plan_digest,
         }
+
+    def verify(self) -> bool:
+        return self.plan_digest == content_digest(self._payload())
+
+    def to_dict(self) -> dict[str, Any]:
+        return {**self._payload(), "plan_digest": self.plan_digest}
 
 
 class TrustedSnapshotResolver:

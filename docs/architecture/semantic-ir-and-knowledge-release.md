@@ -232,6 +232,24 @@ Resolver 在返回 QueryPlan 前重新验证 channel pointer 与逐事件摘要/
 Run 或任何字节篡改都会阻断。本 Slice 只建立可信 snapshot 与无副作用 QueryPlan；执行路由、QueryPolicy 和
 查询决策审计由后续 Slice 消费该稳定契约。
 
+## 统一确定性查询执行
+
+`QueryExecutor` 只接受摘要自洽、且当前仍解析到同一 channel snapshot 的 QueryPlan。执行前会重新构造
+QueryRequest、重新运行 TrustedSnapshotResolver，并比较完整 plan digest；改写 query、run、artifact 或
+channel 已前移的旧计划都不能继续访问运行时文件。
+
+四种 capability 共用 `aof.query-result/v1`，统一固定 request/plan/run/release digest、状态、data、artifact
+evidence 与 result digest：
+
+- `semantic_search` 在已验证 RAG bundle 上执行确定性文本检索与 limit；
+- `datalog` 只运行 bundle 中编译并锁定的 RuleSet，facts 来自结构化 parameters，query 指定输出 predicate；
+- `sparql` 合并已验证 OWL bundle，在不可变 snapshot 上执行只读 ASK/SELECT/CONSTRUCT/DESCRIBE；
+- `query_template` 同时校验 semantic-json 中的 QueryTemplate revision 与 MCP catalog，再完成参数完整性检查和
+  确定性渲染；它只返回 `executed: false`，不会把生成的 SQL 或其他命令直接发送给外部数据源。
+
+该统一执行层不自行解释自然语言，也不允许调用方指定 artifact 路径。QueryPolicy、字段级授权和执行决策
+溯源将在后续 Slice 包裹同一 QueryPlan/QueryResult，不改变各引擎的公共调用方式。
+
 ## 生产运维闭环
 
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加

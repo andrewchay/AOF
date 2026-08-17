@@ -12,6 +12,7 @@ from .query_plans import (
     TrustedQueryError,
     TrustedSnapshotResolver,
 )
+from .query_execution import QueryExecutor, QueryResult
 from .keys import KeyringProvider, ReleaseKeyProvider, RotatingReleaseAttestor
 from .models import ResourceKind, SemanticModelError, SemanticResource, validate_resource_id
 from .governance import (
@@ -41,6 +42,8 @@ __all__ = [
     "QueryRequest",
     "TrustedQueryError",
     "TrustedSnapshotResolver",
+    "QueryExecutor",
+    "QueryResult",
     "KeyringProvider",
     "ReleaseKeyProvider",
     "RotatingReleaseAttestor",
