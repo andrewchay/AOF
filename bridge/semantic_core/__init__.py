@@ -15,6 +15,13 @@ from .query_plans import (
 from .query_execution import QueryExecutor, QueryResult
 from .query_audit import AuditedQueryResult, AuditedQueryService, QueryEvidencePackage
 from .query_control import QueryControlPlane, QueryControlPlaneError
+from .semantic_query import (
+    IntentFilter,
+    SemanticIntent,
+    SemanticQueryCompileError,
+    SemanticSqlCompiler,
+    SemanticSqlPlan,
+)
 from .query_policy import (
     GovernedQueryExecutor,
     GovernedQueryResult,
@@ -60,6 +67,11 @@ __all__ = [
     "QueryEvidencePackage",
     "QueryControlPlane",
     "QueryControlPlaneError",
+    "SemanticIntent",
+    "IntentFilter",
+    "SemanticQueryCompileError",
+    "SemanticSqlCompiler",
+    "SemanticSqlPlan",
     "GovernedQueryExecutor",
     "GovernedQueryResult",
     "QueryPolicy",

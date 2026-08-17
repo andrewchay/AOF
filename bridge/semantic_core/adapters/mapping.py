@@ -78,7 +78,14 @@ def adapt_mapping_library(
                 owner=context.owner,
                 depends_on=dependencies,
                 evidence=[{"evidence_id": f"legacy:mapping:metric:{metric_name}"}],
-                spec={"legacy_record": row, "legacy_source": "metric_catalog"},
+                spec={
+                    "aggregation": str(
+                        row.get("aggregation") or row.get("agg") or ""
+                    ).lower(),
+                    "measure": str(row.get("measure") or "").rsplit(".", 1)[-1],
+                    "legacy_record": row,
+                    "legacy_source": "metric_catalog",
+                },
             )
         )
 
@@ -104,7 +111,12 @@ def adapt_mapping_library(
                 owner=context.owner,
                 depends_on=dependencies,
                 evidence=[{"evidence_id": f"legacy:mapping:dimension:{dimension_name}"}],
-                spec={"legacy_record": row, "legacy_source": "dimension_mapping"},
+                spec={
+                    "field": physical_field.rsplit(".", 1)[-1],
+                    "data_type": str(row.get("data_type") or row.get("type") or ""),
+                    "legacy_record": row,
+                    "legacy_source": "dimension_mapping",
+                },
             )
         )
 

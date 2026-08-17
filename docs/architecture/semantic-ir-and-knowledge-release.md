@@ -232,6 +232,17 @@ Resolver 在返回 QueryPlan 前重新验证 channel pointer 与逐事件摘要/
 Run 或任何字节篡改都会阻断。本 Slice 只建立可信 snapshot 与无副作用 QueryPlan；执行路由、QueryPolicy 和
 查询决策审计由后续 Slice 消费该稳定契约。
 
+## 类型化 Intent IR 与确定性 SQL
+
+`SemanticIntent` 使用 Metric、Dimension 等稳定 Resource ID 表达查询意图，不接收物理表名、字段名或任意 SQL。
+Intent 中的过滤条件是类型化 `IntentFilter`，按语义内容规范化，所有值在 SQL Plan 中转换为 `:pN` 参数；
+输入顺序不会改变 intent digest 或 plan digest。反序列化会重新计算摘要，阻止 Agent 篡改已确认 Intent。
+
+`SemanticSqlCompiler` 只从冻结的 PhysicalDataset、Metric 和 Dimension revisions 解析物理名称、聚合、度量字段
+和分组字段。当前 ANSI 基线明确要求单一共享 Dataset，不会猜测 JOIN；未知资源、跨 Dataset 意图、不支持聚合和
+不安全标识符全部阻断。输出 `aof.semantic-sql-plan/v1`，绑定 Intent digest、参数化 SQL、参数值和所有消费资源
+revision。旧 mapping adapter 同步生成规范化 aggregation、measure、field 和 data_type，使既有资产进入同一编译路径。
+
 ## 统一确定性查询执行
 
 `QueryExecutor` 只接受摘要自洽、且当前仍解析到同一 channel snapshot 的 QueryPlan。执行前会重新构造
