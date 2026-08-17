@@ -35,3 +35,12 @@ valid time、证据和依赖属于语义契约，会影响 revision。
 
 本地 `FileReleaseRepository` 是开发后端：相同发布可幂等重试，但同一个 `release_id` 不允许被
 不同摘要覆盖。生产实现应遵循相同接口语义并迁移到支持事务、租户隔离和并发约束的存储。
+
+## 编译器合约
+
+`bridge.semantic_core.compilers` 提供深而窄的插件接口。编译器必须声明目标、版本、支持的资源
+类型以及明确忽略的资源类型；Release 中出现未分类类型时编译被阻断，不能静默丢失语义。
+
+每个 `CompiledArtifact` 固定记录 compiler、Release digest、全部输入 revision、媒体类型和原始
+文件 SHA-256。`CompilerRegistry` 在返回产物前现场验证路径、文件摘要和 Release 绑定；产物 URI
+不得逃逸编译输出目录。相同 Release 的可复现性通过跨目录构建得到相同 content hash 验证。
