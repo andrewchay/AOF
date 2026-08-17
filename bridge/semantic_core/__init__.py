@@ -4,6 +4,14 @@ from .canonical import CanonicalizationError, canonical_data, canonical_json, co
 from .attestations import HmacReleaseAttestor
 from .identity import PrincipalVerificationError, SemanticPrincipal, SignedPrincipalVerifier
 from .runtime import SemanticRuntimeConsumer
+from .query_plans import (
+    QueryArtifactRef,
+    QueryCapability,
+    QueryPlan,
+    QueryRequest,
+    TrustedQueryError,
+    TrustedSnapshotResolver,
+)
 from .keys import KeyringProvider, ReleaseKeyProvider, RotatingReleaseAttestor
 from .models import ResourceKind, SemanticModelError, SemanticResource, validate_resource_id
 from .governance import (
@@ -27,6 +35,12 @@ __all__ = [
     "SemanticPrincipal",
     "SignedPrincipalVerifier",
     "SemanticRuntimeConsumer",
+    "QueryArtifactRef",
+    "QueryCapability",
+    "QueryPlan",
+    "QueryRequest",
+    "TrustedQueryError",
+    "TrustedSnapshotResolver",
     "KeyringProvider",
     "ReleaseKeyProvider",
     "RotatingReleaseAttestor",

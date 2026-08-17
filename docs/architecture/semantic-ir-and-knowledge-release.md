@@ -213,6 +213,25 @@ reviewer 创建、且精确绑定 run/channel 的 approval decision，publisher 
 通过签名 REST 完成六目标 plan、Policy gate、run、独立 replay、审批和 production pointer 提升，并检查
 回放目录中的每一个实际产物文件。
 
+## 统一可信查询计划
+
+查询不能直接指定某个临时文件或未发布 Release。`QueryRequest` 只描述 channel、capability、query、purpose
+与结构化 parameters；`TrustedSnapshotResolver` 将它解析成内容寻址的 `aof.query-plan/v1`：固定 tenant、
+channel pointer/version、可复现 CompilationRun、Release、compiler Policy revision，以及 capability 所需的
+精确 artifact 摘要。
+
+当前 capability 与运行时 target 的最低依赖为：
+
+- `semantic_search` → `rag`；
+- `datalog` → `datalog`；
+- `sparql` → `owl`；
+- `query_template` → `semantic-json` + `mcp`。
+
+Resolver 在返回 QueryPlan 前重新验证 channel pointer 与逐事件摘要/连续性、Run digest 与 tenant、独立 replay
+状态、compiler lock、Release digest、artifact 路径边界和实际文件 SHA-256。缺失 target、跨租户、非可复现
+Run 或任何字节篡改都会阻断。本 Slice 只建立可信 snapshot 与无副作用 QueryPlan；执行路由、QueryPolicy 和
+查询决策审计由后续 Slice 消费该稳定契约。
+
 ## 生产运维闭环
 
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加
