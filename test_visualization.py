@@ -12,8 +12,8 @@ from pathlib import Path
 AOF_ROOT = Path(__file__).parent
 sys.path.insert(0, str(AOF_ROOT))
 
-from bridge.storage import StorageFactory, StorageConfig
-from bridge.storage.base import Node, Edge, Triple
+from bridge.storage import StorageConfig, StorageFactory  # noqa: E402
+from bridge.storage.base import Edge, Node  # noqa: E402
 
 
 async def create_test_graph():
@@ -97,7 +97,7 @@ async def create_test_graph():
     
     # 验证数据
     stats = await backend.get_statistics()
-    print(f"\n📊 图谱统计:")
+    print("\n📊 图谱统计:")
     print(f"   节点数: {stats.node_count}")
     print(f"   边数: {stats.edge_count}")
     

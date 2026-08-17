@@ -179,7 +179,7 @@ class TestExpandFromSeed:
         assert expand_from_seed(G, "not_exist") == []
 
     def test_max_per_hop_cap(self) -> None:
-        nodes = [{"id": f"hub", "label": "Hub"}]
+        nodes = [{"id": "hub", "label": "Hub"}]
         edges = [{"source": "hub", "target": f"n{i}"} for i in range(20)]
         G = build_graph(nodes, edges)
         paths = expand_from_seed(G, "hub", max_hops=1, max_per_hop=3)

@@ -80,10 +80,14 @@ class KnowledgeRelease:
         for resource in resources:
             existing = by_id.get(resource.resource_id)
             if existing is not None and existing.revision_id != resource.revision_id:
-                raise ReleaseError(f"multiple revisions selected for resource: {resource.resource_id}")
+                raise ReleaseError(
+                    f"multiple revisions selected for resource: {resource.resource_id}"
+                )
             by_id[resource.resource_id] = resource
         if not by_id:
-            raise ReleaseError("a Knowledge Release requires at least one semantic resource")
+            raise ReleaseError(
+                "a Knowledge Release requires at least one semantic resource"
+            )
         missing = sorted(
             {
                 dependency
@@ -96,7 +100,9 @@ class KnowledgeRelease:
             raise ReleaseError(f"missing resource dependencies: {', '.join(missing)}")
         refs = tuple(
             sorted(
-                ResourceRevisionRef(resource.resource_id, resource.revision_id, resource.kind.value)
+                ResourceRevisionRef(
+                    resource.resource_id, resource.revision_id, resource.kind.value
+                )
                 for resource in by_id.values()
             )
         )
@@ -144,20 +150,26 @@ class KnowledgeRelease:
             )
         )
         if not refs:
-            raise ReleaseError("a Knowledge Release requires at least one semantic resource")
+            raise ReleaseError(
+                "a Knowledge Release requires at least one semantic resource"
+            )
         release = cls(
             release_id=release_id,
             resources=refs,
             release_digest=str(value.get("release_digest", "")),
             parent_release=str(parent_release) if parent_release is not None else None,
             scope=_freeze_mapping(value.get("scope", {})),
-            compiled_artifacts=_normalize_artifacts(value.get("compiled_artifacts", [])),
+            compiled_artifacts=_normalize_artifacts(
+                value.get("compiled_artifacts", [])
+            ),
             validation=_freeze_mapping(value.get("validation", {})),
             governance=_freeze_mapping(value.get("governance", {})),
             api_version=str(value.get("api_version", "aof.release/v1")),
         )
         if not release.verify():
-            raise ReleaseError("release_digest does not match canonical manifest content")
+            raise ReleaseError(
+                "release_digest does not match canonical manifest content"
+            )
         return release
 
     def verify(self) -> bool:
@@ -190,9 +202,13 @@ class FileReleaseRepository:
             raise ReleaseError("cannot publish a release with invalid digest")
         path = self._path(release.release_id)
         if path.exists():
-            existing = KnowledgeRelease.from_dict(json.loads(path.read_text(encoding="utf-8")))
+            existing = KnowledgeRelease.from_dict(
+                json.loads(path.read_text(encoding="utf-8"))
+            )
             if existing.release_digest != release.release_digest:
-                raise ReleaseError(f"published release cannot be overwritten: {release.release_id}")
+                raise ReleaseError(
+                    f"published release cannot be overwritten: {release.release_id}"
+                )
             return existing
         self.root.mkdir(parents=True, exist_ok=True)
         path.write_text(canonical_json(release.to_dict()) + "\n", encoding="utf-8")
@@ -304,7 +320,9 @@ class SqliteReleaseRepository:
             try:
                 release = KnowledgeRelease.from_dict(json.loads(manifest))
                 if release.release_id != release_id or release.release_digest != digest:
-                    raise ReleaseError("indexed release identity does not match manifest")
+                    raise ReleaseError(
+                        "indexed release identity does not match manifest"
+                    )
                 if release.scope.get("tenant_id") != tenant_id:
                     raise ReleaseError("indexed tenant does not match manifest")
             except Exception as exc:
@@ -319,7 +337,8 @@ class SqliteReleaseRepository:
         try:
             source.backup(backup)
         finally:
-            backup.close(); source.close()
+            backup.close()
+            source.close()
         return target
 
     def _connect(self) -> sqlite3.Connection:
@@ -332,17 +351,28 @@ class SqliteReleaseRepository:
         if not tenant_id.strip():
             raise ReleaseError("tenant_id is required")
         if release.scope.get("tenant_id") != tenant_id:
-            raise ReleaseError("release scope tenant_id does not match repository tenant_id")
+            raise ReleaseError(
+                "release scope tenant_id does not match repository tenant_id"
+            )
 
 
 def _validate_release_id(release_id: str) -> None:
     if not isinstance(release_id, str) or not _RELEASE_ID.fullmatch(release_id):
-        raise ReleaseError("release_id must match {name}@{version} using safe characters")
+        raise ReleaseError(
+            "release_id must match {name}@{version} using safe characters"
+        )
 
 
-def _normalize_artifacts(values: Iterable[Mapping[str, Any]]) -> tuple[Mapping[str, Any], ...]:
+def _normalize_artifacts(
+    values: Iterable[Mapping[str, Any]],
+) -> tuple[Mapping[str, Any], ...]:
     normalized = [canonical_data(dict(item)) for item in values]
-    normalized.sort(key=lambda item: (str(item.get("target", "")), str(item.get("content_hash", ""))))
+    normalized.sort(
+        key=lambda item: (
+            str(item.get("target", "")),
+            str(item.get("content_hash", "")),
+        )
+    )
     return tuple(_freeze_mapping(item) for item in normalized)
 
 

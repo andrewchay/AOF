@@ -25,7 +25,7 @@ import importlib.util
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Optional
 
 
 # ---------------------------------------------------------------------------

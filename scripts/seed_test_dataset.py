@@ -67,7 +67,7 @@ async def step_ingest() -> dict:
     ensure_preflight_for_add(SPEC, data_paths=[data_path], require_api_key=False)
 
     result = await run_add_from_spec(SPEC, data=data_path)
-    print(f"✅ Ingest complete")
+    print("✅ Ingest complete")
     return result
 
 
@@ -79,12 +79,12 @@ async def step_cognify() -> dict:
     ensure_preflight_for_cognify(SPEC, require_api_key=False)
 
     result = await run_cognify_from_spec(SPEC)
-    print(f"✅ Cognify complete")
+    print("✅ Cognify complete")
     return result
 
 
 async def step_hybrid_search() -> None:
-    print(f"\n[3/5] Verifying with hybrid_search")
+    print("\n[3/5] Verifying with hybrid_search")
     from bridge.hybrid_search import AOFHybridSearch
 
     engine = AOFHybridSearch()
@@ -106,7 +106,7 @@ async def step_hybrid_search() -> None:
 
 
 async def step_graph_analytics() -> None:
-    print(f"\n[4/5] Running graph analytics")
+    print("\n[4/5] Running graph analytics")
     from bridge.graph_analytics import GraphAnalytics
 
     analyzer = GraphAnalytics(dataset_name=DATASET_NAME)
@@ -115,7 +115,7 @@ async def step_graph_analytics() -> None:
 
     if stats.node_count > 0:
         top_nodes = await analyzer.pagerank(top_k=10)
-        print(f"  Top nodes by PageRank:")
+        print("  Top nodes by PageRank:")
         for n in top_nodes[:5]:
             print(f"    - {n.label or n.node_id}: {n.pagerank:.4f}")
 
@@ -124,7 +124,7 @@ async def step_graph_analytics() -> None:
 
 
 async def step_graph_doctor() -> None:
-    print(f"\n[4.5/5] Running graph doctor")
+    print("\n[4.5/5] Running graph doctor")
     from bridge.graph_doctor import GraphDoctor
 
     doctor = GraphDoctor(dataset_name=DATASET_NAME)
@@ -133,7 +133,7 @@ async def step_graph_doctor() -> None:
 
 
 async def step_export() -> None:
-    print(f"\n[5/5] Exporting to markdown")
+    print("\n[5/5] Exporting to markdown")
     from exporters.markdown_exporter import MarkdownExporter
 
     out_dir = PROJECT_ROOT / "test_data" / f"export_{DATASET_NAME}"

@@ -27,7 +27,7 @@ OUTPUT_META = OUTPUT_DIR / "scripture_meta.json"
 
 def load_nodes(limit: int = None):
     """加载节点数据"""
-    print(f"📖 加载节点数据...")
+    print("📖 加载节点数据...")
     nodes = []
     book_counts = Counter()
     testament_counts = Counter()
@@ -66,7 +66,7 @@ def load_nodes(limit: int = None):
 
 def load_edges(node_ids: set, limit: int = None):
     """加载边数据（只加载节点存在的边）"""
-    print(f"\n🔗 加载边数据...")
+    print("\n🔗 加载边数据...")
     edges = []
     
     with open(EDGES_FILE, 'r', encoding='utf-8') as f:
@@ -216,7 +216,7 @@ def process_data(max_nodes: int = 5000):
     }
     
     # 保存文件
-    print(f"\n💾 保存数据文件...")
+    print("\n💾 保存数据文件...")
     
     with open(OUTPUT_NODES, 'w', encoding='utf-8') as f:
         json.dump(nodes, f, ensure_ascii=False, indent=2)
@@ -231,7 +231,7 @@ def process_data(max_nodes: int = 5000):
     print(f"   ✅ 元数据: {OUTPUT_META}")
     
     # 打印统计
-    print(f"\n📊 最终统计:")
+    print("\n📊 最终统计:")
     print(f"   节点: {len(nodes):,}")
     print(f"   边: {len(edges):,}")
     print(f"   书卷: {len(book_counts)}")
