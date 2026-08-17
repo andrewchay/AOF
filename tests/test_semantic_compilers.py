@@ -10,7 +10,9 @@ from bridge.semantic_core import KnowledgeRelease, ResourceKind, SemanticResourc
 from bridge.semantic_core.compilers import (
     CompiledArtifact,
     CompilationInput,
+    CompilationWaiver,
     CompilerError,
+    CompilerPolicy,
     CompilerRegistry,
     SemanticCompiler,
     default_compiler_registry,
@@ -184,3 +186,123 @@ def test_compile_plan_is_deterministic_dependency_closed_and_version_locked() ->
     invalid = registry.plan(release, resources=resources, targets=["unknown-runtime"])
     assert invalid.valid is False
     assert invalid.diagnostics[0]["code"] == "compiler_target_not_registered"
+
+
+def test_compiler_policy_binds_exact_resource_revision_and_waiver() -> None:
+    release, resources = _release()
+    plan = default_compiler_registry().plan(release, resources=resources, targets=["mcp"])
+    policy_resource = SemanticResource.create(
+        resource_id="aof://acme/platform/policy/compiler-production",
+        kind=ResourceKind.POLICY,
+        name="compiler-production",
+        domain="platform",
+        owner="platform-governance",
+        spec={
+            "policy_type": "compiler",
+            "allowed_compilers": {
+                "semantic-json": ["semantic-json@1"],
+                "mcp": ["mcp@2"],
+            },
+            "required_targets": ["semantic-json"],
+            "waiver_allowed_codes": ["compiler_version_not_allowed"],
+        },
+    )
+    policy = CompilerPolicy.from_resource(policy_resource)
+
+    rejected = policy.evaluate(plan)
+
+    assert rejected.conforms is False
+    assert rejected.policy_revision == policy_resource.revision_id
+    assert rejected.report_digest.startswith("sha256:")
+    assert [finding.code for finding in rejected.findings] == ["compiler_version_not_allowed"]
+    finding = rejected.findings[0]
+    assert finding.target == "mcp"
+    assert finding.waiver_allowed is True
+    assert finding.resolved is False
+
+    waiver = CompilationWaiver.create(
+        finding_id=finding.finding_id,
+        policy_revision=policy_resource.revision_id,
+        actor="compiler-admin:alice",
+        rationale="Pinned exception while mcp@2 is being rolled out.",
+        authority="CAB-2026-0817",
+    )
+    accepted = policy.evaluate(plan, waivers=[waiver])
+
+    assert accepted.conforms is True
+    assert accepted.findings[0].resolved is True
+    assert accepted.findings[0].waiver_id == waiver.waiver_id
+
+    stale_waiver = CompilationWaiver.create(
+        finding_id=finding.finding_id,
+        policy_revision="sha256:" + "0" * 64,
+        actor="compiler-admin:alice",
+        rationale="This waiver is bound to a different policy revision.",
+        authority="CAB-2026-0817",
+    )
+    assert policy.evaluate(plan, waivers=[stale_waiver]).conforms is False
+
+
+def test_compiler_policy_reports_required_denied_and_unlisted_targets() -> None:
+    release, resources = _release()
+    registry = default_compiler_registry()
+    plan = registry.plan(release, resources=resources, targets=["mcp", "rag"])
+    policy = CompilerPolicy.from_resource(
+        SemanticResource.create(
+            resource_id="aof://acme/platform/policy/compiler-restricted",
+            kind=ResourceKind.POLICY,
+            name="compiler-restricted",
+            domain="platform",
+            owner="platform-governance",
+            spec={
+                "policy_type": "compiler",
+                "allowed_compilers": {"semantic-json": ["semantic-json@1"]},
+                "required_targets": ["owl"],
+                "denied_targets": ["mcp"],
+            },
+        )
+    )
+
+    report = policy.evaluate(plan)
+
+    assert report.conforms is False
+    assert [(item.code, item.target) for item in report.findings] == [
+        ("compiler_target_denied", "mcp"),
+        ("compiler_target_not_allowed", "rag"),
+        ("required_target_missing", "owl"),
+    ]
+
+
+def test_invalid_compile_plan_cannot_be_waived() -> None:
+    release, resources = _release()
+    plan = default_compiler_registry().plan(
+        release, resources=resources, targets=["unknown-runtime"]
+    )
+    policy = CompilerPolicy.from_resource(
+        SemanticResource.create(
+            resource_id="aof://acme/platform/policy/compiler-open",
+            kind=ResourceKind.POLICY,
+            name="compiler-open",
+            domain="platform",
+            owner="platform-governance",
+            spec={
+                "policy_type": "compiler",
+                "waiver_allowed_codes": ["compile_plan_invalid"],
+            },
+        )
+    )
+    rejected = policy.evaluate(plan)
+    waiver = CompilationWaiver.create(
+        finding_id=rejected.findings[0].finding_id,
+        policy_revision=policy.revision_id,
+        actor="compiler-admin:alice",
+        rationale="A registry error must remain blocking.",
+        authority="CAB-2026-0817",
+    )
+
+    result = policy.evaluate(plan, waivers=[waiver])
+
+    assert result.conforms is False
+    assert result.findings[0].code == "compile_plan_invalid"
+    assert result.findings[0].waiver_allowed is False
+    assert result.findings[0].resolved is False

@@ -167,6 +167,22 @@ RAG bundle 可按统一资源内容检索，MCP bundle 会生成可枚举的 res
 内容生成 `plan_digest`。调用顺序和资源顺序不会改变计划，未注册 target、空输入能力或依赖环都会
 形成 blocking diagnostic，不能进入实际编译。
 
+## 编译策略与精确豁免
+
+编译门禁不是进程内配置，而是统一 IR 中 revision-addressed 的 `Policy` 资源。`CompilerPolicy`
+只接受 `spec.policy_type: compiler`，并对 CompilePlan 执行以下确定性检查：
+
+- `allowed_compilers` 同时限定 target 和精确 `target@version` compiler identity；
+- `required_targets` 要求目标已出现在依赖闭包中；
+- `denied_targets` 显式阻止高风险或未投产 target；
+- 未进入 target allowlist 的编译器默认拒绝。
+
+策略结果为 `aof.compiler-policy-report/v1`，固定 Policy resource/revision、plan digest、稳定 finding ID、
+waiver 状态和 report digest。`CompilationWaiver` 必须绑定精确 finding ID 与 Policy revision，并记录 actor、
+rationale 和外部 authority；策略 revision 变化后旧 waiver 自动失效。只有列入 `waiver_allowed_codes` 的
+风险 finding 可被豁免，CompilePlan 自身无效始终不可豁免。该报告是后续不可变 CompilationRun 的强制输入，
+不会直接触发编译或发布副作用。
+
 ## 生产运维闭环
 
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加

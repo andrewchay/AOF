@@ -11,6 +11,13 @@ from .base import (
     VerificationReport,
 )
 from .semantic_bundle import SemanticBundleCompiler
+from .governance import (
+    CompilationWaiver,
+    CompilerPolicy,
+    CompilerPolicyError,
+    CompilerPolicyFinding,
+    CompilerPolicyReport,
+)
 from .runtime_targets import DatalogCompiler, McpCompiler, OwlCompiler, RagCompiler, ShaclCompiler
 
 
@@ -30,8 +37,13 @@ __all__ = [
     "CompilePlan",
     "CompileStep",
     "CompilationInput",
+    "CompilationWaiver",
     "CompilerError",
     "CompilerRegistry",
+    "CompilerPolicy",
+    "CompilerPolicyError",
+    "CompilerPolicyFinding",
+    "CompilerPolicyReport",
     "SemanticCompiler",
     "SemanticBundleCompiler",
     "OwlCompiler",
