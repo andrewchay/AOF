@@ -13,13 +13,19 @@ from bridge.semantic_core import (
     KnowledgeRelease,
     QueryCapability,
     QueryExecutor,
+    QueryExecutorRegistry,
     GovernedQueryExecutor,
+    FederatedQueryExecutor,
+    FederatedQueryPlanner,
+    FederatedQueryRequest,
+    FederatedQueryStep,
     QueryPolicy,
     QueryControlPlane,
     QueryPolicyWaiver,
     QueryRequest,
     ResourceKind,
     SemanticResource,
+    SemanticIntent,
     SignedPrincipalVerifier,
     TrustedQueryError,
     TrustedSnapshotResolver,
@@ -79,6 +85,32 @@ def _trusted_query_runtime(tmp_path, compiler_root=None):
             "required_parameters": ["region"],
         },
     )
+    dataset = SemanticResource.create(
+        resource_id="aof://acme/sales/physical-dataset/order-detail",
+        kind=ResourceKind.PHYSICAL_DATASET,
+        name="order-detail",
+        domain="sales",
+        owner="data-platform",
+        spec={"physical_name": "dwd.order_detail"},
+    )
+    metric = SemanticResource.create(
+        resource_id="aof://acme/sales/metric/gmv",
+        kind=ResourceKind.METRIC,
+        name="gmv",
+        domain="sales",
+        owner="data-platform",
+        depends_on=[dataset.resource_id],
+        spec={"aggregation": "sum", "measure": "paid_amount"},
+    )
+    dimension = SemanticResource.create(
+        resource_id="aof://acme/sales/dimension/order-date",
+        kind=ResourceKind.DIMENSION,
+        name="order-date",
+        domain="sales",
+        owner="data-platform",
+        depends_on=[dataset.resource_id],
+        spec={"field": "order_date", "data_type": "date"},
+    )
     query_policy = SemanticResource.create(
         resource_id="aof://acme/platform/policy/query-trusted",
         kind=ResourceKind.POLICY,
@@ -88,11 +120,28 @@ def _trusted_query_runtime(tmp_path, compiler_root=None):
         spec={
             "policy_type": "query",
             "role_capabilities": {
-                "analyst": ["semantic_search", "datalog", "sparql", "query_template"]
+                "analyst": [
+                    "semantic_search",
+                    "semantic_sql",
+                    "graph",
+                    "datalog",
+                    "sparql",
+                    "query_template",
+                ]
             },
         },
     )
-    resources = [ontology, rules, concept, profile, template, query_policy]
+    resources = [
+        ontology,
+        rules,
+        concept,
+        profile,
+        template,
+        dataset,
+        metric,
+        dimension,
+        query_policy,
+    ]
     release = KnowledgeRelease.build(
         release_id="sales-query@2.0.0",
         resources=resources,
@@ -238,6 +287,138 @@ def test_unified_executor_renders_governed_query_template_without_side_effects(t
     assert result.data["rendered_query"] == "SELECT * FROM customers WHERE region = 'east'"
     assert result.data["executed"] is False
     assert [item["target"] for item in result.evidence] == ["semantic-json", "mcp"]
+
+
+def test_unified_executor_compiles_published_semantic_intent_to_sql(tmp_path) -> None:
+    resolver, executor = _trusted_query_runtime(tmp_path)
+    intent = SemanticIntent.create(
+        metrics=["aof://acme/sales/metric/gmv"],
+        dimensions=["aof://acme/sales/dimension/order-date"],
+        purpose="daily-sales-report",
+    )
+    plan = resolver.plan(
+        QueryRequest.create(
+            channel="production",
+            capability="semantic_sql",
+            query=intent.intent_digest,
+            purpose="daily-sales-report",
+            parameters={"intent": intent.to_dict()},
+        ),
+        tenant_id="acme",
+    )
+
+    result = executor.execute(plan)
+
+    assert result.data["executed"] is False
+    assert result.data["sql_plan"]["intent_digest"] == intent.intent_digest
+    assert result.data["sql_plan"]["sql"] == (
+        'SELECT "order_date" AS "order_date", SUM("paid_amount") AS "gmv" '
+        'FROM "dwd"."order_detail" GROUP BY "order_date"'
+    )
+    assert result.evidence[0]["target"] == "semantic-json"
+
+
+def test_unified_executor_traverses_published_graph_snapshot(tmp_path) -> None:
+    resolver, executor = _trusted_query_runtime(tmp_path)
+    plan = resolver.plan(
+        QueryRequest.create(
+            channel="production",
+            capability="graph",
+            query="https://example.test/Customer",
+            purpose="relationship-investigation",
+            parameters={"direction": "out", "limit": 10},
+        ),
+        tenant_id="acme",
+    )
+
+    result = executor.execute(plan)
+
+    assert result.data["snapshot_id"] == f"release:{plan.release_digest}"
+    assert result.to_dict()["data"]["edges"] == [
+        {
+            "subject": "https://example.test/Customer",
+            "predicate": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+            "object": "https://example.test/Entity",
+        }
+    ]
+    assert result.evidence[0]["target"] == "owl"
+
+
+def test_query_executor_spi_preserves_trusted_result_envelope(tmp_path) -> None:
+    resolver, _ = _trusted_query_runtime(tmp_path)
+    registry = QueryExecutorRegistry()
+    registry.register(
+        QueryCapability.SEMANTIC_SEARCH,
+        lambda plan: {"query": plan.query, "source": "enterprise-search-spi"},
+    )
+    executor = QueryExecutor(resolver, registry=registry)
+    plan = resolver.plan(
+        QueryRequest.create(
+            channel="production",
+            capability="semantic_search",
+            query="customer",
+            purpose="customer-support",
+        ),
+        tenant_id="acme",
+    )
+
+    result = executor.execute(plan)
+
+    assert result.data["source"] == "enterprise-search-spi"
+    assert result.plan_digest == plan.plan_digest
+    assert result.release_digest == plan.release_digest
+    assert result.evidence[0]["target"] == "rag"
+
+
+def test_federated_query_dag_executes_one_release_with_unified_evidence(tmp_path) -> None:
+    resolver, executor = _trusted_query_runtime(tmp_path)
+    request = FederatedQueryRequest.create(
+        channel="production",
+        purpose="customer-eligibility-investigation",
+        steps=[
+            FederatedQueryStep.create(
+                step_id="search",
+                capability="semantic_search",
+                query="customer",
+            ),
+            FederatedQueryStep.create(
+                step_id="relations",
+                capability="graph",
+                query="https://example.test/Customer",
+                parameters={"direction": "out"},
+                depends_on=["search"],
+            ),
+            FederatedQueryStep.create(
+                step_id="eligibility",
+                capability="datalog",
+                query="eligible",
+                parameters={
+                    "facts": [{"predicate": "customer", "terms": ["alice"]}]
+                },
+                depends_on=["relations"],
+            ),
+        ],
+    )
+    plan = FederatedQueryPlanner(resolver).plan(request, tenant_id="acme")
+
+    result = FederatedQueryExecutor(executor).execute(plan)
+
+    assert [step.step_id for step in plan.steps] == [
+        "search",
+        "relations",
+        "eligibility",
+    ]
+    assert result.status == "succeeded"
+    assert result.release_digest == plan.release_digest
+    assert result.to_dict()["step_results"]["eligibility"]["data"][
+        "derived_count"
+    ] == 1
+    assert [item["target"] for item in result.to_dict()["evidence"]] == [
+        "datalog",
+        "owl",
+        "rag",
+    ]
+    assert result.result_digest.startswith("sha256:")
 
 
 def test_unified_executor_rejects_plan_content_with_a_stale_digest(tmp_path) -> None:

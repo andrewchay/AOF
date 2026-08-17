@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
 
-from rdflib import Graph
+from rdflib import Graph, URIRef
 
 from bridge.ontology_governance import DatalogEngine, SparqlService
 
@@ -21,6 +21,8 @@ from .query_plans import (
     TrustedQueryError,
     TrustedSnapshotResolver,
 )
+from .models import SemanticResource
+from .semantic_query import SemanticIntent, SemanticQueryCompileError, SemanticSqlCompiler
 
 
 def _freeze(value: Any) -> Any:
@@ -64,11 +66,61 @@ class QueryResult:
         }
 
 
+class QueryExecutorRegistry:
+    """Capability-keyed SPI for deterministic query execution backends."""
+
+    def __init__(self) -> None:
+        self._handlers: dict[QueryCapability, Callable[[QueryPlan], Mapping[str, Any]]] = {}
+
+    def register(
+        self,
+        capability: QueryCapability | str,
+        handler: Callable[[QueryPlan], Mapping[str, Any]],
+    ) -> None:
+        normalized = (
+            capability
+            if isinstance(capability, QueryCapability)
+            else QueryCapability(capability)
+        )
+        if normalized in self._handlers:
+            raise TrustedQueryError(
+                f"query executor already registered: {normalized.value}"
+            )
+        if not callable(handler):
+            raise TrustedQueryError("query executor handler must be callable")
+        self._handlers[normalized] = handler
+
+    def execute(self, plan: QueryPlan) -> Mapping[str, Any]:
+        handler = self._handlers.get(plan.capability)
+        if handler is None:
+            raise TrustedQueryError(
+                f"no unified executor is available for capability: {plan.capability.value}"
+            )
+        result = handler(plan)
+        if not isinstance(result, Mapping):
+            raise TrustedQueryError("query executor must return a semantic object")
+        return result
+
+
 class QueryExecutor:
     """Execute only plans that still resolve to the same verified channel snapshot."""
 
-    def __init__(self, resolver: TrustedSnapshotResolver) -> None:
+    def __init__(
+        self,
+        resolver: TrustedSnapshotResolver,
+        *,
+        registry: QueryExecutorRegistry | None = None,
+    ) -> None:
         self.resolver = resolver
+        if registry is None:
+            registry = QueryExecutorRegistry()
+            registry.register(QueryCapability.SEMANTIC_SEARCH, self._semantic_search)
+            registry.register(QueryCapability.SEMANTIC_SQL, self._semantic_sql)
+            registry.register(QueryCapability.GRAPH, self._graph)
+            registry.register(QueryCapability.DATALOG, self._datalog)
+            registry.register(QueryCapability.SPARQL, self._sparql)
+            registry.register(QueryCapability.QUERY_TEMPLATE, self._query_template)
+        self.registry = registry
 
     def execute(self, plan: QueryPlan) -> QueryResult:
         if not plan.verify():
@@ -85,18 +137,7 @@ class QueryExecutor:
         current = self.resolver.plan(request, tenant_id=plan.tenant_id)
         if current.plan_digest != plan.plan_digest:
             raise TrustedQueryError("query plan no longer matches the trusted channel snapshot")
-        if plan.capability is QueryCapability.SEMANTIC_SEARCH:
-            data = self._semantic_search(plan)
-        elif plan.capability is QueryCapability.DATALOG:
-            data = self._datalog(plan)
-        elif plan.capability is QueryCapability.SPARQL:
-            data = self._sparql(plan)
-        elif plan.capability is QueryCapability.QUERY_TEMPLATE:
-            data = self._query_template(plan)
-        else:
-            raise TrustedQueryError(
-                f"no unified executor is available for capability: {plan.capability.value}"
-            )
+        data = self.registry.execute(plan)
         evidence = tuple(
             {
                 "evidence_id": f"artifact:{artifact.target}:{artifact.content_hash}",
@@ -158,6 +199,57 @@ class QueryExecutor:
         selected = hits[:raw_limit]
         return {"query": plan.query, "hits": selected, "count": len(selected)}
 
+    def _semantic_sql(self, plan: QueryPlan) -> dict[str, Any]:
+        raw_intent = plan.parameters.get("intent")
+        if not isinstance(raw_intent, Mapping):
+            raise TrustedQueryError("semantic_sql requires a typed intent object")
+        try:
+            intent = SemanticIntent.from_dict(raw_intent)
+            if intent.intent_digest != plan.query:
+                raise TrustedQueryError("semantic_sql query must equal the intent digest")
+            semantic = self._artifact_payload(plan, "semantic-json")
+            resources = tuple(
+                SemanticResource.from_dict(item) for item in semantic.get("resources", ())
+            )
+            sql_plan = SemanticSqlCompiler(resources).compile(intent)
+        except SemanticQueryCompileError as exc:
+            raise TrustedQueryError(str(exc)) from exc
+        return {"executed": False, "sql_plan": sql_plan.to_dict()}
+
+    def _graph(self, plan: QueryPlan) -> dict[str, Any]:
+        direction = plan.parameters.get("direction", "both")
+        if direction not in {"in", "out", "both"}:
+            raise TrustedQueryError("graph direction must be in, out, or both")
+        raw_limit = plan.parameters.get("limit", 100)
+        if isinstance(raw_limit, bool) or not isinstance(raw_limit, int) or raw_limit < 1:
+            raise TrustedQueryError("graph limit must be a positive integer")
+        node = URIRef(plan.query)
+        raw_predicate = plan.parameters.get("predicate")
+        if raw_predicate is not None and (
+            not isinstance(raw_predicate, str) or not raw_predicate.strip()
+        ):
+            raise TrustedQueryError("graph predicate must be a non-empty URI string")
+        predicate = URIRef(raw_predicate) if raw_predicate else None
+        graph = self._ontology_graph(plan)
+        triples = set()
+        if direction in {"out", "both"}:
+            triples.update(graph.triples((node, predicate, None)))
+        if direction in {"in", "both"}:
+            triples.update(graph.triples((None, predicate, node)))
+        edges = [
+            {"subject": str(subject), "predicate": str(relation), "object": str(target)}
+            for subject, relation, target in sorted(
+                triples, key=lambda item: tuple(str(value) for value in item)
+            )[:raw_limit]
+        ]
+        return {
+            "snapshot_id": f"release:{plan.release_digest}",
+            "node": plan.query,
+            "direction": direction,
+            "edges": edges,
+            "count": len(edges),
+        }
+
     def _datalog(self, plan: QueryPlan) -> dict[str, Any]:
         payload = self._artifact_payload(plan, "datalog")
         raw_facts = plan.parameters.get("facts", ())
@@ -190,6 +282,14 @@ class QueryExecutor:
         }
 
     def _sparql(self, plan: QueryPlan) -> dict[str, Any]:
+        graph = self._ontology_graph(plan)
+        service = SparqlService(
+            graph.serialize(format="turtle"),
+            snapshot_id=f"release:{plan.release_digest}",
+        )
+        return service.query(plan.query)
+
+    def _ontology_graph(self, plan: QueryPlan) -> Graph:
         payload = self._artifact_payload(plan, "owl")
         graph = Graph()
         formats = {"ttl": "turtle", "rdfxml": "xml", "jsonld": "json-ld"}
@@ -200,11 +300,7 @@ class QueryExecutor:
                 data=spec.get("content", ""),
                 format=formats.get(raw_format, raw_format),
             )
-        service = SparqlService(
-            graph.serialize(format="turtle"),
-            snapshot_id=f"release:{plan.release_digest}",
-        )
-        return service.query(plan.query)
+        return graph
 
     def _query_template(self, plan: QueryPlan) -> dict[str, Any]:
         semantic = self._artifact_payload(plan, "semantic-json")

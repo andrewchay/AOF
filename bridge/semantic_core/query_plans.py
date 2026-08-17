@@ -20,6 +20,8 @@ class TrustedQueryError(ValueError):
 
 class QueryCapability(str, Enum):
     SEMANTIC_SEARCH = "semantic_search"
+    SEMANTIC_SQL = "semantic_sql"
+    GRAPH = "graph"
     DATALOG = "datalog"
     SPARQL = "sparql"
     QUERY_TEMPLATE = "query_template"
@@ -27,6 +29,8 @@ class QueryCapability(str, Enum):
 
 _CAPABILITY_TARGETS = {
     QueryCapability.SEMANTIC_SEARCH: ("rag",),
+    QueryCapability.SEMANTIC_SQL: ("semantic-json",),
+    QueryCapability.GRAPH: ("owl",),
     QueryCapability.DATALOG: ("datalog",),
     QueryCapability.SPARQL: ("owl",),
     QueryCapability.QUERY_TEMPLATE: ("semantic-json", "mcp"),

@@ -12,7 +12,7 @@ from .query_plans import (
     TrustedQueryError,
     TrustedSnapshotResolver,
 )
-from .query_execution import QueryExecutor, QueryResult
+from .query_execution import QueryExecutor, QueryExecutorRegistry, QueryResult
 from .query_audit import AuditedQueryResult, AuditedQueryService, QueryEvidencePackage
 from .query_control import QueryControlPlane, QueryControlPlaneError
 from .semantic_query import (
@@ -21,6 +21,15 @@ from .semantic_query import (
     SemanticQueryCompileError,
     SemanticSqlCompiler,
     SemanticSqlPlan,
+)
+from .federated_query import (
+    FederatedPlanStep,
+    FederatedQueryExecutor,
+    FederatedQueryPlan,
+    FederatedQueryPlanner,
+    FederatedQueryRequest,
+    FederatedQueryResult,
+    FederatedQueryStep,
 )
 from .query_policy import (
     GovernedQueryExecutor,
@@ -61,6 +70,7 @@ __all__ = [
     "TrustedQueryError",
     "TrustedSnapshotResolver",
     "QueryExecutor",
+    "QueryExecutorRegistry",
     "QueryResult",
     "AuditedQueryResult",
     "AuditedQueryService",
@@ -72,6 +82,13 @@ __all__ = [
     "SemanticQueryCompileError",
     "SemanticSqlCompiler",
     "SemanticSqlPlan",
+    "FederatedPlanStep",
+    "FederatedQueryExecutor",
+    "FederatedQueryPlan",
+    "FederatedQueryPlanner",
+    "FederatedQueryRequest",
+    "FederatedQueryResult",
+    "FederatedQueryStep",
     "GovernedQueryExecutor",
     "GovernedQueryResult",
     "QueryPolicy",

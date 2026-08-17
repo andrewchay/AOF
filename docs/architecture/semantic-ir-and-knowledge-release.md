@@ -291,8 +291,14 @@ purpose 和 QueryPolicy resource ID；tenant 与 roles 只取自验签后的 Pri
 用临时宽松策略绕过治理。
 
 REST `POST /v1/semantic/query` 与 MCP `aof_semantic_query` 使用同一控制面和返回契约，覆盖 semantic search、
-Datalog、只读 SPARQL 和 QueryTemplate。每种能力均消费真实编译制品，并返回相同的 governed result、决策链与
+确定性 semantic SQL、结构化 Graph traversal、Datalog、只读 SPARQL 和 QueryTemplate。每种能力均消费真实编译制品，并返回相同的 governed result、决策链与
 `aof.query-evidence-package/v1`；签名错误、跨 tenant snapshot、未发布 Policy 或制品摘要不一致都会在执行前阻断。
+
+`QueryExecutorRegistry` 是 capability-keyed Executor SPI。默认执行器均通过同一注册接口接入，企业实现可替换
+具体 SQL、图或检索后端而不改变 QueryPlan、Release pinning 和结果证据契约。`FederatedQueryRequest` 将多个
+capability step 组织为显式依赖 DAG；Planner 拒绝未知依赖和环，并要求所有 step 锁定同一 CompilationRun 与
+Release。`FederatedQueryExecutor` 按确定性拓扑顺序执行，输出 `aof.federated-query-result/v1`，集中绑定每个
+子结果和去重后的编译制品 evidence。
 
 ## 生产运维闭环
 

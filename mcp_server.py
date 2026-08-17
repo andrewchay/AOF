@@ -675,6 +675,8 @@ def _register_semantic_query_tools(server: McpServer) -> None:
                         "type": "string",
                         "enum": [
                             "semantic_search",
+                            "semantic_sql",
+                            "graph",
                             "datalog",
                             "sparql",
                             "query_template",
