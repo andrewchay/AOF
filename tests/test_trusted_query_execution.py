@@ -8,6 +8,7 @@ import pytest
 
 from bridge.decision_provenance import DecisionProvenanceStore
 from bridge.semantic_core import (
+    AuditedQueryService,
     KnowledgeRelease,
     QueryCapability,
     QueryExecutor,
@@ -349,3 +350,125 @@ def test_query_policy_blocks_role_purpose_resource_and_field_violations(tmp_path
     role_finding = next(item for item in report.findings if item.code == "query_role_not_allowed")
     assert role_finding.waiver_allowed is False
     assert report.conforms is False
+
+
+def test_audited_query_emits_verifiable_causal_evidence_package(tmp_path) -> None:
+    resolver, executor = _trusted_query_runtime(tmp_path)
+    decisions = DecisionProvenanceStore(tmp_path / "decisions.jsonl")
+    policy = QueryPolicy.from_resource(
+        SemanticResource.create(
+            resource_id="aof://acme/platform/policy/query-audit",
+            kind=ResourceKind.POLICY,
+            name="query-audit",
+            domain="platform",
+            owner="security-governance",
+            spec={
+                "policy_type": "query",
+                "role_capabilities": {"analyst": ["semantic_search"]},
+                "capability_rules": {
+                    "semantic_search": {
+                        "allowed_purposes": ["customer-support"],
+                        "max_limit": 10,
+                        "allowed_fields": ["resource_id", "name"],
+                    }
+                },
+                "waiver_allowed_codes": ["query_limit_exceeded"],
+            },
+        )
+    )
+    request = QueryRequest.create(
+        channel="production",
+        capability="semantic_search",
+        query="customer",
+        purpose="customer-support",
+        parameters={"limit": 11, "fields": ["resource_id"]},
+    )
+    planned = resolver.plan(request, tenant_id="acme")
+    finding = policy.evaluate(planned, roles=["analyst"]).findings[0]
+    waiver = QueryPolicyWaiver.create(
+        finding_id=finding.finding_id,
+        policy_revision=policy.revision_id,
+        actor="risk-owner:alice",
+        rationale="Incident response exception approved.",
+        authority="INC-99",
+    )
+    service = AuditedQueryService(
+        resolver=resolver,
+        governed_executor=GovernedQueryExecutor(executor, policy),
+        decision_store=decisions,
+    )
+
+    audited = service.execute(
+        request,
+        tenant_id="acme",
+        actor="agent:support",
+        roles=["analyst"],
+        rationale="Answer a governed customer support question.",
+        waivers=[waiver],
+    )
+
+    assert audited.evidence_package.verify() is True
+    assert audited.evidence_package.governed_result_digest == (
+        audited.governed_result.governed_result_digest
+    )
+    trail = decisions.audit_trail(audited.execution_decision_id)
+    query_nodes = [
+        node["decision"]
+        for node in trail["causal_chain"]["nodes"]
+        if node["decision"]["decision_type"].startswith("semantic_query_")
+    ]
+    assert {node["decision_type"] for node in query_nodes} == {
+        "semantic_query_plan",
+        "semantic_query_policy",
+        "semantic_query_policy_waiver",
+        "semantic_query_execute",
+    }
+    assert trail["integrity"]["valid"] is True
+    assert audited.evidence_package.artifact_evidence[0]["target"] == "rag"
+    assert audited.evidence_package.field_evidence[0]["field"] == "resource_id"
+
+    precedents = decisions.find_precedents(
+        "semantic_query_execute", tags=["semantic_search", "customer-support"]
+    )
+    assert precedents[0]["decision"]["decision"]["id"] == audited.execution_decision_id
+
+
+def test_query_evidence_package_detects_tampering(tmp_path) -> None:
+    resolver, executor = _trusted_query_runtime(tmp_path)
+    decisions = DecisionProvenanceStore(tmp_path / "decisions.jsonl")
+    policy = QueryPolicy.from_resource(
+        SemanticResource.create(
+            resource_id="aof://acme/platform/policy/query-audit",
+            kind=ResourceKind.POLICY,
+            name="query-audit",
+            domain="platform",
+            owner="security-governance",
+            spec={
+                "policy_type": "query",
+                "role_capabilities": {"analyst": ["semantic_search"]},
+            },
+        )
+    )
+    audited = AuditedQueryService(
+        resolver=resolver,
+        governed_executor=GovernedQueryExecutor(executor, policy),
+        decision_store=decisions,
+    ).execute(
+        QueryRequest.create(
+            channel="production",
+            capability="semantic_search",
+            query="customer",
+            purpose="customer-support",
+        ),
+        tenant_id="acme",
+        actor="agent:support",
+        roles=["analyst"],
+        rationale="Answer a governed customer support question.",
+    )
+
+    tampered = replace(
+        audited.evidence_package,
+        governed_result_digest="sha256:attacker-controlled",
+    )
+
+    assert tampered.verify() is False

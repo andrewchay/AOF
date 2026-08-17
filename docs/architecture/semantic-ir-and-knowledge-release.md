@@ -262,6 +262,16 @@ field 生成独立、内容寻址的 field evidence，绑定 capability、Plan �
 只有在 report conforms 后才调用统一 QueryExecutor，并输出 `aof.governed-query-result/v1`，同时绑定原始
 QueryResult、完整 Policy report 与 governed result digest；策略拒绝不会触碰运行时 artifact。
 
+## 查询决策溯源与证据包
+
+`AuditedQueryService` 将一次查询建模为可追溯的决策链：`semantic_query_plan` →
+`semantic_query_policy` → `semantic_query_execute`。被实际采用的豁免以
+`semantic_query_policy_waiver` 分支接入策略决策；查询计划还会在可用时连接产生该运行时快照的编译决策。
+
+每次成功执行输出 `aof.query-evidence-package/v1`，整体绑定请求、计划、策略报告、治理后结果、编译制品证据、
+字段授权证据以及 PROV-O 风格审计轨迹。证据包自身内容寻址，可离线检查篡改；查询执行决策带有 capability、
+purpose 与 channel 标签，可直接用于先例查询和下游影响分析。
+
 ## 生产运维闭环
 
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加

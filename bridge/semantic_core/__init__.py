@@ -13,6 +13,7 @@ from .query_plans import (
     TrustedSnapshotResolver,
 )
 from .query_execution import QueryExecutor, QueryResult
+from .query_audit import AuditedQueryResult, AuditedQueryService, QueryEvidencePackage
 from .query_policy import (
     GovernedQueryExecutor,
     GovernedQueryResult,
@@ -53,6 +54,9 @@ __all__ = [
     "TrustedSnapshotResolver",
     "QueryExecutor",
     "QueryResult",
+    "AuditedQueryResult",
+    "AuditedQueryService",
+    "QueryEvidencePackage",
     "GovernedQueryExecutor",
     "GovernedQueryResult",
     "QueryPolicy",
