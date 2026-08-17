@@ -13,6 +13,7 @@ from bridge.semantic_core.compilers import (
     CompilerError,
     CompilerRegistry,
     SemanticCompiler,
+    default_compiler_registry,
 )
 
 
@@ -107,3 +108,60 @@ def test_artifact_verification_rejects_tampering_and_path_escape(tmp_path) -> No
     report = registry.verify(escaped, output_dir, release=release)
     assert report.valid is False
     assert report.findings == ("artifact uri escapes compiler output directory",)
+
+
+def test_default_registry_compiles_governed_release_to_all_runtime_targets(tmp_path) -> None:
+    ontology = SemanticResource.create(
+        resource_id="aof://acme/sales/ontology/sales",
+        kind=ResourceKind.ONTOLOGY,
+        name="sales",
+        domain="sales",
+        owner="knowledge-team",
+        spec={"format": "turtle", "content": "@prefix ex: <https://example.test/> . ex:Order a ex:Entity ."},
+    )
+    shapes = SemanticResource.create(
+        resource_id="aof://acme/sales/constraint-set/sales-shapes",
+        kind=ResourceKind.CONSTRAINT_SET,
+        name="sales-shapes",
+        domain="sales",
+        owner="knowledge-team",
+        depends_on=[ontology.resource_id],
+        spec={"format": "turtle", "content": "@prefix sh: <http://www.w3.org/ns/shacl#> ."},
+    )
+    rules = SemanticResource.create(
+        resource_id="aof://acme/sales/rule-set/access",
+        kind=ResourceKind.RULE_SET,
+        name="access",
+        domain="sales",
+        owner="knowledge-team",
+        spec={"language": "datalog", "program": "allowed(X) :- employee(X)."},
+    )
+    retrieval = SemanticResource.create(
+        resource_id="aof://acme/sales/retrieval-profile/sales",
+        kind=ResourceKind.RETRIEVAL_PROFILE,
+        name="sales",
+        domain="sales",
+        owner="knowledge-team",
+        spec={"strategy": "hybrid", "top_k": 12},
+    )
+    release_resources = [ontology, shapes, rules, retrieval]
+    release = KnowledgeRelease.build(release_id="sales-runtime@1.0.0", resources=release_resources)
+    registry = default_compiler_registry()
+
+    artifacts = {
+        target: registry.compile(
+            target, release, tmp_path / "first" / target, resources=release_resources
+        )
+        for target in ("owl", "shacl", "datalog", "rag", "mcp")
+    }
+    repeated = {
+        target: registry.compile(
+            target, release, tmp_path / "second" / target, resources=reversed(release_resources)
+        )
+        for target in artifacts
+    }
+
+    assert set(artifacts) == {"owl", "shacl", "datalog", "rag", "mcp"}
+    assert all(artifact.release_digest == release.release_digest for artifact in artifacts.values())
+    assert all(artifacts[target].content_hash == repeated[target].content_hash for target in artifacts)
+    assert (tmp_path / "first" / "datalog" / artifacts["datalog"].uri).read_text().endswith("\n")

@@ -9,6 +9,19 @@ from .base import (
     VerificationReport,
 )
 from .semantic_bundle import SemanticBundleCompiler
+from .runtime_targets import DatalogCompiler, McpCompiler, OwlCompiler, RagCompiler, ShaclCompiler
+
+
+def default_compiler_registry() -> CompilerRegistry:
+    """Return the complete deterministic P0.5 compiler set."""
+    return CompilerRegistry([
+        SemanticBundleCompiler(),
+        OwlCompiler(),
+        ShaclCompiler(),
+        DatalogCompiler(),
+        RagCompiler(),
+        McpCompiler(),
+    ])
 
 __all__ = [
     "CompiledArtifact",
@@ -17,5 +30,11 @@ __all__ = [
     "CompilerRegistry",
     "SemanticCompiler",
     "SemanticBundleCompiler",
+    "OwlCompiler",
+    "ShaclCompiler",
+    "DatalogCompiler",
+    "RagCompiler",
+    "McpCompiler",
+    "default_compiler_registry",
     "VerificationReport",
 ]

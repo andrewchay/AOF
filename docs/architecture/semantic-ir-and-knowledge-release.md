@@ -98,3 +98,17 @@ P0 的持久层是本地原子文件和 append-only 决策账本；生产替换�
 校验结果统一转换为 `SemanticFinding`，保留 constraint component、focus node、path 与原始 finding
 类型等细节。SHACL 未支持约束和 RDF 解析错误不可 waiver；其他冲突必须显式 waiver 或修订后重新
 提交，未解决的阻断 finding 不能进入 approval。无本体资源的 Release 不受该门禁影响。
+
+## P0.5 多运行时编译
+
+`default_compiler_registry()` 是 API 和嵌入式调用共享的默认编译器集合，当前包含：
+
+- `semantic-json`：完整、可移植的统一 IR 快照；
+- `owl`：Ontology 与 Vocabulary 的 RDF 源内容、格式和 Revision bundle；
+- `shacl`：ConstraintSet 的 Shapes bundle；
+- `datalog`：可加载的规则集及 program；
+- `rag`：检索配置、概念、指标、维度、数据集、绑定和查询模板索引；
+- `mcp`：所有 SemanticResource 的 MCP resource catalog，并为查询模板、规则集和检索配置生成工具描述。
+
+所有 target 都显式分类每一种 ResourceKind；目标所需资源为空时编译失败，避免生成貌似成功的空产物。
+产物使用 canonical JSON，输入资源顺序不影响字节摘要，并继续绑定候选 Release digest 与完整 Revision 集。
