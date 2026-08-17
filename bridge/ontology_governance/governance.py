@@ -253,6 +253,40 @@ class ShaclCoreValidator:
         return finding
 
 
+def validate_skos_graph(graph: Graph) -> list[dict[str, Any]]:
+    """Return deterministic SKOS integrity findings for a merged RDF snapshot."""
+    findings = []
+    for concept in graph.subjects(RDF.type, SKOS.Concept):
+        labels: dict[str, int] = {}
+        for label in graph.objects(concept, SKOS.prefLabel):
+            lang = label.language or ""
+            labels[lang] = labels.get(lang, 0) + 1
+        for lang, count in labels.items():
+            if count > 1:
+                item = {"type": "skos_conflict", "severity": "Violation", "focus_node": str(concept), "constraint_component": "UniquePrefLabelPerLanguage", "message": f"concept has {count} prefLabel values for language '{lang}'"}
+                item["finding_id"] = f"finding:{_digest(item)[:20]}"; findings.append(item)
+        if (concept, SKOS.broader, concept) in graph or (concept, SKOS.narrower, concept) in graph:
+            item = {"type": "skos_conflict", "severity": "Violation", "focus_node": str(concept), "constraint_component": "SelfHierarchyConflict", "message": "concept cannot be broader/narrower than itself"}
+            item["finding_id"] = f"finding:{_digest(item)[:20]}"; findings.append(item)
+        deprecated = graph.value(concept, OWL.deprecated)
+        if deprecated and bool(deprecated.toPython()):
+            replacements = set(graph.objects(concept, DCTERMS.isReplacedBy)) | set(graph.objects(concept, SKOS.exactMatch))
+            if not replacements:
+                item = {"type": "skos_conflict", "severity": "Violation", "focus_node": str(concept), "constraint_component": "DeprecatedConceptRequiresReplacement", "message": "deprecated concept must declare dcterms:isReplacedBy or skos:exactMatch"}
+                item["finding_id"] = f"finding:{_digest(item)[:20]}"; findings.append(item)
+    broader = {concept: set(graph.objects(concept, SKOS.broader)) for concept in graph.subjects(RDF.type, SKOS.Concept)}
+    for concept in broader:
+        stack, seen = list(broader.get(concept, set())), set()
+        while stack:
+            current = stack.pop()
+            if current == concept:
+                item = {"type": "skos_conflict", "severity": "Violation", "focus_node": str(concept), "constraint_component": "HierarchyCycleConflict", "message": "skos:broader hierarchy contains a cycle"}
+                item["finding_id"] = f"finding:{_digest(item)[:20]}"; findings.append(item); break
+            if current not in seen:
+                seen.add(current); stack.extend(broader.get(current, set()))
+    return findings
+
+
 class OntologyGovernanceService:
     """Draft/review/approve/publish workflow with immutable review evidence."""
 
@@ -484,36 +518,7 @@ class OntologyGovernanceService:
         return sorted(releases, key=lambda item: item["published_at"], reverse=True)
 
     def _validate_skos(self, graph: Graph) -> list[dict[str, Any]]:
-        findings = []
-        for concept in graph.subjects(RDF.type, SKOS.Concept):
-            labels: dict[str, int] = {}
-            for label in graph.objects(concept, SKOS.prefLabel):
-                lang = label.language or ""
-                labels[lang] = labels.get(lang, 0) + 1
-            for lang, count in labels.items():
-                if count > 1:
-                    item = {"type": "skos_conflict", "severity": "Violation", "focus_node": str(concept), "constraint_component": "UniquePrefLabelPerLanguage", "message": f"concept has {count} prefLabel values for language '{lang}'"}
-                    item["finding_id"] = f"finding:{_digest(item)[:20]}"; findings.append(item)
-            if (concept, SKOS.broader, concept) in graph or (concept, SKOS.narrower, concept) in graph:
-                item = {"type": "skos_conflict", "severity": "Violation", "focus_node": str(concept), "constraint_component": "SelfHierarchyConflict", "message": "concept cannot be broader/narrower than itself"}
-                item["finding_id"] = f"finding:{_digest(item)[:20]}"; findings.append(item)
-            deprecated = graph.value(concept, OWL.deprecated)
-            if deprecated and bool(deprecated.toPython()):
-                replacements = set(graph.objects(concept, DCTERMS.isReplacedBy)) | set(graph.objects(concept, SKOS.exactMatch))
-                if not replacements:
-                    item = {"type": "skos_conflict", "severity": "Violation", "focus_node": str(concept), "constraint_component": "DeprecatedConceptRequiresReplacement", "message": "deprecated concept must declare dcterms:isReplacedBy or skos:exactMatch"}
-                    item["finding_id"] = f"finding:{_digest(item)[:20]}"; findings.append(item)
-        broader = {concept: set(graph.objects(concept, SKOS.broader)) for concept in graph.subjects(RDF.type, SKOS.Concept)}
-        for concept in broader:
-            stack, seen = list(broader.get(concept, set())), set()
-            while stack:
-                current = stack.pop()
-                if current == concept:
-                    item = {"type": "skos_conflict", "severity": "Violation", "focus_node": str(concept), "constraint_component": "HierarchyCycleConflict", "message": "skos:broader hierarchy contains a cycle"}
-                    item["finding_id"] = f"finding:{_digest(item)[:20]}"; findings.append(item); break
-                if current not in seen:
-                    seen.add(current); stack.extend(broader.get(current, set()))
-        return findings
+        return validate_skos_graph(graph)
 
     def _diff_release(self, previous: dict[str, Any] | None, contents: dict[str, str]) -> dict[str, Any]:
         current_graph = Graph()

@@ -7,6 +7,7 @@ import re
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 from bridge.decision_provenance import DecisionProvenanceStore
@@ -32,6 +33,7 @@ class SemanticFinding:
     message: str
     resource_id: str | None = None
     waiver_allowed: bool = False
+    details: Mapping[str, Any] = MappingProxyType({})
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -41,6 +43,7 @@ class SemanticFinding:
             "message": self.message,
             "resource_id": self.resource_id,
             "waiver_allowed": self.waiver_allowed,
+            "details": json.loads(canonical_json(self.details)),
         }
 
 

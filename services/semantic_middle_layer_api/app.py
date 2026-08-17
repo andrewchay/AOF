@@ -3968,11 +3968,13 @@ class SemanticCompileReq(SemanticActorReq):
 def _semantic_governance():
     from bridge.semantic_core.compilers import CompilerRegistry, SemanticBundleCompiler
     from bridge.semantic_core.governance import SemanticGovernanceService
+    from bridge.semantic_core.validators import ontology_release_validator
 
     return SemanticGovernanceService(
         AOF_ROOT / 'data' / 'semantic_governance',
         decision_store=_decision_store(),
         compiler_registry=CompilerRegistry([SemanticBundleCompiler()]),
+        validators=[ontology_release_validator],
     )
 
 

@@ -88,3 +88,13 @@ proposal、validation、waiver、approval、compile、publish 都写入既有决
 
 P0 的持久层是本地原子文件和 append-only 决策账本；生产替换必须保持相同状态机、摘要和禁止覆盖
 语义，同时补齐数据库事务、并发版本检查、租户授权、审批职责分离和签名 attestation。
+
+## P0.5 本体发布门禁
+
+统一 Proposal 的 REST 控制面默认加载 `ontology_release_validator`，不再需要调用方手工注入校验器。
+同一候选 Release 中的 `Ontology` 与 `Vocabulary` 会合并为数据图，`ConstraintSet` 合并为 Shapes 图，
+然后执行与既有本体治理服务相同的确定性 SHACL Core 子集、OWL 冲突和 SKOS 完整性检查。
+
+校验结果统一转换为 `SemanticFinding`，保留 constraint component、focus node、path 与原始 finding
+类型等细节。SHACL 未支持约束和 RDF 解析错误不可 waiver；其他冲突必须显式 waiver 或修订后重新
+提交，未解决的阻断 finding 不能进入 approval。无本体资源的 Release 不受该门禁影响。

@@ -183,3 +183,120 @@ def test_semantic_governance_rest_api_publishes_immutable_release(tmp_path, monk
         f"/v1/semantic/proposals/{proposal_id}/approve",
         json={"actor": "reviewer:api", "rationale": "Replay stale transition."},
     ).status_code == 409
+
+
+def test_rest_proposal_runs_default_shacl_owl_skos_release_gate(tmp_path, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+    import services.semantic_middle_layer_api.app as api_module
+
+    ontology = SemanticResource.create(
+        resource_id="aof://acme/people/ontology/people",
+        kind=ResourceKind.ONTOLOGY,
+        name="people",
+        domain="people",
+        owner="ontology-team",
+        spec={
+            "format": "turtle",
+            "content": """
+                @prefix ex: <https://example.test/> .
+                @prefix owl: <http://www.w3.org/2002/07/owl#> .
+                ex:Person a owl:Class .
+                ex:alice a ex:Person .
+            """,
+        },
+    )
+    shapes = SemanticResource.create(
+        resource_id="aof://acme/people/constraint-set/people-shapes",
+        kind=ResourceKind.CONSTRAINT_SET,
+        name="people-shapes",
+        domain="people",
+        owner="ontology-team",
+        depends_on=[ontology.resource_id],
+        spec={
+            "format": "turtle",
+            "content": """
+                @prefix ex: <https://example.test/> .
+                @prefix sh: <http://www.w3.org/ns/shacl#> .
+                ex:PersonShape a sh:NodeShape ; sh:targetClass ex:Person ;
+                  sh:property [ sh:path ex:name ; sh:minCount 1 ] .
+            """,
+        },
+    )
+    vocabulary = SemanticResource.create(
+        resource_id="aof://acme/people/vocabulary/people-vocabulary",
+        kind=ResourceKind.VOCABULARY,
+        name="people-vocabulary",
+        domain="people",
+        owner="ontology-team",
+        depends_on=[ontology.resource_id],
+        spec={
+            "format": "turtle",
+            "content": """
+                @prefix ex: <https://example.test/> .
+                @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+                ex:person a skos:Concept ; skos:prefLabel "Person"@en .
+            """,
+        },
+    )
+
+    monkeypatch.setattr(api_module, "AOF_ROOT", tmp_path)
+    client = TestClient(api_module.app)
+    created = client.post("/v1/semantic/proposals", json={
+        "proposal_id": "people-invalid-shacl",
+        "release_id": "people-knowledge@1.0.0",
+        "resources": [item.to_dict() for item in (ontology, shapes, vocabulary)],
+        "actor": "editor:api",
+        "rationale": "Exercise the default ontology release gate.",
+    })
+    assert created.status_code == 201
+
+    review = client.post(
+        "/v1/semantic/proposals/people-invalid-shacl/validate",
+        json={"actor": "validator:api"},
+    )
+    assert review.status_code == 200
+    assert review.json()["state"] == "conflict_review"
+    assert any(
+        item["validator"] == "ontology-shacl-owl-skos"
+        and item["details"]["constraint_component"] == "MinCountConstraintComponent"
+        for item in review.json()["findings"]
+    )
+    approval = client.post(
+        "/v1/semantic/proposals/people-invalid-shacl/approve",
+        json={"actor": "reviewer:api", "rationale": "Must remain blocked."},
+    )
+    assert approval.status_code == 409
+
+
+def test_default_ontology_gate_reports_owl_and_skos_conflicts() -> None:
+    from bridge.semantic_core.validators import ontology_release_validator
+
+    ontology = SemanticResource.create(
+        resource_id="aof://acme/people/ontology/conflicted-people",
+        kind=ResourceKind.ONTOLOGY,
+        name="conflicted-people",
+        domain="people",
+        owner="ontology-team",
+        spec={"format": "turtle", "content": """
+            @prefix ex: <https://example.test/> .
+            @prefix owl: <http://www.w3.org/2002/07/owl#> .
+            ex:Employee owl:disjointWith ex:Customer .
+            ex:alice a ex:Employee, ex:Customer .
+        """},
+    )
+    vocabulary = SemanticResource.create(
+        resource_id="aof://acme/people/vocabulary/conflicted-people",
+        kind=ResourceKind.VOCABULARY,
+        name="conflicted-people",
+        domain="people",
+        owner="ontology-team",
+        depends_on=[ontology.resource_id],
+        spec={"format": "turtle", "content": """
+            @prefix ex: <https://example.test/> .
+            @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+            ex:person a skos:Concept ; skos:broader ex:person .
+        """},
+    )
+
+    findings = ontology_release_validator((ontology, vocabulary))
+    assert {finding.details["type"] for finding in findings} == {"owl_conflict", "skos_conflict"}
