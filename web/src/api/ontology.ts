@@ -31,6 +31,33 @@ export interface DraftBundle {
   waivers: Array<{ waiver_id: string; finding_id: string; rationale: string; policy: string }>
 }
 
+export interface WorkbenchSession {
+  subject: string
+  tenant_id: string
+  roles: string[]
+  permissions: Record<'read' | 'edit' | 'validate' | 'waive' | 'review' | 'publish', boolean>
+}
+
+export interface WorkbenchSummary {
+  draft_count: number
+  release_count: number
+  state_counts: Record<string, number>
+  findings: { total: number; unresolved: number; waived: number }
+  evidence_integrity: { valid: boolean; decision_ledger: { valid: boolean; entries_checked: number } }
+  recent_releases: Array<Record<string, any>>
+  snapshot_digest: string
+}
+
+export async function getWorkbenchSession() {
+  const { data } = await client.get('/ontology/workbench/session')
+  return data as WorkbenchSession
+}
+
+export async function getWorkbenchSummary() {
+  const { data } = await client.get('/ontology/workbench/summary')
+  return data as WorkbenchSummary
+}
+
 export async function listDrafts() {
   const { data } = await client.get('/ontology/drafts')
   return data as { drafts: OntologyDraftManifest[]; count: number }
@@ -51,8 +78,8 @@ export async function updateDraft(draftId: string, payload: Record<string, unkno
   return data as OntologyDraftManifest
 }
 
-export async function validateDraft(draftId: string, actor: string) {
-  const { data } = await client.post(`/ontology/drafts/${draftId}/validate`, { actor })
+export async function validateDraft(draftId: string) {
+  const { data } = await client.post(`/ontology/drafts/${draftId}/validate`, {})
   return data as { review_id: string; conforms: boolean; findings: GovernanceFinding[] }
 }
 
@@ -66,17 +93,32 @@ export async function approveDraft(draftId: string, payload: Record<string, unkn
   return data
 }
 
-export async function requestChanges(draftId: string, reviewer: string, rationale: string) {
-  const { data } = await client.post(`/ontology/drafts/${draftId}/request-changes`, { reviewer, rationale })
+export async function requestChanges(draftId: string, rationale: string) {
+  const { data } = await client.post(`/ontology/drafts/${draftId}/request-changes`, { rationale })
   return data
 }
 
-export async function publishDraft(draftId: string, actor: string) {
-  const { data } = await client.post(`/ontology/drafts/${draftId}/publish`, { actor })
+export async function publishDraft(draftId: string) {
+  const { data } = await client.post(`/ontology/drafts/${draftId}/publish`, {})
   return data
 }
 
 export async function previewImpact(draftId: string) {
   const { data } = await client.get(`/ontology/drafts/${draftId}/impact`)
   return data as { base_version?: string; change_set: { added: string[][]; removed: string[][] }; potentially_affected_terms: string[] }
+}
+
+export async function listReleases(ontologyId?: string) {
+  const { data } = await client.get('/ontology/releases', { params: { ontology_id: ontologyId } })
+  return data as { releases: Array<Record<string, any>>; count: number }
+}
+
+export async function getAuditTrail(draftId: string) {
+  const { data } = await client.get(`/ontology/drafts/${draftId}/audit-trail`)
+  return data as {
+    decision_id?: string
+    integrity: { valid: boolean; entries_checked: number }
+    compliance?: { policy_references: string[]; evidence_complete: boolean; rationale_complete: boolean }
+    causal_chain: { nodes: Array<{ decision: Record<string, any> }>; edges: Array<Record<string, any>> }
+  }
 }

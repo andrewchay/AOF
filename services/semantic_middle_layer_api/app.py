@@ -4684,7 +4684,7 @@ async def get_governed_semantic_action_run(
 
 class OntologyDraftCreateReq(BaseModel):
     ontology_id: str = Field(min_length=1)
-    created_by: str = Field(min_length=1)
+    created_by: str = ''
     ontology_text: str = Field(min_length=1)
     shapes_text: str = Field(min_length=1)
     skos_text: str = ''
@@ -4692,32 +4692,32 @@ class OntologyDraftCreateReq(BaseModel):
 
 
 class OntologyDraftUpdateReq(BaseModel):
-    actor: str = Field(min_length=1)
+    actor: str = ''
     ontology_text: Optional[str] = None
     shapes_text: Optional[str] = None
     skos_text: Optional[str] = None
 
 
 class OntologyActorReq(BaseModel):
-    actor: str = Field(min_length=1)
+    actor: str = ''
 
 
 class OntologyWaiverReq(BaseModel):
     finding_id: str = Field(min_length=1)
-    actor: str = Field(min_length=1)
+    actor: str = ''
     rationale: str = Field(min_length=1)
     policy: str = Field(min_length=1)
     expires_at: Optional[str] = None
 
 
 class OntologyApprovalReq(BaseModel):
-    approver: str = Field(min_length=1)
+    approver: str = ''
     rationale: str = Field(min_length=1)
     policies: list[str] = Field(default_factory=list)
 
 
 class OntologyChangesReq(BaseModel):
-    reviewer: str = Field(min_length=1)
+    reviewer: str = ''
     rationale: str = Field(min_length=1)
 
 
