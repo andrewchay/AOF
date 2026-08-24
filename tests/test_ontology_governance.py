@@ -45,6 +45,14 @@ ex:employee a skos:Concept ; skos:prefLabel "Employee"@en ; skos:altLabel "Staff
 """
 
 
+def _headers(role: str, subject: str, tenant: str = "acme") -> dict[str, str]:
+    from bridge.semantic_core import SignedPrincipalVerifier
+
+    return SignedPrincipalVerifier(
+        key_id="ontology-identity", secret=b"ontology-identity-secret"
+    ).sign_headers(subject=subject, tenant_id=tenant, roles=[role])
+
+
 def _service(tmp_path):
     decisions = DecisionProvenanceStore(tmp_path / "decisions.jsonl")
     return OntologyGovernanceService(tmp_path / "governance", decisions), decisions
@@ -196,21 +204,23 @@ def test_governance_rest_api_full_release_and_reasoning(tmp_path, monkeypatch):
     import services.semantic_middle_layer_api.app as api_module
 
     monkeypatch.setattr(api_module, "AOF_ROOT", tmp_path)
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_SECRET", "ontology-identity-secret")
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_KEY_ID", "ontology-identity")
     client = TestClient(api_module.app)
     created = client.post("/v1/ontology/drafts", json={
         "ontology_id": "people", "created_by": "editor:api", "ontology_text": ONTOLOGY_VALID,
         "shapes_text": SHAPES, "skos_text": SKOS_VALID,
-    })
+    }, headers=_headers("editor", "alice"))
     assert created.status_code == 201
     draft_id = created.json()["draft_id"]
-    validation = client.post(f"/v1/ontology/drafts/{draft_id}/validate", json={"actor": "validator:api"})
+    validation = client.post(f"/v1/ontology/drafts/{draft_id}/validate", json={"actor": "validator:api"}, headers=_headers("validator", "gate"))
     assert validation.status_code == 200 and validation.json()["conforms"] is True
-    approval = client.post(f"/v1/ontology/drafts/{draft_id}/approve", json={"approver": "reviewer:api", "rationale": "Clean."})
+    approval = client.post(f"/v1/ontology/drafts/{draft_id}/approve", json={"approver": "reviewer:api", "rationale": "Clean."}, headers=_headers("reviewer", "bob"))
     assert approval.status_code == 200
-    publication = client.post(f"/v1/ontology/drafts/{draft_id}/publish", json={"actor": "publisher:api"})
+    publication = client.post(f"/v1/ontology/drafts/{draft_id}/publish", json={"actor": "publisher:api"}, headers=_headers("publisher", "carol"))
     assert publication.status_code == 200
     version = publication.json()["release"]["ontology_version"]
-    sparql = client.post(f"/v1/ontology/releases/people/{version}/sparql", json={"query": "ASK { <https://example.test/alice> a <https://example.test/Person> }"})
+    sparql = client.post(f"/v1/ontology/releases/people/{version}/sparql", json={"query": "ASK { <https://example.test/alice> a <https://example.test/Person> }"}, headers=_headers("viewer", "auditor"))
     assert sparql.status_code == 200 and sparql.json()["boolean"] is True
 
     reasoning = client.post("/v1/reasoning/datalog/run", json={
@@ -228,6 +238,49 @@ def test_governance_rest_api_full_release_and_reasoning(tmp_path, monkeypatch):
         json={"facts": [{"predicate": "edge", "terms": ["a", "b"]}]},
     )
     assert ruleset_run.status_code == 200 and ruleset_run.json()["derived_count"] == 1
+
+
+def test_ontology_http_boundary_is_signed_tenant_isolated_and_separates_duties(
+    tmp_path, monkeypatch
+):
+    from fastapi.testclient import TestClient
+    import services.semantic_middle_layer_api.app as api_module
+
+    monkeypatch.setattr(api_module, "AOF_ROOT", tmp_path)
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_SECRET", "ontology-identity-secret")
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_KEY_ID", "ontology-identity")
+    client = TestClient(api_module.app)
+    payload = {
+        "ontology_id": "people",
+        "created_by": "untrusted:payload",
+        "ontology_text": ONTOLOGY_VALID,
+        "shapes_text": SHAPES,
+        "skos_text": SKOS_VALID,
+    }
+
+    assert client.post("/v1/ontology/drafts", json=payload).status_code == 401
+    created = client.post(
+        "/v1/ontology/drafts", json=payload, headers=_headers("editor", "alice")
+    )
+    draft_id = created.json()["draft_id"]
+    assert created.json()["created_by"] == "editor:alice"
+    assert client.get(
+        "/v1/ontology/drafts", headers=_headers("viewer", "mallory", "other")
+    ).json()["count"] == 0
+    client.post(
+        f"/v1/ontology/drafts/{draft_id}/validate",
+        json={"actor": "ignored"},
+        headers=_headers("validator", "gate"),
+    )
+    self_approval = client.post(
+        f"/v1/ontology/drafts/{draft_id}/approve",
+        json={"approver": "ignored", "rationale": "Self approval."},
+        headers=_headers("reviewer", "alice"),
+    )
+
+    assert created.status_code == 201
+    assert self_approval.status_code == 409
+    assert "separation of duties" in self_approval.json()["detail"]
 
 
 def test_governance_mcp_tools_expose_gate_and_reasoner(tmp_path, monkeypatch):

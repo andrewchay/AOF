@@ -788,6 +788,12 @@ class OntologyGovernanceService:
         policies: Iterable[str] = (),
     ) -> dict[str, Any]:
         manifest = self.get_draft(draft_id)
+        if self._actor_subject(approver) == self._actor_subject(
+            str(manifest["created_by"])
+        ):
+            raise OntologyGovernanceError(
+                "separation of duties: draft creator cannot approve the release"
+            )
         review = self._latest_review(draft_id)
         review_integrity = self._verify_chain(
             self._draft_dir(draft_id) / "reviews.jsonl"
@@ -866,6 +872,12 @@ class OntologyGovernanceService:
         manifest = self.get_draft(draft_id)
         if manifest["state"] != "approved":
             raise OntologyGovernanceError("only an approved draft can be published")
+        if self._actor_subject(actor) == self._actor_subject(
+            str(manifest["approved_by"])
+        ):
+            raise OntologyGovernanceError(
+                "separation of duties: approver cannot publish the release"
+            )
         draft_dir = self._draft_dir(draft_id)
         contents = {
             name: (draft_dir / name).read_text(encoding="utf-8")
@@ -1018,6 +1030,10 @@ class OntologyGovernanceService:
 
     def _validate_skos(self, graph: Graph) -> list[dict[str, Any]]:
         return validate_skos_graph(graph)
+
+    @staticmethod
+    def _actor_subject(actor: str) -> str:
+        return actor.rsplit(":", 1)[-1]
 
     def _diff_release(
         self, previous: dict[str, Any] | None, contents: dict[str, str]

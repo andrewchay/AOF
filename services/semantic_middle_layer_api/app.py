@@ -4746,9 +4746,17 @@ class SparqlQueryReq(BaseModel):
     query: str = Field(min_length=1)
 
 
-def _ontology_governance():
+def _ontology_governance(tenant_id: str):
     from bridge.ontology_governance import OntologyGovernanceService
-    return OntologyGovernanceService(AOF_ROOT / 'data' / 'ontology_governance', _decision_store())
+    return OntologyGovernanceService(
+        AOF_ROOT / 'data' / 'ontology_governance' / tenant_id,
+        _decision_store(),
+    )
+
+
+def _ontology_context(request: Request, action: str):
+    principal, actor = _semantic_principal(request, action)
+    return principal, actor, _ontology_governance(principal.tenant_id)
 
 
 def _datalog_rulesets():
@@ -4757,98 +4765,136 @@ def _datalog_rulesets():
 
 
 def _ontology_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
     message = str(exc)
-    return HTTPException(status_code=404 if 'not found:' in message else 409 if any(word in message for word in ('blocked', 'cannot be edited', 'only an approved')) else 422, detail=message)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif any(word in message for word in ('blocked', 'cannot be edited', 'only an approved', 'separation of duties')):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
 
 
 @app.post('/v1/ontology/drafts', status_code=201)
-async def create_ontology_draft(req: OntologyDraftCreateReq) -> dict[str, Any]:
+async def create_ontology_draft(req: OntologyDraftCreateReq, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().create_draft(**req.model_dump())
+        _, actor, service = _ontology_context(request, 'create')
+        payload = req.model_dump()
+        payload['created_by'] = actor
+        return service.create_draft(**payload)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
 
 @app.get('/v1/ontology/drafts')
-async def list_ontology_drafts() -> dict[str, Any]:
-    drafts = _ontology_governance().list_drafts()
-    return {'drafts': drafts, 'count': len(drafts)}
+async def list_ontology_drafts(request: Request) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        drafts = service.list_drafts()
+        return {'drafts': drafts, 'count': len(drafts)}
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
 
 
 @app.get('/v1/ontology/drafts/{draft_id}')
-async def get_ontology_draft(draft_id: str) -> dict[str, Any]:
+async def get_ontology_draft(draft_id: str, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().get_draft_bundle(draft_id)
+        _, _, service = _ontology_context(request, 'read')
+        return service.get_draft_bundle(draft_id)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
 
 @app.put('/v1/ontology/drafts/{draft_id}')
-async def update_ontology_draft(draft_id: str, req: OntologyDraftUpdateReq) -> dict[str, Any]:
+async def update_ontology_draft(draft_id: str, req: OntologyDraftUpdateReq, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().update_draft(draft_id, **req.model_dump())
+        _, actor, service = _ontology_context(request, 'edit')
+        payload = req.model_dump()
+        payload['actor'] = actor
+        return service.update_draft(draft_id, **payload)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
 
 @app.post('/v1/ontology/drafts/{draft_id}/validate')
-async def validate_ontology_draft(draft_id: str, req: OntologyActorReq) -> dict[str, Any]:
+async def validate_ontology_draft(draft_id: str, req: OntologyActorReq, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().validate_draft(draft_id, actor=req.actor)
+        _, actor, service = _ontology_context(request, 'validate')
+        return service.validate_draft(draft_id, actor=actor)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
 
 @app.post('/v1/ontology/drafts/{draft_id}/waivers', status_code=201)
-async def waive_ontology_finding(draft_id: str, req: OntologyWaiverReq) -> dict[str, Any]:
+async def waive_ontology_finding(draft_id: str, req: OntologyWaiverReq, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().waive_finding(draft_id, **req.model_dump())
+        _, actor, service = _ontology_context(request, 'waive')
+        payload = req.model_dump()
+        payload['actor'] = actor
+        return service.waive_finding(draft_id, **payload)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
 
 @app.post('/v1/ontology/drafts/{draft_id}/approve')
-async def approve_ontology_draft(draft_id: str, req: OntologyApprovalReq) -> dict[str, Any]:
+async def approve_ontology_draft(draft_id: str, req: OntologyApprovalReq, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().approve(draft_id, **req.model_dump())
+        _, actor, service = _ontology_context(request, 'approve')
+        payload = req.model_dump()
+        payload['approver'] = actor
+        return service.approve(draft_id, **payload)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
 
 @app.post('/v1/ontology/drafts/{draft_id}/request-changes')
-async def request_ontology_changes(draft_id: str, req: OntologyChangesReq) -> dict[str, Any]:
+async def request_ontology_changes(draft_id: str, req: OntologyChangesReq, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().request_changes(draft_id, **req.model_dump())
+        _, actor, service = _ontology_context(request, 'request_changes')
+        return service.request_changes(draft_id, reviewer=actor, rationale=req.rationale)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
 
 @app.post('/v1/ontology/drafts/{draft_id}/publish')
-async def publish_ontology_draft(draft_id: str, req: OntologyActorReq) -> dict[str, Any]:
+async def publish_ontology_draft(draft_id: str, req: OntologyActorReq, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().publish(draft_id, actor=req.actor)
+        _, actor, service = _ontology_context(request, 'publish')
+        return service.publish(draft_id, actor=actor)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
 
 @app.get('/v1/ontology/drafts/{draft_id}/impact')
-async def preview_ontology_impact(draft_id: str) -> dict[str, Any]:
+async def preview_ontology_impact(draft_id: str, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().impact_preview(draft_id)
+        _, _, service = _ontology_context(request, 'read')
+        return service.impact_preview(draft_id)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
 
 @app.get('/v1/ontology/releases')
-async def list_ontology_releases(ontology_id: Optional[str] = None) -> dict[str, Any]:
-    releases = _ontology_governance().list_releases(ontology_id)
-    return {'releases': releases, 'count': len(releases)}
+async def list_ontology_releases(request: Request, ontology_id: Optional[str] = None) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        releases = service.list_releases(ontology_id)
+        return {'releases': releases, 'count': len(releases)}
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
 
 
 @app.get('/v1/ontology/releases/{ontology_id}/{version}')
-async def get_ontology_release(ontology_id: str, version: str) -> dict[str, Any]:
+async def get_ontology_release(ontology_id: str, version: str, request: Request) -> dict[str, Any]:
     try:
-        return _ontology_governance().get_release(ontology_id, version)
+        _, _, service = _ontology_context(request, 'read')
+        return service.get_release(ontology_id, version)
     except Exception as exc:
         raise _ontology_error(exc) from exc
 
@@ -4897,10 +4943,11 @@ async def run_datalog_ruleset(ruleset_id: str, version: str, req: DatalogRuleSet
 
 
 @app.post('/v1/ontology/releases/{ontology_id}/{version}/sparql')
-async def query_ontology_release(ontology_id: str, version: str, req: SparqlQueryReq) -> dict[str, Any]:
+async def query_ontology_release(ontology_id: str, version: str, req: SparqlQueryReq, request: Request) -> dict[str, Any]:
     from bridge.ontology_governance import SparqlService
     try:
-        release = _ontology_governance().get_release(ontology_id, version)
+        _, _, service = _ontology_context(request, 'read')
+        release = service.get_release(ontology_id, version)
         rdf_text = release['ontology_text'] + '\n' + release['skos_text']
         return SparqlService(rdf_text, snapshot_id=f'ontology:{ontology_id}:{version}').query(req.query)
     except Exception as exc:

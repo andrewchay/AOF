@@ -26,6 +26,7 @@ class SemanticPrincipal:
     def actor_for(self, action: str) -> str:
         allowed = {
             "create": ("admin", "owner", "editor"),
+            "edit": ("admin", "owner", "editor"),
             "read": ("admin", "owner", "editor", "reviewer", "validator", "risk-owner", "compiler", "publisher", "viewer"),
             "validate": ("admin", "validator"),
             "waive": ("admin", "risk-owner"),
