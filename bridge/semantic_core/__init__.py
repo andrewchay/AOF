@@ -33,6 +33,12 @@ from .workflows import (
     WorkflowRunError,
     WorkflowRunService,
 )
+from .simulation import (
+    SimulationError,
+    SimulationRequest,
+    SimulationRun,
+    SqliteBitemporalSimulationService,
+)
 from .action_contracts import ActionCatalog, ActionContractError
 from .action_plans import (
     ActionPlan,
@@ -166,6 +172,10 @@ __all__ = [
     "WorkflowRun",
     "WorkflowRunError",
     "WorkflowRunService",
+    "SimulationError",
+    "SimulationRequest",
+    "SimulationRun",
+    "SqliteBitemporalSimulationService",
     "CanonicalizationError",
     "ActionCatalog",
     "ActionContractError",
