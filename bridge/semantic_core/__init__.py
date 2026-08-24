@@ -26,6 +26,13 @@ from .incremental_reasoning import (
     ReasoningFactChange,
     SqliteIncrementalReasoningRuntime,
 )
+from .workflows import (
+    SqliteWorkflowRunRepository,
+    WorkflowPlan,
+    WorkflowRun,
+    WorkflowRunError,
+    WorkflowRunService,
+)
 from .action_contracts import ActionCatalog, ActionContractError
 from .action_plans import (
     ActionPlan,
@@ -154,6 +161,11 @@ __all__ = [
     "IncrementalReasoningRun",
     "ReasoningFactChange",
     "SqliteIncrementalReasoningRuntime",
+    "SqliteWorkflowRunRepository",
+    "WorkflowPlan",
+    "WorkflowRun",
+    "WorkflowRunError",
+    "WorkflowRunService",
     "CanonicalizationError",
     "ActionCatalog",
     "ActionContractError",

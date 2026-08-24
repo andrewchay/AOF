@@ -166,6 +166,17 @@ class ActionPlan:
     def to_dict(self) -> dict[str, Any]:
         return {**self._payload(), "plan_digest": self.plan_digest}
 
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "ActionPlan":
+        payload = dict(value)
+        payload.pop("api_version", None)
+        for field in ("required_approval_roles", "object_ids"):
+            payload[field] = tuple(payload[field])
+        plan = cls(**payload)
+        if not plan.verify():
+            raise ActionPlanningError("action plan digest mismatch")
+        return plan
+
 
 @dataclass(frozen=True)
 class ActionPolicy:

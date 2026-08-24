@@ -584,6 +584,58 @@ class ActionRunService:
         )
         return self.repository.update(completed, expected_digest=executing.run_digest)
 
+    def compensate(self, run_id: str, *, actor: str, rationale: str) -> ActionRun:
+        run = self._run(run_id)
+        if run.status == "compensated":
+            return run
+        if run.status != "succeeded":
+            raise ActionRunError(
+                f"action run cannot be compensated from status: {run.status}"
+            )
+        operation = run.plan.get("compensation_operation")
+        if not operation:
+            raise ActionRunError("action run has no compensation operation")
+        connector = self.connectors.get(str(run.plan["connector"]))
+        try:
+            compensation = self._result(
+                connector.compensate(
+                    {
+                        "execution_id": run.run_id,
+                        "idempotency_key": run.plan["idempotency_key"],
+                        "operation": operation,
+                        "receipt": canonical_data(run.result.get("receipt", {})),
+                    }
+                )
+            )
+        except Exception as exc:
+            compensation = {
+                "outcome": "unknown",
+                "effect_applied": None,
+                "receipt": {},
+                "error": {"type": type(exc).__name__, "message": str(exc)},
+            }
+        status = (
+            "compensated"
+            if compensation["outcome"] == "succeeded"
+            else "reconciliation_required"
+        )
+        decision = self._decision(
+            actor=actor,
+            decision_type="action_compensation_completed",
+            conclusion=status,
+            rationale=rationale,
+            plan=run.plan,
+        )
+        updated = run.transition(
+            status=status,
+            action="compensate",
+            actor=actor,
+            rationale=rationale,
+            decision_id=decision,
+            result={**canonical_data(run.result), "compensation": compensation},
+        )
+        return self.repository.update(updated, expected_digest=run.run_digest)
+
     @staticmethod
     def _result(value: Mapping[str, Any]) -> dict[str, Any]:
         if not isinstance(value, Mapping):
