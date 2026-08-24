@@ -103,6 +103,10 @@ class ActionPlan:
     action_type_id: str
     action_type_revision: str
     function_id: str
+    connector: str
+    operation: str
+    compensation_function_id: str | None
+    compensation_operation: str | None
     target_object_type_id: str
     effect_class: str
     idempotency_scope: str
@@ -133,6 +137,10 @@ class ActionPlan:
             "action_type_id": self.action_type_id,
             "action_type_revision": self.action_type_revision,
             "function_id": self.function_id,
+            "connector": self.connector,
+            "operation": self.operation,
+            "compensation_function_id": self.compensation_function_id,
+            "compensation_operation": self.compensation_operation,
             "target_object_type_id": self.target_object_type_id,
             "effect_class": self.effect_class,
             "idempotency_scope": self.idempotency_scope,
@@ -300,6 +308,22 @@ class GovernedActionPlanner:
             raise ActionPlanningError(
                 f"action type is not published: {request.action_type_id}"
             )
+        functions = {
+            item.get("resource_id"): item
+            for item in action_catalog.get("functions", ())
+            if isinstance(item, Mapping)
+        }
+        function = functions.get(action.get("function_id"))
+        if function is None:
+            raise ActionPlanningError("action function is missing from the catalog")
+        compensation_id = action.get("compensation_function_id")
+        compensation = functions.get(compensation_id) if compensation_id else None
+        if compensation_id and compensation is None:
+            raise ActionPlanningError("action compensation function is missing from the catalog")
+        if compensation is not None and compensation.get("connector") != function.get("connector"):
+            raise ActionPlanningError(
+                "action and compensation functions must use the same connector"
+            )
         self._validate_inputs(request.inputs, action.get("input_schema"))
         policy_resource = next(
             (
@@ -346,6 +370,12 @@ class GovernedActionPlanner:
             "action_type_id": request.action_type_id,
             "action_type_revision": action["revision_id"],
             "function_id": action["function_id"],
+            "connector": function["connector"],
+            "operation": function["operation"],
+            "compensation_function_id": compensation_id,
+            "compensation_operation": (
+                compensation["operation"] if compensation is not None else None
+            ),
             "target_object_type_id": action["target_object_type_id"],
             "effect_class": action["effect_class"],
             "idempotency_scope": action["idempotency_scope"],
@@ -376,6 +406,12 @@ class GovernedActionPlanner:
             action_type_id=request.action_type_id,
             action_type_revision=str(action["revision_id"]),
             function_id=str(action["function_id"]),
+            connector=str(function["connector"]),
+            operation=str(function["operation"]),
+            compensation_function_id=(str(compensation_id) if compensation_id else None),
+            compensation_operation=(
+                str(compensation["operation"]) if compensation is not None else None
+            ),
             target_object_type_id=str(action["target_object_type_id"]),
             effect_class=str(action["effect_class"]),
             idempotency_scope=str(action["idempotency_scope"]),

@@ -31,15 +31,33 @@ def _action_resources() -> list[SemanticResource]:
             "timeout_ms": 5000,
         },
     )
+    compensation = SemanticResource.create(
+        resource_id="aof://acme/crm/function/resume-customer",
+        kind=ResourceKind.FUNCTION,
+        name="resume-customer",
+        domain="crm",
+        owner="crm-platform",
+        spec={
+            "connector": "crm-core",
+            "operation": "resume_customer",
+            "side_effects": True,
+            "timeout_ms": 5000,
+        },
+    )
     action = SemanticResource.create(
         resource_id="aof://acme/crm/action-type/suspend-customer",
         kind=ResourceKind.ACTION_TYPE,
         name="suspend-customer",
         domain="crm",
         owner="risk-operations",
-        depends_on=[customer.resource_id, function.resource_id],
+        depends_on=[
+            customer.resource_id,
+            function.resource_id,
+            compensation.resource_id,
+        ],
         spec={
             "function_id": function.resource_id,
+            "compensation_function_id": compensation.resource_id,
             "target_object_type_id": customer.resource_id,
             "effect_class": "reversible",
             "idempotency_scope": "object",
@@ -69,7 +87,7 @@ def _action_resources() -> list[SemanticResource]:
             ]
         },
     )
-    return [customer, function, action, workflow]
+    return [customer, function, compensation, action, workflow]
 
 
 def test_release_compiles_deterministic_action_catalog(tmp_path) -> None:
@@ -128,7 +146,7 @@ def test_action_compiler_rejects_embedded_connector_credentials(tmp_path) -> Non
 
 def test_action_compiler_rejects_cyclic_workflow() -> None:
     resources = _action_resources()
-    action = resources[2]
+    action = next(item for item in resources if item.kind is ResourceKind.ACTION_TYPE)
     workflow = resources[-1]
     resources[-1] = SemanticResource.create(
         resource_id=workflow.resource_id,

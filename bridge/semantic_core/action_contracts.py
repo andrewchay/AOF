@@ -124,13 +124,29 @@ class ActionCatalog:
         spec = canonical_data(resource.spec)
         _reject_embedded_secrets(spec)
         function_id = _required_text(spec.get("function_id"), "action function_id")
+        compensation_function_id = spec.get("compensation_function_id")
         object_type_id = _required_text(
             spec.get("target_object_type_id"), "action target_object_type_id"
         )
+        effect = spec.get("effect_class")
+        if effect not in {"reversible", "irreversible"}:
+            raise ActionContractError(
+                "action effect_class must be reversible or irreversible"
+            )
         expected = {
             function_id: ResourceKind.FUNCTION,
             object_type_id: ResourceKind.OBJECT_TYPE,
         }
+        if effect == "reversible":
+            compensation_function_id = _required_text(
+                compensation_function_id,
+                "reversible action compensation_function_id",
+            )
+            expected[compensation_function_id] = ResourceKind.FUNCTION
+        elif compensation_function_id is not None:
+            raise ActionContractError(
+                "irreversible actions cannot declare compensation_function_id"
+            )
         for resource_id, kind in expected.items():
             dependency = resources.get(resource_id)
             if dependency is None or dependency.kind is not kind:
@@ -141,11 +157,6 @@ class ActionCatalog:
                 raise ActionContractError(
                     f"action dependency must be declared in depends_on: {resource_id}"
                 )
-        effect = spec.get("effect_class")
-        if effect not in {"reversible", "irreversible"}:
-            raise ActionContractError(
-                "action effect_class must be reversible or irreversible"
-            )
         idempotency = spec.get("idempotency_scope")
         if idempotency not in {"object", "request", "tenant"}:
             raise ActionContractError(
@@ -164,6 +175,7 @@ class ActionCatalog:
             "resource_id": resource.resource_id,
             "revision_id": resource.revision_id,
             "function_id": function_id,
+            "compensation_function_id": compensation_function_id,
             "target_object_type_id": object_type_id,
             "effect_class": effect,
             "idempotency_scope": idempotency,

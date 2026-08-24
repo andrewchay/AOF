@@ -25,7 +25,8 @@ from tests.test_action_compiler import _action_resources
 
 def _action_runtime(tmp_path):
     resources = _action_resources()
-    action_id = resources[2].resource_id
+    action = next(item for item in resources if item.kind is ResourceKind.ACTION_TYPE)
+    action_id = action.resource_id
     policy = SemanticResource.create(
         resource_id="aof://acme/crm/policy/action-production",
         kind=ResourceKind.POLICY,
@@ -99,7 +100,7 @@ def _action_runtime(tmp_path):
         approved_by="reviewer:alice",
         rationale="Promote reproduced action contracts.",
     )
-    return repository, resources[2], policy
+    return repository, action, policy
 
 
 def test_governed_action_plan_pins_release_policy_and_impact(tmp_path) -> None:

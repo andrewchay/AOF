@@ -56,8 +56,25 @@ Planner 在任何 Connector 可见之前依次完成 JSON object input schema、
 ActionType revision、Policy revision/report 和 impact report。Impact report 至少列出精确对象集合、对象数量、
 effect class、引用该动作的 Workflow 和是否需要审批。
 
+## ActionRun 状态机
+
+`SqliteActionRunRepository` 以 tenant/action/idempotency scope/key（object scope 还包含对象集合）形成唯一
+idempotency identity。重复提交相同 plan 返回同一 ActionRun；同一 identity 绑定不同 plan 会被事务唯一门拒绝。
+Repository 对状态更新使用 optimistic digest、验证每个 history event 和嵌入 ActionPlan digest，并提供全库
+完整性扫描、schema version 与 SQLite online backup。
+
+需要审批的 Run 从 `awaiting_approval` 开始，请求人不得自批，审批者必须持有 ActionType 指定角色。执行前先把
+状态持久化为 `executing`，再调用部署期 `ActionConnector`；因此 worker 在调用前后崩溃时，重启实例不会盲目
+重试，而是把遗留 `executing` 转为 `reconciliation_required`。Connector 凭据只存在于 provider，不进入
+ActionPlan 或 ActionRun。
+
+已确认成功进入 `succeeded`；明确未产生效果的失败进入 `failed`；已产生部分效果的可逆动作调用同 Connector
+上的精确 compensation operation，成功后进入 `compensated`。超时、连接中断、未知 effect 或补偿不确定均进入
+`reconciliation_required`。终态重复 execute 返回原 Run，不再次产生副作用。submit、approve、execute 和结果
+均链接 Decision Provenance，绑定 Release、CompilationRun、ActionPlan 和 Policy revision。
+
 ## 当前完成边界
 
-当前已完成统一资源类型、跨资源引用校验、凭据隔离、Workflow DAG、确定性 catalog，以及 release-pinned
-ActionPlan 的权限/输入/影响预检。ActionRun、审批/补偿、双时态对象、事件规则和生成式 MCP 行动工具属于
-后续 Slice；在相应 E2E 完成前不得声称 Action 已可生产执行。
+当前已完成统一资源类型、确定性 catalog、release-pinned ActionPlan，以及事务型 ActionRun 的幂等、审批、
+补偿和 reconciliation 状态机。双时态对象、事件规则和生成式 MCP 行动工具属于后续 Slice；在统一生产 E2E
+完成前不得声称完整企业行动平台已生产就绪。

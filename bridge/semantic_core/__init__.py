@@ -10,6 +10,14 @@ from .action_plans import (
     ActionRequest,
     GovernedActionPlanner,
 )
+from .action_runs import (
+    ActionConnector,
+    ActionConnectorRegistry,
+    ActionRun,
+    ActionRunError,
+    ActionRunService,
+    SqliteActionRunRepository,
+)
 from .attestations import HmacReleaseAttestor
 from .identity import PrincipalVerificationError, SemanticPrincipal, SignedPrincipalVerifier
 from .runtime import SemanticRuntimeConsumer
@@ -101,6 +109,12 @@ __all__ = [
     "ActionPolicyError",
     "ActionRequest",
     "GovernedActionPlanner",
+    "ActionConnector",
+    "ActionConnectorRegistry",
+    "ActionRun",
+    "ActionRunError",
+    "ActionRunService",
+    "SqliteActionRunRepository",
     "HmacReleaseAttestor",
     "PrincipalVerificationError",
     "SemanticPrincipal",
