@@ -14,6 +14,7 @@ from .query_plans import (
 )
 from .query_execution import (
     QueryExecutionScope,
+    QueryExecutionLimits,
     QueryExecutor,
     QueryExecutorRegistry,
     QueryResult,
@@ -95,6 +96,7 @@ __all__ = [
     "TrustedSnapshotResolver",
     "QueryExecutor",
     "QueryExecutionScope",
+    "QueryExecutionLimits",
     "QueryExecutorRegistry",
     "QueryResult",
     "SqliteSemanticSqlExecutor",

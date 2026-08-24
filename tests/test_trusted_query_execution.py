@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import sqlite3
+import threading
 from dataclasses import replace
 
 import pytest
@@ -15,6 +16,7 @@ from bridge.semantic_core import (
     QueryCapability,
     QueryExecutor,
     QueryExecutorRegistry,
+    QueryExecutionLimits,
     GovernedQueryExecutor,
     FederatedQueryExecutor,
     FederatedQueryPlanner,
@@ -288,6 +290,102 @@ def test_sqlite_executor_runs_deterministic_semantic_sql_against_real_data(tmp_p
         {"gmv": 7.0, "order_date": "2026-08-18"},
     ]
     assert result.data["data_snapshot"]["snapshot_digest"].startswith("sha256:")
+
+
+def test_sqlite_executor_fails_closed_on_resource_budgets_and_cancellation(
+    tmp_path, monkeypatch
+) -> None:
+    resolver, _ = _trusted_query_runtime(tmp_path)
+    main_database = tmp_path / "warehouse-main.sqlite3"
+    attached_database = tmp_path / "dwd.sqlite3"
+    sqlite3.connect(main_database).close()
+    with sqlite3.connect(attached_database) as connection:
+        connection.execute(
+            "CREATE TABLE order_detail "
+            "(order_date TEXT NOT NULL, paid_amount REAL NOT NULL)"
+        )
+        connection.executemany(
+            "INSERT INTO order_detail VALUES (?, ?)",
+            [("2026-08-17", 10.0), ("2026-08-18", 7.0)],
+        )
+    intent = SemanticIntent.create(
+        metrics=["aof://acme/sales/metric/gmv"],
+        dimensions=["aof://acme/sales/dimension/order-date"],
+        purpose="daily-sales-report",
+    )
+    plan = resolver.plan(
+        QueryRequest.create(
+            channel="production",
+            capability="semantic_sql",
+            query=intent.intent_digest,
+            purpose="daily-sales-report",
+            parameters={"intent": intent.to_dict()},
+        ),
+        tenant_id="acme",
+    )
+
+    bounded = SqliteSemanticSqlExecutor(
+        resolver,
+        database=main_database,
+        attachments={"dwd": attached_database},
+        limits=QueryExecutionLimits(max_rows=1),
+    )
+    with pytest.raises(TrustedQueryError, match="row limit exceeded"):
+        bounded(plan)
+
+    cancelled = threading.Event()
+    cancelled.set()
+    cancellable = SqliteSemanticSqlExecutor(
+        resolver,
+        database=main_database,
+        attachments={"dwd": attached_database},
+        cancel_check=cancelled.is_set,
+        limits=QueryExecutionLimits(progress_interval=1),
+    )
+    with pytest.raises(TrustedQueryError, match="cancelled"):
+        cancellable(plan)
+
+    vm_bounded = SqliteSemanticSqlExecutor(
+        resolver,
+        database=main_database,
+        attachments={"dwd": attached_database},
+        limits=QueryExecutionLimits(max_vm_steps=1, progress_interval=1),
+    )
+    with pytest.raises(TrustedQueryError, match="VM step limit exceeded"):
+        vm_bounded(plan)
+
+    ticks = iter((0.0, 1.0))
+    monkeypatch.setattr(
+        "bridge.semantic_core.query_execution.time.monotonic",
+        lambda: next(ticks, 1.0),
+    )
+    timed = SqliteSemanticSqlExecutor(
+        resolver,
+        database=main_database,
+        attachments={"dwd": attached_database},
+        limits=QueryExecutionLimits(timeout_ms=1, progress_interval=1),
+    )
+    with pytest.raises(TrustedQueryError, match="timeout"):
+        timed(plan)
+
+
+def test_query_execution_limits_parse_production_environment_fail_closed() -> None:
+    limits = QueryExecutionLimits.from_environment(
+        {
+            "AOF_QUERY_TIMEOUT_MS": "2500",
+            "AOF_QUERY_MAX_ROWS": "500",
+            "AOF_QUERY_MAX_VM_STEPS": "750000",
+            "AOF_QUERY_PROGRESS_INTERVAL": "250",
+        }
+    )
+    assert limits == QueryExecutionLimits(
+        timeout_ms=2500,
+        max_rows=500,
+        max_vm_steps=750000,
+        progress_interval=250,
+    )
+    with pytest.raises(TrustedQueryError, match="AOF_QUERY_MAX_ROWS"):
+        QueryExecutionLimits.from_environment({"AOF_QUERY_MAX_ROWS": "unbounded"})
 
 
 def test_unified_executor_runs_datalog_from_the_same_query_contract(tmp_path) -> None:

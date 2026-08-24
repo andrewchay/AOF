@@ -352,6 +352,12 @@ MCP 的编译和查询控制面注入同一 Repository 类型，进程重启后�
 串行化并发幂等写、提供 schema version、全库完整性扫描和 online backup。恢复验收必须先执行
 `verify_all()`，不得把“数据库可打开”视为证据链完整。
 
+真实 SQLite Executor 以 `QueryExecutionLimits` 执行：数据库和 attachment 只按 `mode=ro` 打开，完成
+attachment 后安装 authorizer 拒绝 DDL、DML、PRAGMA、事务和再次 ATTACH；progress handler 同时执行
+deadline、VM step budget 与协作式 cancellation 检查，结果读取使用 `max_rows + 1` 探测并在超限时整体失败，
+不会返回伪装成功的截断结果。REST/MCP 共享 `AOF_QUERY_TIMEOUT_MS`、`AOF_QUERY_MAX_ROWS`、
+`AOF_QUERY_MAX_VM_STEPS` 和 `AOF_QUERY_PROGRESS_INTERVAL`；非法值 fail closed。
+
 签名层统一使用 `DetachedSigningProvider`，Release 与 Query evidence 分别由
 `ProviderReleaseAttestor`、`ProviderQueryEvidenceAttestor` 消费相同的小接口：读取 current key ID、
 对规范化 bytes 签名、按 attestation key ID 验签。`LocalSigningKeyProvider` 是本地参考实现，轮换 current

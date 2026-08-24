@@ -555,6 +555,7 @@ def _semantic_query_control():
     from bridge.decision_provenance import DecisionProvenanceStore
     from bridge.semantic_core import (
         QueryControlPlane,
+        QueryExecutionLimits,
         QueryExecutor,
         SignedPrincipalVerifier,
         SqliteSemanticSqlExecutor,
@@ -594,6 +595,7 @@ def _semantic_query_control():
                     resolver,
                     database=sqlite_database,
                     attachments=sqlite_attachments,
+                    limits=QueryExecutionLimits.from_environment(os.environ),
                 ),
             )
         return executor

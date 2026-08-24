@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import sqlite3
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,6 +81,48 @@ class QueryExecutionScope:
 
     resource_ids: tuple[str, ...] | None = None
     fields: tuple[str, ...] | None = None
+
+
+@dataclass(frozen=True)
+class QueryExecutionLimits:
+    """Fail-closed resource envelope for an external query backend."""
+
+    timeout_ms: int = 30_000
+    max_rows: int = 10_000
+    max_vm_steps: int = 10_000_000
+    progress_interval: int = 1_000
+
+    def __post_init__(self) -> None:
+        for name in ("timeout_ms", "max_rows", "max_vm_steps", "progress_interval"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise TrustedQueryError(f"{name} must be a positive integer")
+
+    @classmethod
+    def from_environment(cls, environment: Mapping[str, str]) -> "QueryExecutionLimits":
+        names = {
+            "timeout_ms": "AOF_QUERY_TIMEOUT_MS",
+            "max_rows": "AOF_QUERY_MAX_ROWS",
+            "max_vm_steps": "AOF_QUERY_MAX_VM_STEPS",
+            "progress_interval": "AOF_QUERY_PROGRESS_INTERVAL",
+        }
+        defaults = cls()
+        values = {}
+        for field, variable in names.items():
+            raw = environment.get(variable, str(getattr(defaults, field)))
+            try:
+                values[field] = int(raw)
+            except (TypeError, ValueError) as exc:
+                raise TrustedQueryError(
+                    f"{variable} must be a positive integer"
+                ) from exc
+        try:
+            return cls(**values)
+        except TrustedQueryError as exc:
+            field = str(exc).split(" ", 1)[0]
+            raise TrustedQueryError(
+                f"{names.get(field, field)} must be a positive integer"
+            ) from exc
 
 
 class QueryExecutorRegistry:
@@ -486,6 +529,8 @@ class SqliteSemanticSqlExecutor:
         *,
         database: str | Path,
         attachments: Mapping[str, str | Path] | None = None,
+        limits: QueryExecutionLimits | None = None,
+        cancel_check: Callable[[], bool] | None = None,
     ) -> None:
         self.compiler = QueryExecutor(resolver)
         self.database = Path(database).resolve()
@@ -493,6 +538,8 @@ class SqliteSemanticSqlExecutor:
             self._alias(alias): Path(path).resolve()
             for alias, path in (attachments or {}).items()
         }
+        self.limits = limits or QueryExecutionLimits()
+        self.cancel_check = cancel_check or (lambda: False)
 
     def __call__(self, plan: QueryPlan) -> Mapping[str, Any]:
         sql_plan = self.compiler.compile_semantic_sql(plan)
@@ -501,9 +548,28 @@ class SqliteSemanticSqlExecutor:
             f"p{index}": value
             for index, value in enumerate(sql_plan.parameter_values, start=1)
         }
+        started = time.monotonic()
+        deadline = started + self.limits.timeout_ms / 1_000
+        progress_steps = 0
+        interrupted_by: str | None = None
+
+        def progress() -> int:
+            nonlocal progress_steps, interrupted_by
+            progress_steps += self.limits.progress_interval
+            if self.cancel_check():
+                interrupted_by = "cancelled"
+                return 1
+            if time.monotonic() >= deadline:
+                interrupted_by = "timeout"
+                return 1
+            if progress_steps > self.limits.max_vm_steps:
+                interrupted_by = "VM step limit exceeded"
+                return 1
+            return 0
+
         try:
             with sqlite3.connect(
-                f"file:{self.database}?mode=ro", uri=True
+                f"file:{self.database}?mode=ro", uri=True, timeout=1
             ) as connection:
                 connection.row_factory = sqlite3.Row
                 for alias, path in sorted(self.attachments.items()):
@@ -512,10 +578,20 @@ class SqliteSemanticSqlExecutor:
                         (f"file:{path}?mode=ro",),
                     )
                 connection.execute("PRAGMA query_only = ON")
+                connection.set_authorizer(self._authorize_read_only)
+                connection.set_progress_handler(progress, self.limits.progress_interval)
                 cursor = connection.execute(sql_plan.sql, parameters)
                 columns = tuple(item[0] for item in (cursor.description or ()))
-                rows = [dict(row) for row in cursor.fetchall()]
+                rows = [dict(row) for row in cursor.fetchmany(self.limits.max_rows + 1)]
+                if len(rows) > self.limits.max_rows:
+                    raise TrustedQueryError(
+                        f"semantic SQL row limit exceeded: {self.limits.max_rows}"
+                    )
         except sqlite3.Error as exc:
+            if interrupted_by is not None:
+                raise TrustedQueryError(
+                    f"semantic SQL execution {interrupted_by}"
+                ) from exc
             raise TrustedQueryError(f"semantic SQL execution failed: {exc}") from exc
         return {
             "executed": True,
@@ -525,7 +601,51 @@ class SqliteSemanticSqlExecutor:
             "columns": list(columns),
             "rows": canonical_data(rows),
             "row_count": len(rows),
+            "execution_limits": {
+                "timeout_ms": self.limits.timeout_ms,
+                "max_rows": self.limits.max_rows,
+                "max_vm_steps": self.limits.max_vm_steps,
+            },
         }
+
+    @staticmethod
+    def _authorize_read_only(
+        action: int,
+        _argument1: str | None,
+        _argument2: str | None,
+        _database: str | None,
+        _trigger: str | None,
+    ) -> int:
+        denied = {
+            sqlite3.SQLITE_INSERT,
+            sqlite3.SQLITE_UPDATE,
+            sqlite3.SQLITE_DELETE,
+            sqlite3.SQLITE_CREATE_INDEX,
+            sqlite3.SQLITE_CREATE_TABLE,
+            sqlite3.SQLITE_CREATE_TEMP_INDEX,
+            sqlite3.SQLITE_CREATE_TEMP_TABLE,
+            sqlite3.SQLITE_CREATE_TEMP_TRIGGER,
+            sqlite3.SQLITE_CREATE_TEMP_VIEW,
+            sqlite3.SQLITE_CREATE_TRIGGER,
+            sqlite3.SQLITE_CREATE_VIEW,
+            sqlite3.SQLITE_DROP_INDEX,
+            sqlite3.SQLITE_DROP_TABLE,
+            sqlite3.SQLITE_DROP_TEMP_INDEX,
+            sqlite3.SQLITE_DROP_TEMP_TABLE,
+            sqlite3.SQLITE_DROP_TEMP_TRIGGER,
+            sqlite3.SQLITE_DROP_TEMP_VIEW,
+            sqlite3.SQLITE_DROP_TRIGGER,
+            sqlite3.SQLITE_DROP_VIEW,
+            sqlite3.SQLITE_ALTER_TABLE,
+            sqlite3.SQLITE_REINDEX,
+            sqlite3.SQLITE_ANALYZE,
+            sqlite3.SQLITE_ATTACH,
+            sqlite3.SQLITE_DETACH,
+            sqlite3.SQLITE_PRAGMA,
+            sqlite3.SQLITE_TRANSACTION,
+            sqlite3.SQLITE_SAVEPOINT,
+        }
+        return sqlite3.SQLITE_DENY if action in denied else sqlite3.SQLITE_OK
 
     def _snapshot(self) -> dict[str, Any]:
         sources = {"main": self._file_digest(self.database)}
