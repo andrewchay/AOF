@@ -1,6 +1,16 @@
 """AOF Semantic IR and immutable Knowledge Release contracts."""
 
 from .canonical import CanonicalizationError, canonical_data, canonical_json, content_digest
+from .continuous_ingest import (
+    ContinuousIngestionError,
+    ContinuousIngestionService,
+    IngestionRun,
+    KnowledgeSource,
+    SourceBatch,
+    SourceConnector,
+    SourceConnectorRegistry,
+    SqliteContinuousIngestionRepository,
+)
 from .action_contracts import ActionCatalog, ActionContractError
 from .action_plans import (
     ActionPlan,
@@ -109,6 +119,14 @@ from .releases import (
 )
 
 __all__ = [
+    "ContinuousIngestionError",
+    "ContinuousIngestionService",
+    "IngestionRun",
+    "KnowledgeSource",
+    "SourceBatch",
+    "SourceConnector",
+    "SourceConnectorRegistry",
+    "SqliteContinuousIngestionRepository",
     "CanonicalizationError",
     "ActionCatalog",
     "ActionContractError",
