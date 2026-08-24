@@ -39,6 +39,7 @@ from .simulation import (
     SimulationRun,
     SqliteBitemporalSimulationService,
 )
+from .runtime_control import EnterpriseRuntimeControlPlane
 from .action_contracts import ActionCatalog, ActionContractError
 from .action_plans import (
     ActionPlan,
@@ -176,6 +177,7 @@ __all__ = [
     "SimulationRequest",
     "SimulationRun",
     "SqliteBitemporalSimulationService",
+    "EnterpriseRuntimeControlPlane",
     "CanonicalizationError",
     "ActionCatalog",
     "ActionContractError",

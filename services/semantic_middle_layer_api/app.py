@@ -4116,6 +4116,25 @@ class ContinuousCompileStageReq(BaseModel):
     parent_release: Optional[str] = None
 
 
+class RuntimeReasoningReq(BaseModel):
+    ruleset_id: str = Field(min_length=1)
+    program: str = Field(min_length=1)
+    change: dict[str, Any]
+
+
+class RuntimeWorkflowStartReq(BaseModel):
+    plan: dict[str, Any]
+    rationale: str = Field(min_length=1)
+
+
+class RuntimeWorkflowApprovalReq(BaseModel):
+    rationale: str = Field(min_length=1)
+
+
+class RuntimeSimulationReq(BaseModel):
+    request: dict[str, Any]
+
+
 def _semantic_governance():
     from bridge.semantic_core.compilers import default_compiler_registry
     from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
@@ -4390,6 +4409,90 @@ def _continuous_knowledge_compiler(tenant_id: str):
         ),
         decisions,
     )
+
+
+def _enterprise_runtime_control():
+    from bridge.semantic_core import (
+        ActionConnectorRegistry,
+        ActionRunService,
+        BitemporalObjectStore,
+        EnterpriseRuntimeControlPlane,
+        SignedPrincipalVerifier,
+        SqliteActionRunRepository,
+        SqliteBitemporalSimulationService,
+        SqliteIncrementalReasoningRuntime,
+        SqliteWorkflowRunRepository,
+        WorkflowRunService,
+    )
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    root = Path(os.environ.get(
+        'AOF_ENTERPRISE_RUNTIME_STATE_DIR',
+        str(AOF_ROOT / 'data' / 'enterprise_runtime'),
+    ))
+    decisions = _decision_store()
+    connectors = _semantic_action_connectors(ActionConnectorRegistry)
+    actions = ActionRunService(
+        SqliteActionRunRepository(
+            Path(os.environ.get(
+                'AOF_ACTION_RUN_DATABASE',
+                str(AOF_ROOT / 'data' / 'semantic_actions' / 'action-runs.sqlite3'),
+            ))
+        ),
+        connectors=connectors,
+        decision_store=decisions,
+    )
+    return EnterpriseRuntimeControlPlane(
+        verifier=SignedPrincipalVerifier(
+            key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+            secret=secret,
+        ),
+        reasoning=SqliteIncrementalReasoningRuntime(
+            Path(os.environ.get(
+                'AOF_REASONING_RUNTIME_DATABASE', str(root / 'reasoning.sqlite3')
+            )),
+            decision_store=decisions,
+        ),
+        workflows=WorkflowRunService(
+            SqliteWorkflowRunRepository(
+                Path(os.environ.get(
+                    'AOF_WORKFLOW_RUN_DATABASE', str(root / 'workflows.sqlite3')
+                ))
+            ),
+            actions=actions,
+            decision_store=decisions,
+        ),
+        simulations=SqliteBitemporalSimulationService(
+            Path(os.environ.get(
+                'AOF_SIMULATION_RUN_DATABASE', str(root / 'simulations.sqlite3')
+            )),
+            objects=BitemporalObjectStore(
+                Path(os.environ.get(
+                    'AOF_BITEMPORAL_OBJECT_DATABASE', str(root / 'objects.sqlite3')
+                ))
+            ),
+            decision_store=decisions,
+        ),
+    )
+
+
+def _enterprise_runtime_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core.identity import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif any(token in message for token in ('already bound', 'changed concurrently', 'cannot change')):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
 
 
 def _semantic_governance_error(exc: Exception) -> HTTPException:
@@ -4851,6 +4954,161 @@ async def stage_continuous_knowledge_compilation(
         )
     except Exception as exc:
         raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/reasoning-runs', status_code=201)
+async def apply_enterprise_reasoning(
+    req: RuntimeReasoningReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().apply_reasoning(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/reasoning-runs')
+async def list_enterprise_reasoning_runs(request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().list_reasoning_runs(headers=request.headers)
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/reasoning/facts')
+async def query_enterprise_reasoning_facts(
+    request: Request, ruleset_id: str, predicate: Optional[str] = None
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().query_reasoning(
+            ruleset_id=ruleset_id, predicate=predicate, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/reasoning-runs/{run_id}')
+async def get_enterprise_reasoning_run(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().get_reasoning_run(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/reasoning-runs/{run_id}/replay')
+async def replay_enterprise_reasoning_run(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().replay_reasoning(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/workflow-runs', status_code=201)
+async def start_enterprise_workflow(
+    req: RuntimeWorkflowStartReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().start_workflow(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/workflow-runs')
+async def list_enterprise_workflows(request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().list_workflow_runs(headers=request.headers)
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/workflow-runs/{run_id}')
+async def get_enterprise_workflow(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().get_workflow_run(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/workflow-runs/{run_id}/nodes/{node_id}/approve')
+async def approve_enterprise_workflow_node(
+    run_id: str,
+    node_id: str,
+    req: RuntimeWorkflowApprovalReq,
+    request: Request,
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().approve_workflow_node(
+            run_id, node_id, req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/workflow-runs/{run_id}/advance')
+async def advance_enterprise_workflow(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().advance_workflow(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/simulations', status_code=201)
+async def run_enterprise_simulation(
+    req: RuntimeSimulationReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().simulate(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/simulations')
+async def list_enterprise_simulations(request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().list_simulations(headers=request.headers)
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/simulations/{run_id}')
+async def get_enterprise_simulation(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().get_simulation(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/simulations/{run_id}/replay')
+async def replay_enterprise_simulation(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().replay_simulation(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
 
 
 # ==================== Ontology governance & deterministic reasoning ====================

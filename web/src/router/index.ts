@@ -36,6 +36,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '本体治理', icon: 'Connection' },
       },
       {
+        path: 'runtime',
+        name: 'runtime',
+        component: () => import('@/views/RuntimeView.vue'),
+        meta: { title: '企业运行室', icon: 'Cpu' },
+      },
+      {
         path: 'agent',
         name: 'agent',
         component: () => import('@/views/AgentTestView.vue'),

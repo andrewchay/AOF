@@ -11,6 +11,7 @@ const menuItems = [
   { path: '/okf', title: 'OKF 知识包', icon: 'Collection' },
   { path: '/graph', title: '知识图谱', icon: 'Share' },
   { path: '/ontology', title: '本体治理', icon: 'Connection' },
+  { path: '/runtime', title: '企业运行室', icon: 'Cpu' },
   { path: '/agent', title: 'Agent 测试', icon: 'ChatDotRound' },
 ]
 

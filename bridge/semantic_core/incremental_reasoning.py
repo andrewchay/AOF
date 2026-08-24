@@ -359,6 +359,24 @@ class SqliteIncrementalReasoningRuntime:
             "reproduced": replay["result_hash"] == run.result_hash,
         }
 
+    def get_run(self, run_id: str, *, tenant_id: str) -> IncrementalReasoningRun:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM reasoning_runs WHERE run_id=? AND tenant_id=?",
+                (run_id, tenant_id),
+            ).fetchone()
+        if row is None:
+            raise IncrementalReasoningError(f"reasoning run not found: {run_id}")
+        return IncrementalReasoningRun.from_dict(json.loads(row[0]))
+
+    def list_runs(self, *, tenant_id: str) -> list[IncrementalReasoningRun]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM reasoning_runs WHERE tenant_id=? ORDER BY rowid DESC",
+                (tenant_id,),
+            ).fetchall()
+        return [IncrementalReasoningRun.from_dict(json.loads(row[0])) for row in rows]
+
     def verify_all(self) -> dict[str, Any]:
         errors: list[str] = []
         with self._connect() as connection:
@@ -445,4 +463,3 @@ class SqliteIncrementalReasoningRuntime:
             (str(item["predicate"]), tuple(str(term) for term in item["terms"]))
             for item in values
         }
-

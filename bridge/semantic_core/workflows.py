@@ -391,6 +391,14 @@ class SqliteWorkflowRunRepository:
             ).fetchone()
         return WorkflowRun.from_dict(json.loads(row[0])) if row else None
 
+    def list_runs(self, *, tenant_id: str) -> list[WorkflowRun]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM workflow_runs WHERE tenant_id=? ORDER BY rowid DESC",
+                (tenant_id,),
+            ).fetchall()
+        return [WorkflowRun.from_dict(json.loads(row[0])) for row in rows]
+
     def put_new(self, run: WorkflowRun) -> WorkflowRun:
         with self._connect() as connection:
             try:

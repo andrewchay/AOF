@@ -428,6 +428,14 @@ class SqliteBitemporalSimulationService:
             raise SimulationError(f"simulation run not found: {run_id}")
         return SimulationRun.from_dict(json.loads(row[0]))
 
+    def list_runs(self, *, tenant_id: str) -> list[SimulationRun]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM simulation_runs WHERE tenant_id=? ORDER BY rowid DESC",
+                (tenant_id,),
+            ).fetchall()
+        return [SimulationRun.from_dict(json.loads(row[0])) for row in rows]
+
     def verify_all(self) -> dict[str, Any]:
         errors = []
         with self._connect() as connection:
@@ -493,4 +501,3 @@ class SqliteBitemporalSimulationService:
             for item in derived
             if str(item.get("predicate")) in wanted
         )
-
