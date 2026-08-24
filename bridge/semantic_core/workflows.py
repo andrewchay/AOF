@@ -337,6 +337,16 @@ class WorkflowRun:
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "WorkflowRun":
         plan = WorkflowPlan.from_dict(value.get("plan", {}))
+        history = value.get("history", ())
+        if not isinstance(history, list | tuple):
+            raise WorkflowRunError("workflow run history must be a list")
+        for item in history:
+            payload = {key: inner for key, inner in item.items() if key != "event_digest"}
+            if item.get("event_digest") != content_digest(payload):
+                raise WorkflowRunError("workflow run event digest mismatch")
+        nodes = value.get("nodes", {})
+        if not isinstance(nodes, Mapping) or set(nodes) != set(plan.nodes):
+            raise WorkflowRunError("workflow run nodes do not match the frozen plan")
         run = cls._build(
             run_id=_text(value.get("run_id"), "run_id"),
             tenant_id=_text(value.get("tenant_id"), "tenant_id"),
@@ -344,8 +354,8 @@ class WorkflowRun:
             plan=plan.to_dict(),
             requester=_text(value.get("requester"), "requester"),
             status=_text(value.get("status"), "status"),
-            nodes=value.get("nodes", {}),
-            history=value.get("history", ()),
+            nodes=nodes,
+            history=history,
         )
         if value.get("run_digest") != run.run_digest:
             raise WorkflowRunError("workflow run digest mismatch")
@@ -456,6 +466,18 @@ class SqliteWorkflowRunRepository:
             except Exception as exc:
                 errors.append(f"run/{run_id}: {exc}")
         return {"valid": not errors, "workflow_run_count": len(rows), "errors": errors}
+
+    def backup_to(self, destination: str | Path) -> Path:
+        target = Path(destination)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source = self._connect()
+        backup = sqlite3.connect(target)
+        try:
+            source.backup(backup)
+        finally:
+            backup.close()
+            source.close()
+        return target
 
 
 class WorkflowRunService:

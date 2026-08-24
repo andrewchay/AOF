@@ -42,6 +42,11 @@ class EnterpriseRuntimeControlPlane:
             change=ReasoningFactChange.create(
                 change_id=self._text(change.get("change_id"), "change_id"),
                 tenant_id=principal.tenant_id,
+                effective_at=(
+                    str(change["effective_at"])
+                    if change.get("effective_at") is not None
+                    else None
+                ),
                 assertions=self._fact_values(change.get("assertions", ())),
                 retractions=self._fact_values(change.get("retractions", ())),
                 source=change.get("source", {}),
@@ -223,4 +228,3 @@ class EnterpriseRuntimeControlPlane:
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field} must be a non-empty string")
         return value.strip()
-

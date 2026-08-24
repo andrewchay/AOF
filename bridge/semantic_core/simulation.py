@@ -251,6 +251,7 @@ class SimulationRun:
         ):
             payload[field] = tuple(payload[field])
         run = cls(**payload)
+        SimulationRequest.from_dict(run.request)
         expected = content_digest(
             {key: item for key, item in run.to_dict().items() if key != "run_digest"}
         )
@@ -453,6 +454,18 @@ class SqliteBitemporalSimulationService:
             except Exception as exc:
                 errors.append(f"run/{run_id}: {exc}")
         return {"valid": not errors, "simulation_run_count": len(rows), "errors": errors}
+
+    def backup_to(self, destination: str | Path) -> Path:
+        target = Path(destination)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source = self._connect()
+        backup = sqlite3.connect(target)
+        try:
+            source.backup(backup)
+        finally:
+            backup.close()
+            source.close()
+        return target
 
     def _record_decision(self, run: SimulationRun) -> None:
         if self.decisions.get(run.audit_decision_id) is not None:

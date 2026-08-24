@@ -126,3 +126,42 @@ def test_ruleset_state_is_tenant_isolated_version_pinned_and_tamper_evident(
 
     assert verification["valid"] is False
     assert verification["errors"] == ["state/acme/eligibility@1"]
+    with pytest.raises(IncrementalReasoningError, match="state digest mismatch"):
+        runtime.query(tenant_id="acme", ruleset_id="eligibility@1")
+
+
+def test_out_of_order_changes_use_effective_time_not_arrival_order(tmp_path) -> None:
+    runtime = SqliteIncrementalReasoningRuntime(
+        tmp_path / "reasoning.sqlite3",
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+    )
+    program = "alert(X) :- signal(X)."
+    runtime.apply(
+        ruleset_id="signals@1",
+        program=program,
+        change=ReasoningFactChange.create(
+            change_id="retract-newer",
+            tenant_id="acme",
+            effective_at="2026-08-24T11:00:00+00:00",
+            retractions=[("signal", ["alice"])],
+            source={"type": "event", "id": "retract-newer"},
+        ),
+        actor="engine:reasoning",
+    )
+    late_arrival = runtime.apply(
+        ruleset_id="signals@1",
+        program=program,
+        change=ReasoningFactChange.create(
+            change_id="assert-older",
+            tenant_id="acme",
+            effective_at="2026-08-24T10:00:00+00:00",
+            assertions=[("signal", ["alice"])],
+            source={"type": "event", "id": "assert-older"},
+        ),
+        actor="engine:reasoning",
+    )
+
+    assert late_arrival.delta["asserted_added"] == []
+    assert runtime.query(
+        tenant_id="acme", ruleset_id="signals@1", predicate="alert"
+    ) == []
