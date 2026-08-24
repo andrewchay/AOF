@@ -18,6 +18,7 @@ from bridge.semantic_core.compilers import (
     default_compiler_registry,
 )
 from bridge.semantic_core.governance import (
+    SemanticFinding,
     SemanticGovernancePolicy,
     SemanticGovernanceService,
 )
@@ -129,3 +130,78 @@ def test_clean_change_set_requires_review_then_replay_before_promotion(
     assert "knowledge_ingestion_accepted" in decision_types
     assert "semantic_compile_replay" in decision_types
     assert decisions.verify_integrity()["valid"] is True
+
+    staged_again = continuous.stage(
+        ingested.run_id,
+        tenant_id="acme",
+        release_id="crm-knowledge@1.0.0",
+        resources=[resource],
+        actor="editor:ingestion",
+        validator="validator:semantic-gate",
+    )
+    assert staged_again["state"] == "published"
+    assert staged_again["idempotent_replay"] is True
+
+
+def test_semantic_validator_blocks_continuous_proposal(tmp_path) -> None:
+    decisions = DecisionProvenanceStore(tmp_path / "decisions.jsonl")
+    ingestion = SqliteContinuousIngestionRepository(tmp_path / "ingestion.sqlite3")
+    source = ingestion.register_source(
+        KnowledgeSource.create(
+            source_id="crm-customers",
+            tenant_id="acme",
+            source_type="fixture",
+            owner="crm-platform",
+            config={"snapshot_mode": "full"},
+        )
+    )
+    connectors = SourceConnectorRegistry()
+    connectors.register("fixture", CustomerFixture())
+    ingested = ContinuousIngestionService(ingestion, connectors).ingest_once(
+        source.source_id, tenant_id="acme", actor="ingestor:worker"
+    )
+    resource = SemanticResource.create(
+        resource_id="aof://acme/crm/object-type/customer",
+        kind=ResourceKind.OBJECT_TYPE,
+        name="customer",
+        domain="crm",
+        owner="crm-platform",
+        spec={"source_id": source.source_id, "identity_field": "id"},
+    )
+
+    def blocking_validator(resources):
+        return [
+            SemanticFinding(
+                finding_id="missing-required-mapping",
+                validator="mapping-quality",
+                severity="blocking",
+                message="source field is not mapped",
+                resource_id=resources[0].resource_id,
+            )
+        ]
+
+    registry = default_compiler_registry()
+    governance = SemanticGovernanceService(
+        tmp_path / "governance",
+        decision_store=decisions,
+        compiler_registry=registry,
+        validators=[blocking_validator],
+        access_policy=SemanticGovernancePolicy(),
+    )
+    compilation = CompilationRunService(
+        CompilationRunRepository(tmp_path / "compiler" / "acme"),
+        registry=registry,
+        decision_store=decisions,
+    )
+    staged = ContinuousKnowledgeCompiler(
+        ingestion, governance, compilation, decisions
+    ).stage(
+        ingested.run_id,
+        tenant_id="acme",
+        release_id="crm-knowledge@blocked",
+        resources=[resource],
+        actor="editor:ingestion",
+        validator="validator:semantic-gate",
+    )
+
+    assert staged["state"] == "conflict_review"

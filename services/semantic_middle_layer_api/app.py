@@ -4110,6 +4110,12 @@ class KnowledgeIngestReq(BaseModel):
     attempt_id: str = Field(min_length=1)
 
 
+class ContinuousCompileStageReq(BaseModel):
+    release_id: str = Field(min_length=1)
+    resources: list[dict[str, Any]] = Field(min_length=1)
+    parent_release: Optional[str] = None
+
+
 def _semantic_governance():
     from bridge.semantic_core.compilers import default_compiler_registry
     from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
@@ -4345,6 +4351,44 @@ def _continuous_ingestion_control():
             secret=secret,
         ),
         decisions=_decision_store(),
+    )
+
+
+def _continuous_knowledge_compiler(tenant_id: str):
+    from bridge.semantic_core import (
+        ContinuousKnowledgeCompiler,
+        SqliteContinuousIngestionRepository,
+    )
+    from bridge.semantic_core.compilers import (
+        CompilationRunRepository,
+        CompilationRunService,
+        SqliteCompilationRunRepository,
+        default_compiler_registry,
+    )
+
+    database = Path(os.environ.get(
+        'AOF_CONTINUOUS_INGESTION_DATABASE',
+        str(AOF_ROOT / 'data' / 'continuous_ingestion' / 'state.sqlite3'),
+    ))
+    root = Path(os.environ.get(
+        'AOF_COMPILER_STATE_DIR', str(AOF_ROOT / 'data' / 'semantic_compiler')
+    ))
+    repository_type = (
+        SqliteCompilationRunRepository
+        if os.environ.get('AOF_RUNTIME_MODE', 'development').lower() == 'production'
+        else CompilationRunRepository
+    )
+    registry = default_compiler_registry()
+    decisions = _decision_store()
+    return ContinuousKnowledgeCompiler(
+        SqliteContinuousIngestionRepository(database),
+        _semantic_governance(),
+        CompilationRunService(
+            repository_type(root / tenant_id),
+            registry=registry,
+            decision_store=decisions,
+        ),
+        decisions,
     )
 
 
@@ -4785,6 +4829,28 @@ async def get_continuous_ingestion_run(run_id: str, request: Request) -> dict[st
         return _continuous_ingestion_control().get_run(run_id, headers=request.headers)
     except Exception as exc:
         raise _continuous_ingestion_error(exc) from exc
+
+
+@app.post('/v1/knowledge/ingestion-runs/{run_id}/stage', status_code=201)
+async def stage_continuous_knowledge_compilation(
+    run_id: str, req: ContinuousCompileStageReq, request: Request
+) -> dict[str, Any]:
+    from bridge.semantic_core import SemanticResource
+
+    try:
+        principal, actor = _semantic_principal(request, 'create')
+        validator = principal.actor_for('validate')
+        return _continuous_knowledge_compiler(principal.tenant_id).stage(
+            run_id,
+            tenant_id=principal.tenant_id,
+            release_id=req.release_id,
+            resources=[SemanticResource.from_dict(item) for item in req.resources],
+            actor=actor,
+            validator=validator,
+            parent_release=req.parent_release,
+        )
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
 
 
 # ==================== Ontology governance & deterministic reasoning ====================

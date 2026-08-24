@@ -51,11 +51,55 @@ class ContinuousKnowledgeCompiler:
         run = self.ingestion.get_run(ingestion_run_id, tenant_id=tenant_id)
         changes = self.ingestion.get_change_set(ingestion_run_id, tenant_id=tenant_id)
         if any(changes.schema_drift.values()) and not self.policy.allow_schema_drift:
+            decision_id = f"decision:ingestion-schema-drift:{run.run_id}"
+            if self.decisions.get(decision_id) is None:
+                self.decisions.record(
+                    decision_id=decision_id,
+                    agent_id=validator,
+                    decision_type="knowledge_ingestion_schema_drift_blocked",
+                    conclusion=f"blocked {run.run_id} pending schema drift review",
+                    rationale="The continuous compilation policy forbids unreviewed schema drift.",
+                    evidence=[
+                        {
+                            "id": run.run_id,
+                            "type": "ingestion_run",
+                            "content_hash": run.run_digest,
+                        },
+                        {
+                            "id": changes.change_set_digest,
+                            "type": "knowledge_change_set",
+                            "content_hash": changes.change_set_digest,
+                        },
+                    ],
+                    status="blocked",
+                    tenant_id=tenant_id,
+                    policies=["policy:continuous-compile:no-schema-drift"],
+                    tags=["continuous-compile", "schema-drift", "blocked"],
+                )
             return {
                 "state": "schema_drift_review",
                 "ingestion_run_id": run.run_id,
                 "change_set_digest": changes.change_set_digest,
                 "schema_drift": changes.schema_drift,
+                "decision_id": decision_id,
+            }
+        proposal_id = f"continuous-{run.run_id.removeprefix('ingest-')}"
+        try:
+            existing = self.governance.get_proposal(
+                proposal_id, tenant_id=tenant_id
+            )
+        except Exception as exc:
+            if "proposal not found:" not in str(exc):
+                raise
+        else:
+            return {
+                "state": existing["state"],
+                "proposal_id": proposal_id,
+                "candidate_digest": existing["candidate_digest"],
+                "ingestion_run_id": run.run_id,
+                "change_set_digest": changes.change_set_digest,
+                "impact": self.governance.impact(proposal_id, tenant_id=tenant_id),
+                "idempotent_replay": True,
             }
         accepted = self.decisions.record(
             agent_id=actor,
@@ -76,7 +120,6 @@ class ContinuousKnowledgeCompiler:
             ],
             tenant_id=tenant_id,
         )
-        proposal_id = f"continuous-{run.run_id.removeprefix('ingest-')}"
         proposal = self.governance.create_proposal(
             proposal_id=proposal_id,
             release_id=release_id,

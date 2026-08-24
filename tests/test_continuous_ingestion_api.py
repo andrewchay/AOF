@@ -1,6 +1,8 @@
 """Signed REST boundary for enterprise source registration and run evidence."""
 
 from bridge.semantic_core import (
+    ResourceKind,
+    SemanticResource,
     SignedPrincipalVerifier,
     SourceBatch,
     SourceConnectorRegistry,
@@ -34,6 +36,9 @@ def test_signed_rest_source_ingestion_is_tenant_isolated_and_auditable(
     monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_KEY_ID", "ingestion-identity")
     monkeypatch.setenv(
         "AOF_CONTINUOUS_INGESTION_DATABASE", str(tmp_path / "ingestion.sqlite3")
+    )
+    monkeypatch.setenv(
+        "AOF_DECISION_PROVENANCE_FILE", str(tmp_path / "decisions.jsonl")
     )
     connectors = SourceConnectorRegistry()
     connectors.register("fixture-api", ApiFixtureConnector())
@@ -69,6 +74,29 @@ def test_signed_rest_source_ingestion_is_tenant_isolated_and_auditable(
     other = client.get(
         "/v1/knowledge/sources", headers=_headers("viewer", "mallory", "other")
     )
+    resource = SemanticResource.create(
+        resource_id="aof://acme/contracts/object-type/contract",
+        kind=ResourceKind.OBJECT_TYPE,
+        name="contract",
+        domain="contracts",
+        owner="legal-knowledge",
+        spec={"source_id": "contracts", "identity_field": "id"},
+    )
+    stage_headers = SignedPrincipalVerifier(
+        key_id="ingestion-identity", secret=b"ingestion-secret"
+    ).sign_headers(
+        subject="semantic-bot",
+        tenant_id="acme",
+        roles=["editor", "validator"],
+    )
+    staged = client.post(
+        f"/v1/knowledge/ingestion-runs/{run.json()['run_id']}/stage",
+        json={
+            "release_id": "contracts-knowledge@1.0.0",
+            "resources": [resource.to_dict()],
+        },
+        headers=stage_headers,
+    )
 
     assert unauthorized.status_code == 401
     assert created.status_code == 201 and created.json()["owner"] == "owner:alice"
@@ -80,3 +108,5 @@ def test_signed_rest_source_ingestion_is_tenant_isolated_and_auditable(
         "deleted": 0,
     }
     assert other.json()["count"] == 0
+    assert staged.status_code == 201 and staged.json()["state"] == "review"
+    assert staged.json()["ingestion_run_id"] == run.json()["run_id"]
