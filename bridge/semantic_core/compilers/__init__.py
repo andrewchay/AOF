@@ -18,7 +18,14 @@ from .governance import (
     CompilerPolicyFinding,
     CompilerPolicyReport,
 )
-from .runtime_targets import DatalogCompiler, McpCompiler, OwlCompiler, RagCompiler, ShaclCompiler
+from .runtime_targets import (
+    ActionCompiler,
+    DatalogCompiler,
+    McpCompiler,
+    OwlCompiler,
+    RagCompiler,
+    ShaclCompiler,
+)
 from .control_plane import CompilerControlPlane, CompilerControlPlaneError
 from .runs import (
     CompilationRun,
@@ -37,6 +44,7 @@ def default_compiler_registry() -> CompilerRegistry:
         ShaclCompiler(),
         DatalogCompiler(),
         RagCompiler(),
+        ActionCompiler(),
         McpCompiler(),
     ])
 
@@ -65,6 +73,7 @@ __all__ = [
     "ShaclCompiler",
     "DatalogCompiler",
     "RagCompiler",
+    "ActionCompiler",
     "McpCompiler",
     "default_compiler_registry",
     "VerificationReport",

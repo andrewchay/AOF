@@ -1,6 +1,7 @@
 """AOF Semantic IR and immutable Knowledge Release contracts."""
 
 from .canonical import CanonicalizationError, canonical_data, canonical_json, content_digest
+from .action_contracts import ActionCatalog, ActionContractError
 from .attestations import HmacReleaseAttestor
 from .identity import PrincipalVerificationError, SemanticPrincipal, SignedPrincipalVerifier
 from .runtime import SemanticRuntimeConsumer
@@ -84,6 +85,8 @@ from .releases import (
 
 __all__ = [
     "CanonicalizationError",
+    "ActionCatalog",
+    "ActionContractError",
     "HmacReleaseAttestor",
     "PrincipalVerificationError",
     "SemanticPrincipal",

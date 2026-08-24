@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from ..canonical import canonical_json
+from ..action_contracts import ActionCatalog, ActionContractError
 from ..models import ResourceKind, SemanticResource
 from .base import CompilationInput, CompiledArtifact, SemanticCompiler, VerificationReport
 
@@ -100,6 +101,33 @@ class RagCompiler(_RuntimeJsonCompiler):
         ResourceKind.QUERY_TEMPLATE,
     })
     ignored_kinds = frozenset(ResourceKind) - supported_kinds
+
+
+class ActionCompiler(_RuntimeJsonCompiler):
+    target = "actions"
+    version = "1"
+    filename = "action-catalog.json"
+    media_type = "application/vnd.aof.action-catalog+json"
+    supported_kinds = frozenset(
+        {ResourceKind.ACTION_TYPE, ResourceKind.FUNCTION, ResourceKind.WORKFLOW}
+    )
+    ignored_kinds = frozenset(ResourceKind) - supported_kinds
+    requires_targets = ("semantic-json",)
+
+    def validate(self, compilation: CompilationInput) -> VerificationReport:
+        report = super().validate(compilation)
+        if not report.valid:
+            return report
+        try:
+            ActionCatalog.build(compilation.release, compilation.resources)
+        except ActionContractError as exc:
+            return VerificationReport(False, (str(exc),))
+        return report
+
+    def payload(
+        self, compilation: CompilationInput, resources: tuple[SemanticResource, ...]
+    ) -> dict[str, Any]:
+        return ActionCatalog.build(compilation.release, compilation.resources).to_dict()
 
 
 class McpCompiler(_RuntimeJsonCompiler):

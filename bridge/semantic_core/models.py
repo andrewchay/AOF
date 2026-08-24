@@ -35,6 +35,9 @@ class ResourceKind(str, Enum):
     QUERY_TEMPLATE = "QueryTemplate"
     QUERY_CONTRACT = "QueryContract"
     RETRIEVAL_PROFILE = "RetrievalProfile"
+    FUNCTION = "Function"
+    ACTION_TYPE = "ActionType"
+    WORKFLOW = "Workflow"
     POLICY = "Policy"
 
 
