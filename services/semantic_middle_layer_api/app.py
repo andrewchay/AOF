@@ -4044,7 +4044,7 @@ def _semantic_governance():
     from bridge.semantic_core.compilers import default_compiler_registry
     from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
     from bridge.semantic_core.releases import SqliteReleaseRepository
-    from bridge.semantic_core.attestations import HmacReleaseAttestor
+    from bridge.semantic_core.keys import LocalSigningKeyProvider, ProviderReleaseAttestor
     from bridge.semantic_core.validators import (
         ontology_release_validator,
         semantic_query_regression_validator,
@@ -4052,9 +4052,13 @@ def _semantic_governance():
 
     governance_root = AOF_ROOT / 'data' / 'semantic_governance'
     signing_secret = os.environ.get('AOF_RELEASE_SIGNING_SECRET', '').encode('utf-8')
-    attestor = HmacReleaseAttestor(
-        key_id=os.environ.get('AOF_RELEASE_SIGNING_KEY_ID', 'release-key-default'),
-        secret=signing_secret,
+    release_key_id = os.environ.get(
+        'AOF_RELEASE_SIGNING_KEY_ID', 'release-key-default'
+    )
+    attestor = ProviderReleaseAttestor(
+        LocalSigningKeyProvider(
+            {release_key_id: signing_secret}, current_key_id=release_key_id
+        )
     ) if signing_secret else None
     return SemanticGovernanceService(
         governance_root,
@@ -4087,11 +4091,14 @@ def _semantic_compiler_control():
 
 def _semantic_query_control():
     from bridge.semantic_core import (
-        HmacQueryEvidenceAttestor,
         QueryControlPlane,
         QueryExecutor,
         SignedPrincipalVerifier,
         SqliteSemanticSqlExecutor,
+    )
+    from bridge.semantic_core.keys import (
+        LocalSigningKeyProvider,
+        ProviderQueryEvidenceAttestor,
     )
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
@@ -4135,13 +4142,21 @@ def _semantic_query_control():
             secret=secret,
         ),
         decision_store=_decision_store(),
-        evidence_attestor=HmacQueryEvidenceAttestor(
-            key_id=os.environ.get(
-                'AOF_QUERY_EVIDENCE_SIGNING_KEY_ID', 'query-evidence-key-default'
-            ),
-            secret=os.environ.get(
-                'AOF_QUERY_EVIDENCE_SIGNING_SECRET', secret.decode('utf-8')
-            ).encode('utf-8'),
+        evidence_attestor=ProviderQueryEvidenceAttestor(
+            LocalSigningKeyProvider(
+                {
+                    os.environ.get(
+                        'AOF_QUERY_EVIDENCE_SIGNING_KEY_ID',
+                        'query-evidence-key-default',
+                    ): os.environ.get(
+                        'AOF_QUERY_EVIDENCE_SIGNING_SECRET', secret.decode('utf-8')
+                    ).encode('utf-8')
+                },
+                current_key_id=os.environ.get(
+                    'AOF_QUERY_EVIDENCE_SIGNING_KEY_ID',
+                    'query-evidence-key-default',
+                ),
+            )
         ),
         executor_factory=executor_factory,
     )

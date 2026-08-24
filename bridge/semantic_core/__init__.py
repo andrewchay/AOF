@@ -54,7 +54,17 @@ from .query_policy import (
     QueryPolicyReport,
     QueryPolicyWaiver,
 )
-from .keys import KeyringProvider, ReleaseKeyProvider, RotatingReleaseAttestor
+from .keys import (
+    DetachedSigningProvider,
+    ExternalSignerClient,
+    ExternalSigningProvider,
+    KeyringProvider,
+    LocalSigningKeyProvider,
+    ProviderQueryEvidenceAttestor,
+    ProviderReleaseAttestor,
+    ReleaseKeyProvider,
+    RotatingReleaseAttestor,
+)
 from .models import ResourceKind, SemanticModelError, SemanticResource, validate_resource_id
 from .governance import (
     SemanticFinding,
@@ -124,6 +134,12 @@ __all__ = [
     "QueryPolicyWaiver",
     "KeyringProvider",
     "ReleaseKeyProvider",
+    "DetachedSigningProvider",
+    "ExternalSignerClient",
+    "ExternalSigningProvider",
+    "LocalSigningKeyProvider",
+    "ProviderQueryEvidenceAttestor",
+    "ProviderReleaseAttestor",
     "RotatingReleaseAttestor",
     "ResourceKind",
     "ResourceRevisionRef",

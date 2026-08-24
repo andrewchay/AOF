@@ -345,6 +345,11 @@ liveness、metrics、readiness 和 SLO 诊断入口，其余业务流量 fail cl
 逐 Manifest 摘要/租户/索引一致性扫描，以及 SQLite online backup。备份文件可直接由新 Repository
 实例恢复并再次执行完整性验证；同一 tenant/release 的冲突摘要仍由事务唯一键阻断。
 
-签名层通过 `ReleaseKeyProvider` 与具体密钥来源解耦。`RotatingReleaseAttestor` 总是使用 provider 的
-current key 签名，并按 attestation 中的 key ID 获取历史密钥验签，因此轮换不会让旧 Release 失去
-可验证性。`KeyringProvider` 用于本地和测试；生产可用相同协议对接 KMS/HSM，业务层不接触主密钥。
+签名层统一使用 `DetachedSigningProvider`，Release 与 Query evidence 分别由
+`ProviderReleaseAttestor`、`ProviderQueryEvidenceAttestor` 消费相同的小接口：读取 current key ID、
+对规范化 bytes 签名、按 attestation key ID 验签。`LocalSigningKeyProvider` 是本地参考实现，轮换 current
+key 后仍保留历史 key 验签，因此旧 Release 与 QueryRun 不会失去可验证性。
+
+生产 KMS/HSM 通过 `ExternalSigningProvider` 接入；它只委托 `sign/verify`，没有读取 key material 的方法，
+业务层和 attestor 从接口上都无法取得主密钥。外部签名失败会直接中止发布或 QueryRun 持久化，不降级到本地
+密钥。旧 `ReleaseKeyProvider/RotatingReleaseAttestor` 保留兼容，新增代码统一使用 detached provider。

@@ -156,6 +156,10 @@ curl http://localhost:8787/v1/ops/slo/targets
 三个信任域的 secret 必须分别生成且至少 32 bytes，不能复用；readiness 输出只包含错误码和配置名，
 不会回显密钥值。运行模式仅允许 `development`、`test`、`production`，拼写错误会 fail closed。
 
+Release 与 Query evidence attestor 均使用统一 `DetachedSigningProvider`。默认本地部署使用独立
+`LocalSigningKeyProvider`；KMS/HSM 集成实现 `ExternalSignerClient.sign/verify` 并注入
+`ExternalSigningProvider`，无需也不应向 AOF 返回密钥明文。
+
 ### 查看日志
 
 ```bash

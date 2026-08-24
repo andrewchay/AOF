@@ -544,11 +544,14 @@ async def _tool_semantic_compile_get_channel(args: dict[str, Any]) -> dict[str, 
 def _semantic_query_control():
     from bridge.decision_provenance import DecisionProvenanceStore
     from bridge.semantic_core import (
-        HmacQueryEvidenceAttestor,
         QueryControlPlane,
         QueryExecutor,
         SignedPrincipalVerifier,
         SqliteSemanticSqlExecutor,
+    )
+    from bridge.semantic_core.keys import (
+        LocalSigningKeyProvider,
+        ProviderQueryEvidenceAttestor,
     )
 
     secret = os.environ.get("AOF_SEMANTIC_IDENTITY_SECRET", "").encode("utf-8")
@@ -590,13 +593,21 @@ def _semantic_query_control():
             secret=secret,
         ),
         decision_store=DecisionProvenanceStore(),
-        evidence_attestor=HmacQueryEvidenceAttestor(
-            key_id=os.environ.get(
-                "AOF_QUERY_EVIDENCE_SIGNING_KEY_ID", "query-evidence-key-default"
-            ),
-            secret=os.environ.get(
-                "AOF_QUERY_EVIDENCE_SIGNING_SECRET", secret.decode("utf-8")
-            ).encode("utf-8"),
+        evidence_attestor=ProviderQueryEvidenceAttestor(
+            LocalSigningKeyProvider(
+                {
+                    os.environ.get(
+                        "AOF_QUERY_EVIDENCE_SIGNING_KEY_ID",
+                        "query-evidence-key-default",
+                    ): os.environ.get(
+                        "AOF_QUERY_EVIDENCE_SIGNING_SECRET", secret.decode("utf-8")
+                    ).encode("utf-8")
+                },
+                current_key_id=os.environ.get(
+                    "AOF_QUERY_EVIDENCE_SIGNING_KEY_ID",
+                    "query-evidence-key-default",
+                ),
+            )
         ),
         executor_factory=executor_factory,
     )
