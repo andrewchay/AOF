@@ -73,8 +73,20 @@ ActionPlan 或 ActionRun。
 `reconciliation_required`。终态重复 execute 返回原 Run，不再次产生副作用。submit、approve、execute 和结果
 均链接 Decision Provenance，绑定 Release、CompilationRun、ActionPlan 和 Policy revision。
 
+## 双时态 Object/Fact
+
+`BitemporalObjectStore` 不把对象保存为可覆盖的当前 JSON，而是保存 Fact version。每个 version 同时具有
+业务有效区间 `[valid_from, valid_to)` 和系统认知区间 `[tx_from, tx_to)`；同一 `fact_id` 的修正关闭旧
+transaction interval 并新增 version，不删除旧值。`recorded_at` 必须单调前进，fact identity 不得改变对象或
+field。
+
+`snapshot(valid_at, known_at)` 因而能分别回答“该业务时点什么为真”和“在该认知时点系统知道什么”，返回
+values、Fact version/digest、source、valid/transaction intervals 及关联 ActionRun。重叠且同时有效的同字段
+Fact 会被视为歧义而拒绝，不用隐式 last-write-wins 掩盖冲突。Store 按 tenant 隔离，并提供 digest scan、
+schema version 和 SQLite online backup。
+
 ## 当前完成边界
 
-当前已完成统一资源类型、确定性 catalog、release-pinned ActionPlan，以及事务型 ActionRun 的幂等、审批、
-补偿和 reconciliation 状态机。双时态对象、事件规则和生成式 MCP 行动工具属于后续 Slice；在统一生产 E2E
-完成前不得声称完整企业行动平台已生产就绪。
+当前已完成统一资源类型、确定性 catalog、release-pinned ActionPlan、事务型 ActionRun，以及双时态
+Object/Fact point-in-time 查询。事件规则和生成式 MCP 行动工具属于后续 Slice；在统一生产 E2E 完成前不得
+声称完整企业行动平台已生产就绪。

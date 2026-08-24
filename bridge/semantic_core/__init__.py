@@ -18,6 +18,7 @@ from .action_runs import (
     ActionRunService,
     SqliteActionRunRepository,
 )
+from .bitemporal import BitemporalError, BitemporalObjectStore
 from .attestations import HmacReleaseAttestor
 from .identity import PrincipalVerificationError, SemanticPrincipal, SignedPrincipalVerifier
 from .runtime import SemanticRuntimeConsumer
@@ -115,6 +116,8 @@ __all__ = [
     "ActionRunError",
     "ActionRunService",
     "SqliteActionRunRepository",
+    "BitemporalError",
+    "BitemporalObjectStore",
     "HmacReleaseAttestor",
     "PrincipalVerificationError",
     "SemanticPrincipal",
