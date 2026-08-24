@@ -44,7 +44,9 @@ from bridge.semantic_core.compilers import (
 )
 
 
-def _trusted_query_runtime(tmp_path, compiler_root=None):
+def _trusted_query_runtime(
+    tmp_path, compiler_root=None, repository_factory=CompilationRunRepository
+):
     ontology = SemanticResource.create(
         resource_id="aof://acme/sales/ontology/sales",
         kind=ResourceKind.ONTOLOGY,
@@ -180,7 +182,7 @@ def _trusted_query_runtime(tmp_path, compiler_root=None):
         )
     )
     registry = default_compiler_registry()
-    repository = CompilationRunRepository((compiler_root or tmp_path / "compiler") / "acme")
+    repository = repository_factory((compiler_root or tmp_path / "compiler") / "acme")
     service = CompilationRunService(
         repository,
         registry=registry,
