@@ -17,7 +17,12 @@ from .attestations import HmacReleaseAttestor
 from .compilers import CompilerRegistry
 from .impact import SemanticImpactAnalyzer
 from .models import ResourceKind, SemanticResource
-from .releases import FileReleaseRepository, KnowledgeRelease, ReleaseError, SqliteReleaseRepository
+from .releases import (
+    FileReleaseRepository,
+    KnowledgeRelease,
+    ReleaseError,
+    SqliteReleaseRepository,
+)
 
 
 class SemanticGovernanceError(ValueError):
@@ -85,15 +90,21 @@ class SemanticGovernanceService:
         decision_store: DecisionProvenanceStore | None = None,
         compiler_registry: CompilerRegistry | None = None,
         validators: Iterable[SemanticValidator] = (),
-        release_repository: FileReleaseRepository | SqliteReleaseRepository | None = None,
+        release_repository: FileReleaseRepository
+        | SqliteReleaseRepository
+        | None = None,
         access_policy: SemanticGovernancePolicy | None = None,
         release_attestor: HmacReleaseAttestor | None = None,
     ) -> None:
         self.root = Path(root)
-        self.decision_store = decision_store or DecisionProvenanceStore(self.root / "decisions.jsonl")
+        self.decision_store = decision_store or DecisionProvenanceStore(
+            self.root / "decisions.jsonl"
+        )
         self.compiler_registry = compiler_registry or CompilerRegistry()
         self.validators = tuple(validators)
-        self.release_repository = release_repository or FileReleaseRepository(self.root / "releases")
+        self.release_repository = release_repository or FileReleaseRepository(
+            self.root / "releases"
+        )
         self.access_policy = access_policy
         self.release_attestor = release_attestor
 
@@ -107,6 +118,8 @@ class SemanticGovernanceService:
         rationale: str,
         parent_release: str | None = None,
         scope: Mapping[str, Any] | None = None,
+        parent_decision_ids: Iterable[str] = (),
+        source_evidence: Iterable[Mapping[str, Any]] = (),
     ) -> dict[str, Any]:
         self._authorize(actor, "create")
         if not _PROPOSAL_ID.fullmatch(proposal_id):
@@ -115,13 +128,19 @@ class SemanticGovernanceService:
         if path.exists():
             raise SemanticGovernanceError(f"proposal already exists: {proposal_id}")
         frozen_resources = tuple(sorted(resources, key=lambda item: item.resource_id))
-        tenants = {resource.resource_id.split("/", 3)[2] for resource in frozen_resources}
+        tenants = {
+            resource.resource_id.split("/", 3)[2] for resource in frozen_resources
+        }
         if len(tenants) != 1:
-            raise SemanticGovernanceError("a proposal must contain resources from exactly one tenant")
+            raise SemanticGovernanceError(
+                "a proposal must contain resources from exactly one tenant"
+            )
         tenant_id = next(iter(tenants))
         normalized_scope = dict(scope or {})
         if normalized_scope.get("tenant_id") not in (None, tenant_id):
-            raise SemanticGovernanceError("proposal scope tenant_id does not match resource tenant")
+            raise SemanticGovernanceError(
+                "proposal scope tenant_id does not match resource tenant"
+            )
         normalized_scope["tenant_id"] = tenant_id
         try:
             candidate = KnowledgeRelease.build(
@@ -137,11 +156,16 @@ class SemanticGovernanceService:
             decision_type="semantic_proposal",
             conclusion=f"created proposal {proposal_id}",
             rationale=rationale,
-            evidence=self._resource_evidence(frozen_resources),
+            parent_decision_ids=parent_decision_ids,
+            evidence=[*self._resource_evidence(frozen_resources), *source_evidence],
             policies=["policy:semantic-release-governance"],
             tags=["semantic", "proposal"],
             output_entities=[
-                {"id": f"proposal:{proposal_id}", "type": "semantic_proposal", "content_hash": candidate.release_digest}
+                {
+                    "id": f"proposal:{proposal_id}",
+                    "type": "semantic_proposal",
+                    "content_hash": candidate.release_digest,
+                }
             ],
         )
         manifest = {
@@ -163,7 +187,9 @@ class SemanticGovernanceService:
         self._write(path, manifest)
         return manifest
 
-    def get_proposal(self, proposal_id: str, *, tenant_id: str | None = None) -> dict[str, Any]:
+    def get_proposal(
+        self, proposal_id: str, *, tenant_id: str | None = None
+    ) -> dict[str, Any]:
         path = self._proposal_path(proposal_id)
         if not path.exists():
             raise SemanticGovernanceError(f"proposal not found: {proposal_id}")
@@ -181,10 +207,15 @@ class SemanticGovernanceService:
         for validator in self.validators:
             for finding in validator(resources):
                 if not isinstance(finding, SemanticFinding):
-                    raise SemanticGovernanceError("validators must return SemanticFinding values")
+                    raise SemanticGovernanceError(
+                        "validators must return SemanticFinding values"
+                    )
                 findings.append(finding.to_dict())
         findings.sort(key=lambda item: item["finding_id"])
-        conforms = not any(item["severity"].lower() in {"error", "violation", "blocking"} for item in findings)
+        conforms = not any(
+            item["severity"].lower() in {"error", "violation", "blocking"}
+            for item in findings
+        )
         review = {
             "conforms": conforms,
             "findings": findings,
@@ -195,13 +226,27 @@ class SemanticGovernanceService:
         decision = self.decision_store.record(
             agent_id=actor,
             decision_type="semantic_validation",
-            conclusion="validation passed" if conforms else "validation requires conflict review",
+            conclusion="validation passed"
+            if conforms
+            else "validation requires conflict review",
             rationale=f"Validated {len(resources)} frozen semantic revisions.",
             parent_decision_ids=[manifest["proposal_decision_id"]],
-            evidence=[{"id": f"proposal:{proposal_id}:candidate", "type": "release_candidate", "content_hash": manifest["candidate_digest"]}],
+            evidence=[
+                {
+                    "id": f"proposal:{proposal_id}:candidate",
+                    "type": "release_candidate",
+                    "content_hash": manifest["candidate_digest"],
+                }
+            ],
             policies=["policy:semantic-release-validation"],
             tags=["semantic", "validation"],
-            output_entities=[{"id": f"review:{review['review_hash']}", "type": "semantic_review", "content_hash": review["review_hash"]}],
+            output_entities=[
+                {
+                    "id": f"review:{review['review_hash']}",
+                    "type": "semantic_review",
+                    "content_hash": review["review_hash"],
+                }
+            ],
         )
         review["decision_id"] = decision["decision"]["id"]
         manifest["review"] = review
@@ -209,16 +254,22 @@ class SemanticGovernanceService:
         self._write(self._proposal_path(proposal_id), manifest)
         return {**review, "state": manifest["state"]}
 
-    def impact(self, proposal_id: str, *, tenant_id: str | None = None) -> dict[str, Any]:
+    def impact(
+        self, proposal_id: str, *, tenant_id: str | None = None
+    ) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id, tenant_id=tenant_id)
         resources = self._resources(manifest)
         current = {resource.resource_id: resource.revision_id for resource in resources}
         previous: dict[str, str] = {}
         parent: KnowledgeRelease | None = None
         if manifest.get("parent_release"):
-            parent = self._release_get(manifest["parent_release"], manifest["tenant_id"])
+            parent = self._release_get(
+                manifest["parent_release"], manifest["tenant_id"]
+            )
             if parent is None:
-                raise SemanticGovernanceError(f"parent release not found: {manifest['parent_release']}")
+                raise SemanticGovernanceError(
+                    f"parent release not found: {manifest['parent_release']}"
+                )
             previous = {item.resource_id: item.revision_id for item in parent.resources}
         previous_resources = []
         current_by_id = {resource.resource_id: resource for resource in resources}
@@ -250,8 +301,16 @@ class SemanticGovernanceService:
             "resource_count": len(resources),
             "added": sorted(set(current) - set(previous)),
             "removed": sorted(set(previous) - set(current)),
-            "changed": sorted(key for key in set(current) & set(previous) if current[key] != previous[key]),
-            "unchanged": sorted(key for key in set(current) & set(previous) if current[key] == previous[key]),
+            "changed": sorted(
+                key
+                for key in set(current) & set(previous)
+                if current[key] != previous[key]
+            ),
+            "unchanged": sorted(
+                key
+                for key in set(current) & set(previous)
+                if current[key] == previous[key]
+            ),
             "affected_resource_ids": list(detailed.affected_resource_ids),
             "affected_mcp_tools": list(detailed.affected_mcp_tools),
             "affected_contract_ids": list(detailed.affected_contract_ids),
@@ -272,7 +331,14 @@ class SemanticGovernanceService:
         self._authorize(actor, "waive")
         self._require_state(manifest, {"conflict_review"}, "waive finding")
         review = manifest.get("review") or {}
-        finding = next((item for item in review.get("findings", []) if item["finding_id"] == finding_id), None)
+        finding = next(
+            (
+                item
+                for item in review.get("findings", [])
+                if item["finding_id"] == finding_id
+            ),
+            None,
+        )
         if finding is None:
             raise SemanticGovernanceError(f"finding not found: {finding_id}")
         if not finding.get("waiver_allowed"):
@@ -293,17 +359,29 @@ class SemanticGovernanceService:
             conclusion=f"waived {finding_id}",
             rationale=rationale,
             parent_decision_ids=[review["decision_id"]],
-            evidence=[{"id": finding_id, "type": "semantic_finding", "content_hash": review["review_hash"]}],
+            evidence=[
+                {
+                    "id": finding_id,
+                    "type": "semantic_finding",
+                    "content_hash": review["review_hash"],
+                }
+            ],
             policies=[policy],
             tags=["semantic", "waiver"],
             output_entities=[{"id": waiver_id, "type": "semantic_waiver"}],
         )
-        waiver = {**waiver_payload, "waiver_id": waiver_id, "decision_id": decision["decision"]["id"]}
+        waiver = {
+            **waiver_payload,
+            "waiver_id": waiver_id,
+            "decision_id": decision["decision"]["id"],
+        }
         manifest["waivers"].append(waiver)
         self._write(self._proposal_path(proposal_id), manifest)
         return waiver
 
-    def request_changes(self, proposal_id: str, *, actor: str, rationale: str) -> dict[str, Any]:
+    def request_changes(
+        self, proposal_id: str, *, actor: str, rationale: str
+    ) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
         self._authorize(actor, "request_changes")
         self._require_state(manifest, {"review", "conflict_review"}, "request changes")
@@ -314,7 +392,13 @@ class SemanticGovernanceService:
             conclusion=f"changes requested for {proposal_id}",
             rationale=rationale,
             parent_decision_ids=[review["decision_id"]],
-            evidence=[{"id": f"review:{review['review_hash']}", "type": "semantic_review", "content_hash": review["review_hash"]}],
+            evidence=[
+                {
+                    "id": f"review:{review['review_hash']}",
+                    "type": "semantic_review",
+                    "content_hash": review["review_hash"],
+                }
+            ],
             policies=["policy:semantic-release-governance"],
             tags=["semantic", "changes-requested"],
         )
@@ -323,12 +407,16 @@ class SemanticGovernanceService:
         self._write(self._proposal_path(proposal_id), manifest)
         return manifest
 
-    def approve(self, proposal_id: str, *, actor: str, rationale: str) -> dict[str, Any]:
+    def approve(
+        self, proposal_id: str, *, actor: str, rationale: str
+    ) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
         self._authorize(actor, "approve")
         self._require_state(manifest, {"review", "conflict_review"}, "approve")
         if self._subject(actor) == self._subject(manifest["created_by"]):
-            raise SemanticGovernanceError("separation of duties forbids creator self-approval")
+            raise SemanticGovernanceError(
+                "separation of duties forbids creator self-approval"
+            )
         review = manifest["review"]
         blocking = {
             item["finding_id"]
@@ -338,18 +426,31 @@ class SemanticGovernanceService:
         waived = {item["finding_id"] for item in manifest["waivers"]}
         unresolved = sorted(blocking - waived)
         if unresolved:
-            raise SemanticGovernanceError(f"approval blocked by unresolved findings: {', '.join(unresolved)}")
-        parents = [review["decision_id"], *[item["decision_id"] for item in manifest["waivers"]]]
+            raise SemanticGovernanceError(
+                f"approval blocked by unresolved findings: {', '.join(unresolved)}"
+            )
+        parents = [
+            review["decision_id"],
+            *[item["decision_id"] for item in manifest["waivers"]],
+        ]
         decision = self.decision_store.record(
             agent_id=actor,
             decision_type="semantic_approval",
             conclusion=f"approved {proposal_id}",
             rationale=rationale,
             parent_decision_ids=parents,
-            evidence=[{"id": f"review:{review['review_hash']}", "type": "semantic_review", "content_hash": review["review_hash"]}],
+            evidence=[
+                {
+                    "id": f"review:{review['review_hash']}",
+                    "type": "semantic_review",
+                    "content_hash": review["review_hash"],
+                }
+            ],
             policies=["policy:semantic-release-approval"],
             tags=["semantic", "approval"],
-            output_entities=[{"id": f"approval:{proposal_id}", "type": "semantic_approval"}],
+            output_entities=[
+                {"id": f"approval:{proposal_id}", "type": "semantic_approval"}
+            ],
         )
         manifest["state"] = "approved"
         manifest["approval_decision_id"] = decision["decision"]["id"]
@@ -357,7 +458,9 @@ class SemanticGovernanceService:
         self._write(self._proposal_path(proposal_id), manifest)
         return manifest
 
-    def compile(self, proposal_id: str, *, actor: str, targets: Iterable[str]) -> dict[str, Any]:
+    def compile(
+        self, proposal_id: str, *, actor: str, targets: Iterable[str]
+    ) -> dict[str, Any]:
         manifest = self.get_proposal(proposal_id)
         self._authorize(actor, "compile")
         self._require_state(manifest, {"approved"}, "compile")
@@ -387,11 +490,21 @@ class SemanticGovernanceService:
             conclusion=f"compiled {len(artifacts)} artifact(s) for {proposal_id}",
             rationale="Approved frozen semantic revisions compiled through registered deterministic targets.",
             parent_decision_ids=[manifest["approval_decision_id"]],
-            evidence=[{"id": f"candidate:{proposal_id}", "type": "release_candidate", "content_hash": candidate.release_digest}],
+            evidence=[
+                {
+                    "id": f"candidate:{proposal_id}",
+                    "type": "release_candidate",
+                    "content_hash": candidate.release_digest,
+                }
+            ],
             policies=["policy:semantic-release-compilation"],
             tags=["semantic", "compile"],
             output_entities=[
-                {"id": f"artifact:{item['target']}:{item['content_hash']}", "type": "compiled_artifact", "content_hash": item["content_hash"]}
+                {
+                    "id": f"artifact:{item['target']}:{item['content_hash']}",
+                    "type": "compiled_artifact",
+                    "content_hash": item["content_hash"],
+                }
                 for item in artifacts
             ],
         )
@@ -419,7 +532,9 @@ class SemanticGovernanceService:
         self._authorize(actor, "publish")
         self._require_state(manifest, {"ready"}, "publish")
         if self._subject(actor) == self._subject(manifest["approved_by"]):
-            raise SemanticGovernanceError("separation of duties forbids approver self-publication")
+            raise SemanticGovernanceError(
+                "separation of duties forbids approver self-publication"
+            )
         release = KnowledgeRelease.from_dict(manifest["release"])
         self._release_publish(release, manifest["tenant_id"])
         decision = self.decision_store.record(
@@ -428,10 +543,22 @@ class SemanticGovernanceService:
             conclusion=f"published {release.release_id}",
             rationale="Approved and verified compiled Knowledge Release published immutably.",
             parent_decision_ids=[manifest["compile_decision_id"]],
-            evidence=[{"id": release.release_id, "type": "knowledge_release", "content_hash": release.release_digest}],
+            evidence=[
+                {
+                    "id": release.release_id,
+                    "type": "knowledge_release",
+                    "content_hash": release.release_digest,
+                }
+            ],
             policies=["policy:semantic-release-publish"],
             tags=["semantic", "publish"],
-            output_entities=[{"id": release.release_id, "type": "knowledge_release", "content_hash": release.release_digest}],
+            output_entities=[
+                {
+                    "id": release.release_id,
+                    "type": "knowledge_release",
+                    "content_hash": release.release_digest,
+                }
+            ],
         )
         manifest["state"] = "published"
         manifest["publish_decision_id"] = decision["decision"]["id"]
@@ -457,7 +584,9 @@ class SemanticGovernanceService:
     def _subject(self, actor: str) -> str:
         return self.access_policy.subject(actor) if self.access_policy else actor
 
-    def _release_publish(self, release: KnowledgeRelease, tenant_id: str) -> KnowledgeRelease:
+    def _release_publish(
+        self, release: KnowledgeRelease, tenant_id: str
+    ) -> KnowledgeRelease:
         if isinstance(self.release_repository, SqliteReleaseRepository):
             return self.release_repository.publish(release, tenant_id=tenant_id)
         return self.release_repository.publish(release)
@@ -469,17 +598,27 @@ class SemanticGovernanceService:
 
     @staticmethod
     def _resources(manifest: Mapping[str, Any]) -> tuple[SemanticResource, ...]:
-        return tuple(SemanticResource.from_dict(value) for value in manifest["resources"])
+        return tuple(
+            SemanticResource.from_dict(value) for value in manifest["resources"]
+        )
 
     @staticmethod
-    def _resource_evidence(resources: Iterable[SemanticResource]) -> list[dict[str, Any]]:
+    def _resource_evidence(
+        resources: Iterable[SemanticResource],
+    ) -> list[dict[str, Any]]:
         return [
-            {"id": resource.resource_id, "type": resource.kind.value, "content_hash": resource.revision_id}
+            {
+                "id": resource.resource_id,
+                "type": resource.kind.value,
+                "content_hash": resource.revision_id,
+            }
             for resource in resources
         ]
 
     @staticmethod
-    def _require_state(manifest: Mapping[str, Any], allowed: set[str], action: str) -> None:
+    def _require_state(
+        manifest: Mapping[str, Any], allowed: set[str], action: str
+    ) -> None:
         if manifest.get("state") not in allowed:
             raise SemanticGovernanceError(
                 f"cannot {action} proposal in state {manifest.get('state')}; expected {', '.join(sorted(allowed))}"

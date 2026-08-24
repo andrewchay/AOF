@@ -12,6 +12,7 @@ from .continuous_ingest import (
     SourceConnectorRegistry,
     SqliteContinuousIngestionRepository,
 )
+from .continuous_compile import ContinuousCompilePolicy, ContinuousKnowledgeCompiler
 from .action_contracts import ActionCatalog, ActionContractError
 from .action_plans import (
     ActionPlan,
@@ -129,6 +130,8 @@ __all__ = [
     "SourceConnector",
     "SourceConnectorRegistry",
     "SqliteContinuousIngestionRepository",
+    "ContinuousCompilePolicy",
+    "ContinuousKnowledgeCompiler",
     "CanonicalizationError",
     "ActionCatalog",
     "ActionContractError",
