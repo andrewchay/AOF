@@ -146,13 +146,19 @@ class IngestionRun:
     records_digest: str
     source_snapshot_digest: str
     batch_digest: str
+    change_set_digest: str
     actor: str
     status: str
     run_digest: str
 
     @classmethod
     def succeeded(
-        cls, source: KnowledgeSource, batch: SourceBatch, *, actor: str
+        cls,
+        source: KnowledgeSource,
+        batch: SourceBatch,
+        change_set: "KnowledgeChangeSet",
+        *,
+        actor: str,
     ) -> "IngestionRun":
         if batch.cursor_from != source.cursor:
             raise ContinuousIngestionError(
@@ -179,6 +185,7 @@ class IngestionRun:
             "records_digest": content_digest(batch.records),
             "source_snapshot_digest": content_digest(batch.source_snapshot),
             "batch_digest": batch.batch_digest,
+            "change_set_digest": change_set.change_set_digest,
             "actor": _text(actor, "actor"),
             "status": "succeeded",
         }
@@ -192,6 +199,95 @@ class IngestionRun:
         return cls(**dict(value))
 
 
+@dataclass(frozen=True)
+class KnowledgeChangeSet:
+    source_id: str
+    source_revision: str
+    cursor_from: str | None
+    cursor_to: str
+    added: tuple[Mapping[str, Any], ...]
+    updated: tuple[Mapping[str, Any], ...]
+    deleted: tuple[Mapping[str, Any], ...]
+    schema_drift: Mapping[str, Any]
+    summary: Mapping[str, int]
+    change_set_digest: str
+
+    @classmethod
+    def build(
+        cls,
+        source: KnowledgeSource,
+        batch: SourceBatch,
+        previous: Mapping[str, Mapping[str, Any]],
+        previous_fields: Sequence[str],
+    ) -> "KnowledgeChangeSet":
+        identity_field = str(source.config.get("identity_field", "id"))
+        current: dict[str, Mapping[str, Any]] = {}
+        for record in batch.records:
+            entity_id = record.get(identity_field)
+            if not isinstance(entity_id, str) or not entity_id.strip():
+                raise ContinuousIngestionError(
+                    f"record identity field is missing: {identity_field}"
+                )
+            if entity_id in current:
+                raise ContinuousIngestionError(
+                    f"duplicate entity identity: {entity_id}"
+                )
+            current[entity_id] = record
+        added = tuple(
+            {"entity_id": key, "record": current[key]}
+            for key in sorted(current.keys() - previous.keys())
+        )
+        updated = tuple(
+            {
+                "entity_id": key,
+                "before_digest": content_digest(previous[key]),
+                "record": current[key],
+            }
+            for key in sorted(current.keys() & previous.keys())
+            if content_digest(current[key]) != content_digest(previous[key])
+        )
+        deleted = ()
+        if source.config.get("snapshot_mode") == "full":
+            deleted = tuple(
+                {"entity_id": key, "before_digest": content_digest(previous[key])}
+                for key in sorted(previous.keys() - current.keys())
+            )
+        fields = sorted({str(key) for record in current.values() for key in record})
+        schema_drift = {
+            "added_fields": sorted(set(fields) - set(previous_fields)),
+            "removed_fields": sorted(set(previous_fields) - set(fields)),
+        }
+        if not previous:
+            schema_drift = {"added_fields": [], "removed_fields": []}
+        summary = {
+            "added": len(added),
+            "updated": len(updated),
+            "deleted": len(deleted),
+        }
+        payload = {
+            "source_id": source.source_id,
+            "source_revision": source.revision_id,
+            "cursor_from": batch.cursor_from,
+            "cursor_to": batch.cursor_to,
+            "added": added,
+            "updated": updated,
+            "deleted": deleted,
+            "schema_drift": schema_drift,
+            "summary": summary,
+        }
+        return cls(**payload, change_set_digest=content_digest(payload))
+
+    def to_dict(self) -> dict[str, Any]:
+        return canonical_data(self.__dict__)
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "KnowledgeChangeSet":
+        payload = dict(value)
+        for field in ("added", "updated", "deleted"):
+            payload[field] = tuple(payload[field])
+        return cls(**payload)
+
+
 class SqliteContinuousIngestionRepository:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -203,6 +299,15 @@ class SqliteContinuousIngestionRepository:
             )
             db.execute(
                 "CREATE TABLE IF NOT EXISTS ingestion_runs (run_id TEXT PRIMARY KEY, tenant_id TEXT, source_id TEXT, run_digest TEXT, payload TEXT)"
+            )
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS knowledge_change_sets (run_id TEXT PRIMARY KEY, tenant_id TEXT, change_set_digest TEXT, payload TEXT)"
+            )
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS source_entities (tenant_id TEXT, source_id TEXT, entity_id TEXT, payload TEXT, PRIMARY KEY (tenant_id, source_id, entity_id))"
+            )
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS source_schemas (tenant_id TEXT, source_id TEXT, fields_json TEXT, PRIMARY KEY (tenant_id, source_id))"
             )
             db.execute("PRAGMA user_version=1")
 
@@ -243,7 +348,29 @@ class SqliteContinuousIngestionRepository:
             raise ContinuousIngestionError(f"knowledge source not found: {source_id}")
         return self._source(json.loads(row[0]))
 
-    def commit(self, source: KnowledgeSource, run: IngestionRun) -> IngestionRun:
+    def prepare_change_set(
+        self, source: KnowledgeSource, batch: SourceBatch
+    ) -> KnowledgeChangeSet:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT entity_id, payload FROM source_entities WHERE tenant_id=? AND source_id=?",
+                (source.tenant_id, source.source_id),
+            ).fetchall()
+            schema = db.execute(
+                "SELECT fields_json FROM source_schemas WHERE tenant_id=? AND source_id=?",
+                (source.tenant_id, source.source_id),
+            ).fetchone()
+        previous = {str(row[0]): json.loads(row[1]) for row in rows}
+        fields = json.loads(schema[0]) if schema else []
+        return KnowledgeChangeSet.build(source, batch, previous, fields)
+
+    def commit(
+        self,
+        source: KnowledgeSource,
+        run: IngestionRun,
+        change_set: KnowledgeChangeSet,
+        batch: SourceBatch,
+    ) -> IngestionRun:
         db = self._connect()
         try:
             db.execute("BEGIN IMMEDIATE")
@@ -271,6 +398,37 @@ class SqliteContinuousIngestionRepository:
                 ),
             )
             db.execute(
+                "INSERT INTO knowledge_change_sets VALUES (?, ?, ?, ?)",
+                (
+                    run.run_id,
+                    run.tenant_id,
+                    change_set.change_set_digest,
+                    canonical_json(change_set.to_dict()),
+                ),
+            )
+            identity_field = str(source.config.get("identity_field", "id"))
+            if source.config.get("snapshot_mode") == "full":
+                db.execute(
+                    "DELETE FROM source_entities WHERE tenant_id=? AND source_id=?",
+                    (source.tenant_id, source.source_id),
+                )
+            for record in batch.records:
+                entity_id = str(record[identity_field])
+                db.execute(
+                    "INSERT OR REPLACE INTO source_entities VALUES (?, ?, ?, ?)",
+                    (
+                        source.tenant_id,
+                        source.source_id,
+                        entity_id,
+                        canonical_json(record),
+                    ),
+                )
+            fields = sorted({str(key) for record in batch.records for key in record})
+            db.execute(
+                "INSERT OR REPLACE INTO source_schemas VALUES (?, ?, ?)",
+                (source.tenant_id, source.source_id, canonical_json(fields)),
+            )
+            db.execute(
                 "UPDATE knowledge_sources SET payload=? WHERE tenant_id=? AND source_id=?",
                 (
                     canonical_json(advanced.to_dict()),
@@ -296,12 +454,25 @@ class SqliteContinuousIngestionRepository:
             raise ContinuousIngestionError(f"ingestion run not found: {run_id}")
         return IngestionRun.from_dict(json.loads(row[0]))
 
+    def get_change_set(self, run_id: str, *, tenant_id: str) -> KnowledgeChangeSet:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT payload FROM knowledge_change_sets WHERE run_id=? AND tenant_id=?",
+                (run_id, tenant_id),
+            ).fetchone()
+        if not row:
+            raise ContinuousIngestionError(f"knowledge change set not found: {run_id}")
+        return KnowledgeChangeSet.from_dict(json.loads(row[0]))
+
     def verify_all(self) -> dict[str, Any]:
         errors = []
         with self._connect() as db:
             sources = db.execute("SELECT payload FROM knowledge_sources").fetchall()
             runs = db.execute(
                 "SELECT run_digest, payload FROM ingestion_runs"
+            ).fetchall()
+            changes = db.execute(
+                "SELECT change_set_digest, payload FROM knowledge_change_sets"
             ).fetchall()
         for stored_digest, raw in runs:
             run = IngestionRun.from_dict(json.loads(raw))
@@ -311,6 +482,18 @@ class SqliteContinuousIngestionRepository:
                 or content_digest(payload) != run.run_digest
             ):
                 errors.append(run.run_id)
+        for stored_digest, raw in changes:
+            change_set = KnowledgeChangeSet.from_dict(json.loads(raw))
+            payload = {
+                key: value
+                for key, value in change_set.to_dict().items()
+                if key != "change_set_digest"
+            }
+            if (
+                stored_digest != change_set.change_set_digest
+                or content_digest(payload) != stored_digest
+            ):
+                errors.append(change_set.source_id)
         return {
             "valid": not errors,
             "source_count": len(sources),
@@ -336,5 +519,6 @@ class ContinuousIngestionService:
     ) -> IngestionRun:
         source = self.repository.get_source(source_id, tenant_id=tenant_id)
         batch = self.connectors.get(source.source_type).fetch(source, source.cursor)
-        run = IngestionRun.succeeded(source, batch, actor=actor)
-        return self.repository.commit(source, run)
+        change_set = self.repository.prepare_change_set(source, batch)
+        run = IngestionRun.succeeded(source, batch, change_set, actor=actor)
+        return self.repository.commit(source, run, change_set, batch)

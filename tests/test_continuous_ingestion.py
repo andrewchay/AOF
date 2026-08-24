@@ -24,6 +24,37 @@ class FixtureSourceConnector:
         )
 
 
+class EvolvingFixtureConnector:
+    def fetch(self, source, cursor):
+        if cursor is None:
+            return SourceBatch.create(
+                cursor_from=None,
+                cursor_to="snapshot:1",
+                records=[
+                    {"id": "customer:alice", "name": "Alice"},
+                    {"id": "customer:bob", "name": "Bob"},
+                ],
+                source_snapshot={"snapshot": 1},
+            )
+        return SourceBatch.create(
+            cursor_from="snapshot:1",
+            cursor_to="snapshot:2",
+            records=[
+                {
+                    "id": "customer:alice",
+                    "name": "Alice Chen",
+                    "email": "alice@example.test",
+                },
+                {
+                    "id": "customer:carol",
+                    "name": "Carol",
+                    "email": "carol@example.test",
+                },
+            ],
+            source_snapshot={"snapshot": 2},
+        )
+
+
 def test_registered_source_ingests_immutable_restart_safe_run(tmp_path) -> None:
     path = tmp_path / "continuous-ingestion.sqlite3"
     repository = SqliteContinuousIngestionRepository(path)
@@ -59,3 +90,39 @@ def test_registered_source_ingests_immutable_restart_safe_run(tmp_path) -> None:
         "run_count": 1,
         "errors": [],
     }
+
+
+def test_full_snapshot_emits_deterministic_changes_and_schema_drift(tmp_path) -> None:
+    repository = SqliteContinuousIngestionRepository(tmp_path / "changes.sqlite3")
+    source = repository.register_source(
+        KnowledgeSource.create(
+            source_id="crm-evolving",
+            tenant_id="acme",
+            source_type="fixture-evolving",
+            owner="crm-platform",
+            config={"identity_field": "id", "snapshot_mode": "full"},
+        )
+    )
+    connectors = SourceConnectorRegistry()
+    connectors.register("fixture-evolving", EvolvingFixtureConnector())
+    service = ContinuousIngestionService(repository, connectors)
+
+    first = service.ingest_once(
+        source.source_id, tenant_id="acme", actor="ingestor:one"
+    )
+    second = service.ingest_once(
+        source.source_id, tenant_id="acme", actor="ingestor:two"
+    )
+    changes = repository.get_change_set(second.run_id, tenant_id="acme")
+
+    assert repository.get_change_set(first.run_id, tenant_id="acme").summary == {
+        "added": 2,
+        "updated": 0,
+        "deleted": 0,
+    }
+    assert [item["entity_id"] for item in changes.added] == ["customer:carol"]
+    assert [item["entity_id"] for item in changes.updated] == ["customer:alice"]
+    assert [item["entity_id"] for item in changes.deleted] == ["customer:bob"]
+    assert changes.schema_drift == {"added_fields": ["email"], "removed_fields": []}
+    assert changes.change_set_digest == second.change_set_digest
+    assert repository.verify_all()["valid"] is True
