@@ -17,6 +17,11 @@ from .releases import KnowledgeRelease
 @dataclass(frozen=True)
 class ContinuousCompilePolicy:
     allow_schema_drift: bool = False
+    promotion_mode: str = "manual"
+
+    def __post_init__(self) -> None:
+        if self.promotion_mode not in {"manual", "automatic"}:
+            raise ValueError("promotion_mode must be manual or automatic")
 
 
 class ContinuousKnowledgeCompiler:
@@ -36,6 +41,61 @@ class ContinuousKnowledgeCompiler:
         self.compilation = compilation
         self.decisions = decisions
         self.policy = policy
+
+    def run_cycle(
+        self,
+        ingestion_run_id: str,
+        *,
+        tenant_id: str,
+        release_id: str,
+        resources: Iterable[SemanticResource],
+        actor: str,
+        validator: str,
+        targets: Iterable[str],
+        channel: str,
+        compiler_policy: CompilerPolicy | None = None,
+        parent_release: str | None = None,
+        approver: str | None = None,
+        compiler: str | None = None,
+        replay_compiler: str | None = None,
+        publisher: str | None = None,
+    ) -> dict:
+        staged = self.stage(
+            ingestion_run_id,
+            tenant_id=tenant_id,
+            release_id=release_id,
+            resources=resources,
+            actor=actor,
+            validator=validator,
+            parent_release=parent_release,
+        )
+        if staged["state"] != "review":
+            return staged
+        if self.policy.promotion_mode == "manual":
+            return {**staged, "state": "awaiting_approval", "gate_state": "review"}
+        required = {
+            "compiler_policy": compiler_policy,
+            "approver": approver,
+            "compiler": compiler,
+            "replay_compiler": replay_compiler,
+            "publisher": publisher,
+        }
+        missing = [name for name, value in required.items() if value is None]
+        if missing:
+            raise ValueError(
+                f"automatic promotion requires: {', '.join(sorted(missing))}"
+            )
+        promoted = self.approve_compile_promote(
+            staged["proposal_id"],
+            compiler_policy=compiler_policy,
+            targets=targets,
+            channel=channel,
+            approver=approver,
+            compiler=compiler,
+            replay_compiler=replay_compiler,
+            publisher=publisher,
+        )
+        return {**staged, **promoted, "gate_state": "review"}
 
     def stage(
         self,
