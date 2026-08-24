@@ -190,3 +190,12 @@ class ProductionReadiness:
                     "production SLO targets must define availability and p95 latency",
                 )
             )
+        trusted = value.get("trusted_runtime_slo") if isinstance(value, Mapping) else None
+        trusted_required = {"error_rate_max", "latency_ms_p95_max"}
+        if not isinstance(trusted, Mapping) or not trusted_required.issubset(trusted):
+            findings.append(
+                ReadinessFinding(
+                    "production_trusted_runtime_slo_invalid",
+                    "production SLO targets must define trusted runtime error rate and p95 latency",
+                )
+            )

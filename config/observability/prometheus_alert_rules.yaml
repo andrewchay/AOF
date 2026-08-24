@@ -27,3 +27,12 @@ groups:
         annotations:
           summary: "AOF API no traffic"
           description: "No requests observed for 15 minutes."
+
+      - alert: AOFTrustedRuntimeSLOBreach
+        expr: aof_trusted_runtime_slo_breach > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AOF trusted runtime SLO breached"
+          description: "Governed query or release operations exceeded the trusted runtime SLO."

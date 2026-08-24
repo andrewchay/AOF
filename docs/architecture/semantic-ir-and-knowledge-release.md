@@ -358,6 +358,13 @@ deadline、VM step budget 与协作式 cancellation 检查，结果读取使用 
 不会返回伪装成功的截断结果。REST/MCP 共享 `AOF_QUERY_TIMEOUT_MS`、`AOF_QUERY_MAX_ROWS`、
 `AOF_QUERY_MAX_VM_STEPS` 和 `AOF_QUERY_PROGRESS_INTERVAL`；非法值 fail closed。
 
+`TrustedRuntimeTelemetry` 对 `compile.execute`、`release.promote` 和 `query.execute` 记录低基数
+operation/status counter 与有界 latency samples。tenant、Release、CompilationRun、QueryRun、plan digest
+只进入当前 OpenTelemetry span 的关联属性和诊断快照，不作为 Prometheus label，避免基数失控；raw query 与
+secret 不被接收。`/v1/ops/trusted-runtime` 按 `trusted_runtime_slo` 输出结构化 breach alerts，`/metrics`
+输出 `aof_trusted_*` 指标，Prometheus 规则对持续 breach 触发 critical 告警。生产 readiness 要求通用 HTTP
+SLO 与 trusted runtime SLO 同时存在。
+
 签名层统一使用 `DetachedSigningProvider`，Release 与 Query evidence 分别由
 `ProviderReleaseAttestor`、`ProviderQueryEvidenceAttestor` 消费相同的小接口：读取 current key ID、
 对规范化 bytes 签名、按 attestation key ID 验签。`LocalSigningKeyProvider` 是本地参考实现，轮换 current

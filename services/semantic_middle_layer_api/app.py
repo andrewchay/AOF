@@ -19,6 +19,7 @@ import time
 import uuid
 from contextlib import nullcontext
 from collections import defaultdict, deque
+from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -27,6 +28,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Query
 from fastapi.responses import PlainTextResponse, FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from bridge.semantic_core.observability import trusted_runtime_telemetry
 
 # Logging
 logger = logging.getLogger('aof_api')
@@ -104,6 +106,22 @@ except Exception:
     OTEL_ENABLED = False
     OTEL_TRACER = None
 
+TRUSTED_RUNTIME_TELEMETRY = trusted_runtime_telemetry()
+
+
+def _trusted_trace_sink(correlation: Mapping[str, str]) -> None:
+    if not OTEL_ENABLED:
+        return
+    try:
+        current = trace.get_current_span()
+        for key, value in correlation.items():
+            current.set_attribute(f'aof.{key}', value)
+    except Exception:
+        return
+
+
+TRUSTED_RUNTIME_TELEMETRY.set_trace_sink(_trusted_trace_sink)
+
 
 def _record_request_metric(path: str, status_code: int, latency_ms: float) -> None:
     global OBS_TOTAL_REQUESTS, OBS_TOTAL_ERRORS
@@ -145,6 +163,7 @@ async def metrics_middleware(request: Request, call_next):
             '/v1/ops/readiness',
             '/v1/ops/slo',
             '/v1/ops/slo/targets',
+            '/v1/ops/trusted-runtime',
         }
         if path not in diagnostic_paths:
             from bridge.semantic_core.production import ProductionReadiness
@@ -3101,6 +3120,18 @@ def get_slo_targets() -> dict[str, Any]:
     }
 
 
+@app.get('/v1/ops/trusted-runtime')
+def get_trusted_runtime_snapshot() -> dict[str, Any]:
+    """Return evidence-correlated trusted operation SLO and active alerts."""
+    configured = _load_slo_targets()
+    targets = (
+        configured.get('trusted_runtime_slo', {})
+        if isinstance(configured, dict)
+        else {}
+    )
+    return TRUSTED_RUNTIME_TELEMETRY.snapshot(targets)
+
+
 @app.post('/v1/ops/slo/reload')
 def reload_slo_targets() -> dict[str, Any]:
     """Reload SLO targets from config file."""
@@ -3188,6 +3219,16 @@ def metrics() -> PlainTextResponse:
         lines.append(f'aof_path_errors_total{{path="{path_safe}"}} {errs}')
         lines.append(f'aof_path_latency_ms_avg{{path="{path_safe}"}} {lat_avg:.3f}')
         lines.append(f'aof_path_latency_ms_max{{path="{path_safe}"}} {lat_max:.3f}')
+
+    configured = _load_slo_targets()
+    trusted_targets = (
+        configured.get('trusted_runtime_slo', {})
+        if isinstance(configured, dict)
+        else {}
+    )
+    lines.extend(
+        TRUSTED_RUNTIME_TELEMETRY.prometheus(trusted_targets).strip().splitlines()
+    )
 
     return PlainTextResponse('\n'.join(lines) + '\n')
 

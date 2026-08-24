@@ -33,7 +33,8 @@ def test_production_readiness_rejects_reused_trust_domain_secrets(tmp_path) -> N
     shared = "s" * 32
     slo = tmp_path / "slo.yaml"
     slo.write_text(
-        "slo:\n  availability_error_rate_max: 0.01\n  latency_ms_p95_max: 800\n",
+        "slo:\n  availability_error_rate_max: 0.01\n  latency_ms_p95_max: 800\n"
+        "trusted_runtime_slo:\n  error_rate_max: 0.005\n  latency_ms_p95_max: 1200\n",
         encoding="utf-8",
     )
 
@@ -88,7 +89,8 @@ def test_readiness_endpoint_is_fail_closed_only_in_production(tmp_path, monkeypa
 def test_explicit_distinct_production_configuration_is_ready(tmp_path) -> None:
     slo = tmp_path / "slo.yaml"
     slo.write_text(
-        "slo:\n  availability_error_rate_max: 0.01\n  latency_ms_p95_max: 800\n",
+        "slo:\n  availability_error_rate_max: 0.01\n  latency_ms_p95_max: 800\n"
+        "trusted_runtime_slo:\n  error_rate_max: 0.005\n  latency_ms_p95_max: 1200\n",
         encoding="utf-8",
     )
 
@@ -109,6 +111,32 @@ def test_explicit_distinct_production_configuration_is_ready(tmp_path) -> None:
 
     assert report.ready is True
     assert report.findings == ()
+
+
+def test_production_readiness_requires_trusted_runtime_slo(tmp_path) -> None:
+    slo = tmp_path / "slo.yaml"
+    slo.write_text(
+        "slo:\n  availability_error_rate_max: 0.01\n  latency_ms_p95_max: 800\n",
+        encoding="utf-8",
+    )
+    report = ProductionReadiness.evaluate(
+        {
+            "AOF_RUNTIME_MODE": "production",
+            "AOF_SEMANTIC_IDENTITY_SECRET": "i" * 32,
+            "AOF_SEMANTIC_IDENTITY_KEY_ID": "identity-2026-08",
+            "AOF_QUERY_EVIDENCE_SIGNING_SECRET": "q" * 32,
+            "AOF_QUERY_EVIDENCE_SIGNING_KEY_ID": "query-2026-08",
+            "AOF_RELEASE_SIGNING_SECRET": "r" * 32,
+            "AOF_RELEASE_SIGNING_KEY_ID": "release-2026-08",
+            "AOF_OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel:4318",
+            "AOF_SLO_TARGETS_FILE": str(slo),
+        },
+        capabilities={"otel_exporter": True},
+    )
+
+    assert [item.code for item in report.findings] == [
+        "production_trusted_runtime_slo_invalid"
+    ]
 
 
 def test_unknown_runtime_mode_never_falls_back_to_development() -> None:

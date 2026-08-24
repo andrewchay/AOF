@@ -15,6 +15,7 @@ from bridge.decision_provenance import DecisionProvenanceStore
 from .canonical import canonical_data, content_digest
 from .identity import SemanticPrincipal, SignedPrincipalVerifier
 from .models import SemanticResource
+from .observability import TrustedRuntimeTelemetry, trusted_runtime_telemetry
 from .query_audit import AuditedQueryService
 from .query_execution import QueryExecutor
 from .query_plans import QueryRequest, TrustedQueryError, TrustedSnapshotResolver
@@ -46,6 +47,7 @@ class QueryControlPlane:
         executor_factory: Callable[[TrustedSnapshotResolver], QueryExecutor] | None = None,
         compilation_repository_factory: Callable[[Path], CompilationRunRepository]
         | None = None,
+        telemetry: TrustedRuntimeTelemetry | None = None,
     ) -> None:
         self.root = Path(root)
         self.verifier = verifier
@@ -61,6 +63,7 @@ class QueryControlPlane:
         self.compilation_repository_factory = (
             compilation_repository_factory or CompilationRunRepository
         )
+        self.telemetry = telemetry or trusted_runtime_telemetry()
 
     def _compilation_repository(self, tenant_id: str) -> CompilationRunRepository:
         return self.compilation_repository_factory(self.root / tenant_id)
@@ -68,19 +71,30 @@ class QueryControlPlane:
     def execute(
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
     ) -> dict[str, Any]:
-        principal = self.verifier.verify(headers)
         normalized = dict(payload)
         normalized["query_run_id"] = self._query_run_id(payload)
-        try:
-            return self._execute(normalized, principal=principal, replay_of=None)
-        except Exception as exc:
+        with self.telemetry.operation(
+            "query.execute", {"query_run_id": normalized["query_run_id"]}
+        ) as correlation:
+            principal = self.verifier.verify(headers)
+            correlation["tenant_id"] = principal.tenant_id
             try:
-                self._persist_failure(normalized, principal=principal, error=exc)
-            except Exception as audit_exc:
-                raise QueryControlPlaneError(
-                    f"{exc}; failure audit persistence failed: {audit_exc}"
-                ) from exc
-            raise
+                result = self._execute(normalized, principal=principal, replay_of=None)
+            except Exception as exc:
+                try:
+                    self._persist_failure(normalized, principal=principal, error=exc)
+                except Exception as audit_exc:
+                    raise QueryControlPlaneError(
+                        f"{exc}; failure audit persistence failed: {audit_exc}"
+                    ) from exc
+                raise
+            correlation.update(
+                compilation_run_id=result.get("compilation_run_id"),
+                release_id=result.get("release_id"),
+                release_digest=result.get("release_digest"),
+                plan_digest=result.get("plan_digest"),
+            )
+            return result
 
     def _execute(
         self,

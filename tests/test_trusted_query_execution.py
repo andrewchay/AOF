@@ -34,6 +34,7 @@ from bridge.semantic_core import (
     SqliteSemanticSqlExecutor,
     TrustedQueryError,
     TrustedSnapshotResolver,
+    TrustedRuntimeTelemetry,
 )
 from bridge.semantic_core.compilers import (
     CompilationRunRepository,
@@ -931,12 +932,14 @@ def _query_headers(capability_role: str = "analyst") -> dict[str, str]:
 
 def test_signed_query_control_plane_executes_all_compiled_engines(tmp_path) -> None:
     _trusted_query_runtime(tmp_path)
+    telemetry = TrustedRuntimeTelemetry()
     control = QueryControlPlane(
         tmp_path / "compiler",
         verifier=SignedPrincipalVerifier(
             key_id="query-identity", secret=b"query-identity-secret"
         ),
         decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+        telemetry=telemetry,
     )
     base = {
         "channel": "production",
@@ -976,6 +979,9 @@ def test_signed_query_control_plane_executes_all_compiled_engines(tmp_path) -> N
         "query_template",
     ]
     assert all(item["evidence_package"]["package_digest"].startswith("sha256:") for item in results)
+    observed = telemetry.snapshot()
+    assert observed["operations"]["query.execute"]["succeeded"] == 4
+    assert observed["last_correlation"]["release_id"] == "sales-query@2.0.0"
 
 
 def test_rest_and_mcp_query_boundaries_share_signed_control_plane(tmp_path, monkeypatch) -> None:

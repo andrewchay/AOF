@@ -12,6 +12,7 @@ from bridge.semantic_core import (
     ResourceKind,
     SemanticResource,
     SignedPrincipalVerifier,
+    TrustedRuntimeTelemetry,
 )
 from bridge.semantic_core.compilers import (
     CompilerControlPlane,
@@ -62,11 +63,13 @@ def _payload() -> dict:
 
 
 def test_signed_control_plane_plans_runs_replays_and_promotes(tmp_path) -> None:
+    telemetry = TrustedRuntimeTelemetry()
     control = CompilerControlPlane(
         tmp_path / "compiler",
         verifier=SignedPrincipalVerifier(key_id="compiler-identity", secret=b"identity-secret"),
         registry=default_compiler_registry(),
         decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+        telemetry=telemetry,
     )
     payload = _payload()
 
@@ -114,6 +117,10 @@ def test_signed_control_plane_plans_runs_replays_and_promotes(tmp_path) -> None:
     assert replay["reproducible"] is True
     assert pointer["run_id"] == replay["run_id"]
     assert control.get_channel("production", headers=_headers("viewer", "auditor")) == pointer
+    observed = telemetry.snapshot()
+    assert observed["operations"]["compile.execute"]["succeeded"] == 1
+    assert observed["operations"]["release.promote"]["succeeded"] == 1
+    assert observed["last_correlation"]["release_id"] == "sales-knowledge@1.0.0"
 
 
 def test_control_plane_rejects_bad_signature_and_cross_tenant_content(tmp_path) -> None:

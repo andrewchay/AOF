@@ -4,3 +4,6 @@ slo:
   availability_error_rate_max: 0.01
   latency_ms_p95_max: 800
   latency_ms_p99_max: 1500
+trusted_runtime_slo:
+  error_rate_max: 0.005
+  latency_ms_p95_max: 1200

@@ -11,6 +11,7 @@ from bridge.decision_provenance import DecisionProvenanceStore
 
 from ..identity import SemanticPrincipal, SignedPrincipalVerifier
 from ..models import SemanticResource
+from ..observability import TrustedRuntimeTelemetry, trusted_runtime_telemetry
 from ..releases import KnowledgeRelease
 from .base import CompilePlan, CompilerRegistry
 from .governance import CompilationWaiver, CompilerPolicy
@@ -41,12 +42,14 @@ class CompilerControlPlane:
         registry: CompilerRegistry,
         decision_store: DecisionProvenanceStore,
         repository_factory: Callable[[Path], CompilationRunRepository] | None = None,
+        telemetry: TrustedRuntimeTelemetry | None = None,
     ) -> None:
         self.root = Path(root)
         self.verifier = verifier
         self.registry = registry
         self.decision_store = decision_store
         self.repository_factory = repository_factory or CompilationRunRepository
+        self.telemetry = telemetry or trusted_runtime_telemetry()
 
     def plan(self, payload: Mapping[str, Any], *, headers: Mapping[str, str]) -> dict[str, Any]:
         principal, _ = self._authorize(headers, "compile")
@@ -64,23 +67,34 @@ class CompilerControlPlane:
     def execute(
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
     ) -> dict[str, Any]:
-        principal, actor = self._authorize(headers, "compile")
-        context = self._context(payload, principal, require_targets=True)
-        plan = self._plan(context)
-        expected = self._required(payload, "expected_plan_digest")
-        if plan.plan_digest != expected:
-            raise CompilerControlPlaneError("expected_plan_digest does not match the current plan")
-        run = self._service(principal).execute(
-            run_id=self._required(payload, "run_id"),
-            plan=plan,
-            policy=context.policy,
-            release=context.release,
-            resources=context.resources,
-            actor=actor,
-            rationale=self._required(payload, "rationale"),
-            waivers=context.waivers,
-        )
-        return run.to_dict()
+        with self.telemetry.operation(
+            "compile.execute", {"compilation_run_id": payload.get("run_id")}
+        ) as correlation:
+            principal, actor = self._authorize(headers, "compile")
+            context = self._context(payload, principal, require_targets=True)
+            plan = self._plan(context)
+            expected = self._required(payload, "expected_plan_digest")
+            if plan.plan_digest != expected:
+                raise CompilerControlPlaneError(
+                    "expected_plan_digest does not match the current plan"
+                )
+            run = self._service(principal).execute(
+                run_id=self._required(payload, "run_id"),
+                plan=plan,
+                policy=context.policy,
+                release=context.release,
+                resources=context.resources,
+                actor=actor,
+                rationale=self._required(payload, "rationale"),
+                waivers=context.waivers,
+            )
+            correlation.update(
+                tenant_id=principal.tenant_id,
+                release_id=run.release_id,
+                release_digest=run.release_digest,
+                plan_digest=run.plan_digest,
+            )
+            return run.to_dict()
 
     def replay(
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
@@ -113,14 +127,30 @@ class CompilerControlPlane:
     def promote(
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
     ) -> dict[str, Any]:
-        principal, actor = self._authorize(headers, "publish")
-        return self._service(principal).promote_with_approval(
-            self._required(payload, "run_id"),
-            channel=self._required(payload, "channel"),
-            actor=actor,
-            approval_decision_id=self._required(payload, "approval_decision_id"),
-            rationale=self._required(payload, "rationale"),
-        )
+        with self.telemetry.operation(
+            "release.promote",
+            {
+                "compilation_run_id": payload.get("run_id"),
+                "channel": payload.get("channel"),
+            },
+        ) as correlation:
+            principal, actor = self._authorize(headers, "publish")
+            pointer = self._service(principal).promote_with_approval(
+                self._required(payload, "run_id"),
+                channel=self._required(payload, "channel"),
+                actor=actor,
+                approval_decision_id=self._required(payload, "approval_decision_id"),
+                rationale=self._required(payload, "rationale"),
+            )
+            run = self._repository(principal).get(str(pointer["run_id"]))
+            correlation["tenant_id"] = principal.tenant_id
+            if run is not None:
+                correlation.update(
+                    release_id=run.release_id,
+                    release_digest=run.release_digest,
+                    plan_digest=run.plan_digest,
+                )
+            return pointer
 
     def rollback(
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]

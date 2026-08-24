@@ -29,6 +29,7 @@ from .query_runs import (
     SqliteQueryRunRepository,
 )
 from .production import ProductionReadiness, ReadinessFinding, ReadinessReport
+from .observability import TrustedRuntimeTelemetry, trusted_runtime_telemetry
 from .semantic_query import (
     IntentFilter,
     SemanticIntent,
@@ -112,6 +113,8 @@ __all__ = [
     "ProductionReadiness",
     "ReadinessFinding",
     "ReadinessReport",
+    "TrustedRuntimeTelemetry",
+    "trusted_runtime_telemetry",
     "SemanticIntent",
     "IntentFilter",
     "SemanticQueryCompileError",
