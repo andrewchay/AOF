@@ -2,6 +2,14 @@
 
 from .canonical import CanonicalizationError, canonical_data, canonical_json, content_digest
 from .action_contracts import ActionCatalog, ActionContractError
+from .action_plans import (
+    ActionPlan,
+    ActionPlanningError,
+    ActionPolicy,
+    ActionPolicyError,
+    ActionRequest,
+    GovernedActionPlanner,
+)
 from .attestations import HmacReleaseAttestor
 from .identity import PrincipalVerificationError, SemanticPrincipal, SignedPrincipalVerifier
 from .runtime import SemanticRuntimeConsumer
@@ -87,6 +95,12 @@ __all__ = [
     "CanonicalizationError",
     "ActionCatalog",
     "ActionContractError",
+    "ActionPlan",
+    "ActionPlanningError",
+    "ActionPolicy",
+    "ActionPolicyError",
+    "ActionRequest",
+    "GovernedActionPlanner",
     "HmacReleaseAttestor",
     "PrincipalVerificationError",
     "SemanticPrincipal",

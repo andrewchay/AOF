@@ -44,8 +44,20 @@ revision，以及 Workflow 的确定性 execution order。相同输入重复编�
 
 编译器会递归拒绝 action spec 中的 secret-like field。Catalog 只证明契约可编译，不代表动作已获准执行。
 
+## ActionPlan 与执行前治理
+
+`ActionRequest` 规范化 channel、ActionType、目标对象、输入、purpose、idempotency key 和 Policy resource，
+并生成 request digest。`GovernedActionPlanner` 只接受 independently reproduced channel run，逐 bytes 验证
+`actions` 与 `semantic-json` artifact，再从同一 Release 解析 ActionType 和 Action Policy。
+
+Action Policy 以 `policy_type=action` 声明 role → ActionType 权限及 ActionType 级 purpose/最大影响对象数。
+Planner 在任何 Connector 可见之前依次完成 JSON object input schema、租户、角色、purpose 和 blast radius
+检查。输出的 `aof.action-plan/v1` 绑定 channel pointer/version、CompilationRun、Release、artifact hashes、
+ActionType revision、Policy revision/report 和 impact report。Impact report 至少列出精确对象集合、对象数量、
+effect class、引用该动作的 Workflow 和是否需要审批。
+
 ## 当前完成边界
 
-本 Slice 已完成统一资源类型、跨资源引用校验、凭据隔离、Workflow DAG 校验和确定性 catalog 编译。
-ActionPlan、权限/影响预检、ActionRun、审批/补偿、双时态对象、事件规则和生成式 MCP 行动工具属于后续
-Slice；在相应 E2E 完成前不得声称 Action 已可生产执行。
+当前已完成统一资源类型、跨资源引用校验、凭据隔离、Workflow DAG、确定性 catalog，以及 release-pinned
+ActionPlan 的权限/输入/影响预检。ActionRun、审批/补偿、双时态对象、事件规则和生成式 MCP 行动工具属于
+后续 Slice；在相应 E2E 完成前不得声称 Action 已可生产执行。
