@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Query
-from fastapi.responses import PlainTextResponse, FileResponse, HTMLResponse
+from fastapi.responses import PlainTextResponse, FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -136,6 +136,32 @@ async def metrics_middleware(request: Request, call_next):
     started = time.perf_counter()
     request_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
     path = request.url.path
+
+    runtime_mode = os.environ.get('AOF_RUNTIME_MODE', 'development').strip().lower()
+    if runtime_mode not in {'development', 'test'}:
+        diagnostic_paths = {
+            '/healthz',
+            '/metrics',
+            '/v1/ops/readiness',
+            '/v1/ops/slo',
+            '/v1/ops/slo/targets',
+        }
+        if path not in diagnostic_paths:
+            from bridge.semantic_core.production import ProductionReadiness
+
+            readiness = ProductionReadiness.evaluate(os.environ)
+            if not readiness.ready:
+                elapsed_ms = (time.perf_counter() - started) * 1000
+                _record_request_metric(path, 503, elapsed_ms)
+                response = JSONResponse(
+                    status_code=503,
+                    content={
+                        'code': 'production_not_ready',
+                        'readiness': readiness.to_dict(),
+                    },
+                )
+                response.headers['X-Request-ID'] = request_id
+                return response
 
     span_name = f'{request.method} {path}'
     span_ctx = OTEL_TRACER.start_as_current_span(span_name) if OTEL_ENABLED and OTEL_TRACER else nullcontext()
@@ -2987,6 +3013,18 @@ class CacheRefreshReq(BaseModel):
     """Refresh mapping cache for one or more topics."""
     topics: list[str] = Field(default_factory=list)
     force: bool = True
+
+
+@app.get('/v1/ops/readiness')
+def get_production_readiness() -> JSONResponse:
+    """Report whether production trust and observability prerequisites are safe."""
+    from bridge.semantic_core.production import ProductionReadiness
+
+    report = ProductionReadiness.evaluate(os.environ)
+    return JSONResponse(
+        status_code=200 if report.ready else 503,
+        content=report.to_dict(),
+    )
 
 
 @app.get('/v1/ops/slo')

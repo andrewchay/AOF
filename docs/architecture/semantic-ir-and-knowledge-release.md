@@ -335,6 +335,12 @@ Release。`FederatedQueryExecutor` 按确定性拓扑顺序执行，输出 `aof.
 
 ## 生产运维闭环
 
+生产模式由 `ProductionReadiness` 统一判定，而不是由各端点各自猜测。`AOF_RUNTIME_MODE=production` 时，
+身份验签、Release 签名和 Query evidence 签名必须使用三个独立且足够强的 secret 及显式版本化 key ID，
+同时要求可用的 OTLP exporter 与有效 SLO 文件。readiness 不序列化 secret；不符合时 HTTP 中间件只开放
+liveness、metrics、readiness 和 SLO 诊断入口，其余业务流量 fail closed。未知 runtime mode 同样被阻断，
+防止配置拼写错误静默降级为开发模式。
+
 `SqliteReleaseRepository` 使用显式 schema version 1，支持并发幂等发布、`PRAGMA integrity_check` 加
 逐 Manifest 摘要/租户/索引一致性扫描，以及 SQLite online backup。备份文件可直接由新 Repository
 实例恢复并再次执行完整性验证；同一 tenant/release 的冲突摘要仍由事务唯一键阻断。

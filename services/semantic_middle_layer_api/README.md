@@ -140,6 +140,22 @@ curl http://localhost:8787/v1/ops/slo/targets
 - `AOF_SLO_TARGETS_FILE=/path/to/slo_targets.yaml`
 - `AOF_OTEL_CONSOLE_EXPORTER=1`（开发环境打印 tracing span）
 
+### 生产 readiness gate
+
+设置 `AOF_RUNTIME_MODE=production` 后，`GET /v1/ops/readiness` 会验证生产信任边界。
+未通过时，仅 `/healthz`、`/metrics`、readiness 和 SLO 诊断端点可访问，其他 API 固定返回 503。
+
+生产环境必须显式配置：
+
+- `AOF_SEMANTIC_IDENTITY_SECRET` 与非默认 `AOF_SEMANTIC_IDENTITY_KEY_ID`
+- `AOF_RELEASE_SIGNING_SECRET` 与非默认 `AOF_RELEASE_SIGNING_KEY_ID`
+- `AOF_QUERY_EVIDENCE_SIGNING_SECRET` 与非默认 `AOF_QUERY_EVIDENCE_SIGNING_KEY_ID`
+- `AOF_OTEL_EXPORTER_OTLP_ENDPOINT`
+- `AOF_SLO_TARGETS_FILE`
+
+三个信任域的 secret 必须分别生成且至少 32 bytes，不能复用；readiness 输出只包含错误码和配置名，
+不会回显密钥值。运行模式仅允许 `development`、`test`、`production`，拼写错误会 fail closed。
+
 ### 查看日志
 
 ```bash

@@ -27,6 +27,7 @@ from .query_runs import (
     QueryRunError,
     SqliteQueryRunRepository,
 )
+from .production import ProductionReadiness, ReadinessFinding, ReadinessReport
 from .semantic_query import (
     IntentFilter,
     SemanticIntent,
@@ -96,6 +97,9 @@ __all__ = [
     "QueryRun",
     "QueryRunError",
     "SqliteQueryRunRepository",
+    "ProductionReadiness",
+    "ReadinessFinding",
+    "ReadinessReport",
     "SemanticIntent",
     "IntentFilter",
     "SemanticQueryCompileError",
