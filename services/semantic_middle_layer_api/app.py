@@ -4802,6 +4802,49 @@ async def list_ontology_drafts(request: Request) -> dict[str, Any]:
         raise _ontology_error(exc) from exc
 
 
+@app.get('/v1/ontology/workbench/session')
+async def get_ontology_workbench_session(request: Request) -> dict[str, Any]:
+    try:
+        principal, _, _ = _ontology_context(request, 'read')
+        roles = set(principal.roles)
+        permissions = {
+            'read': True,
+            'edit': bool(roles.intersection({'admin', 'owner', 'editor'})),
+            'validate': bool(roles.intersection({'admin', 'validator'})),
+            'waive': bool(roles.intersection({'admin', 'risk-owner'})),
+            'review': bool(roles.intersection({'admin', 'reviewer'})),
+            'publish': bool(roles.intersection({'admin', 'publisher'})),
+        }
+        return {
+            'subject': principal.subject,
+            'tenant_id': principal.tenant_id,
+            'roles': list(principal.roles),
+            'permissions': permissions,
+        }
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/workbench/summary')
+async def get_ontology_workbench_summary(request: Request) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        return service.workbench_summary()
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/drafts/{draft_id}/audit-trail')
+async def get_ontology_draft_audit_trail(
+    draft_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        return service.audit_trail(draft_id)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
 @app.get('/v1/ontology/drafts/{draft_id}')
 async def get_ontology_draft(draft_id: str, request: Request) -> dict[str, Any]:
     try:

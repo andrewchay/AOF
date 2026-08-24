@@ -283,6 +283,55 @@ def test_ontology_http_boundary_is_signed_tenant_isolated_and_separates_duties(
     assert "separation of duties" in self_approval.json()["detail"]
 
 
+def test_workbench_summary_session_and_audit_share_one_tenant_snapshot(
+    tmp_path, monkeypatch
+):
+    from fastapi.testclient import TestClient
+    import services.semantic_middle_layer_api.app as api_module
+
+    monkeypatch.setattr(api_module, "AOF_ROOT", tmp_path)
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_SECRET", "ontology-identity-secret")
+    monkeypatch.setenv("AOF_SEMANTIC_IDENTITY_KEY_ID", "ontology-identity")
+    client = TestClient(api_module.app)
+    created = client.post(
+        "/v1/ontology/drafts",
+        json={
+            "ontology_id": "people",
+            "created_by": "ignored",
+            "ontology_text": ONTOLOGY_INVALID,
+            "shapes_text": SHAPES,
+            "skos_text": SKOS_VALID,
+        },
+        headers=_headers("editor", "alice"),
+    ).json()
+    client.post(
+        f"/v1/ontology/drafts/{created['draft_id']}/validate",
+        json={"actor": "ignored"},
+        headers=_headers("validator", "gate"),
+    )
+
+    session = client.get(
+        "/v1/ontology/workbench/session", headers=_headers("reviewer", "bob")
+    ).json()
+    summary = client.get(
+        "/v1/ontology/workbench/summary", headers=_headers("reviewer", "bob")
+    ).json()
+    audit = client.get(
+        f"/v1/ontology/drafts/{created['draft_id']}/audit-trail",
+        headers=_headers("reviewer", "bob"),
+    ).json()
+
+    assert session["tenant_id"] == "acme"
+    assert session["permissions"]["review"] is True
+    assert session["permissions"]["edit"] is False
+    assert summary["state_counts"] == {"conflict_review": 1}
+    assert summary["findings"]["unresolved"] == 1
+    assert summary["evidence_integrity"]["valid"] is True
+    assert summary["snapshot_digest"]
+    assert audit["decision_id"] == audit["@id"]
+    assert audit["integrity"]["valid"] is True
+
+
 def test_governance_mcp_tools_expose_gate_and_reasoner(tmp_path, monkeypatch):
     import asyncio
     import mcp_server

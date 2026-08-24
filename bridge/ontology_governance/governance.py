@@ -1028,6 +1028,87 @@ class OntologyGovernanceService:
         releases = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
         return sorted(releases, key=lambda item: item["published_at"], reverse=True)
 
+    def workbench_summary(self) -> dict[str, Any]:
+        drafts = self.list_drafts()
+        releases = self.list_releases()
+        state_counts: dict[str, int] = {}
+        findings = {"total": 0, "unresolved": 0, "waived": 0}
+        evidence_valid = True
+        for draft in drafts:
+            state = str(draft["state"])
+            state_counts[state] = state_counts.get(state, 0) + 1
+            draft_dir = self._draft_dir(str(draft["draft_id"]))
+            reviews = self._read_jsonl(draft_dir / "reviews.jsonl")
+            waivers = self._read_jsonl(draft_dir / "waivers.jsonl")
+            waived = {str(item["finding_id"]) for item in waivers}
+            if reviews:
+                latest = reviews[-1]
+                latest_findings = latest.get("findings", [])
+                findings["total"] += len(latest_findings)
+                findings["waived"] += sum(
+                    1 for item in latest_findings if item.get("finding_id") in waived
+                )
+                findings["unresolved"] += sum(
+                    1
+                    for item in latest_findings
+                    if item.get("severity") == "Violation"
+                    and item.get("finding_id") not in waived
+                )
+            evidence_valid = evidence_valid and self._verify_chain(
+                draft_dir / "reviews.jsonl"
+            )["valid"]
+            evidence_valid = evidence_valid and self._verify_chain(
+                draft_dir / "waivers.jsonl"
+            )["valid"]
+        payload = {
+            "api_version": "aof.ontology-workbench-summary/v1",
+            "draft_count": len(drafts),
+            "release_count": len(releases),
+            "state_counts": state_counts,
+            "findings": findings,
+            "evidence_integrity": {
+                "valid": evidence_valid,
+                "decision_ledger": self.decision_store.verify_integrity(),
+            },
+            "recent_drafts": sorted(
+                drafts,
+                key=lambda item: item.get("updated_at", item.get("created_at", "")),
+                reverse=True,
+            )[:8],
+            "recent_releases": releases[:8],
+        }
+        return {**payload, "snapshot_digest": _digest(payload)}
+
+    def audit_trail(self, draft_id: str) -> dict[str, Any]:
+        manifest = self.get_draft(draft_id)
+        decision_id = next(
+            (
+                manifest.get(field)
+                for field in (
+                    "publish_decision_id",
+                    "approval_decision_id",
+                    "validation_decision_id",
+                    "changes_request_decision_id",
+                )
+                if manifest.get(field)
+            ),
+            None,
+        )
+        if decision_id is None:
+            return {
+                "api_version": "aof.ontology-audit-trail/v1",
+                "draft_id": draft_id,
+                "decision_id": None,
+                "causal_chain": {"nodes": [], "edges": []},
+                "integrity": self.decision_store.verify_integrity(),
+            }
+        return {
+            "api_version": "aof.ontology-audit-trail/v1",
+            "draft_id": draft_id,
+            "decision_id": decision_id,
+            **self.decision_store.audit_trail(str(decision_id)),
+        }
+
     def _validate_skos(self, graph: Graph) -> list[dict[str, Any]]:
         return validate_skos_graph(graph)
 
