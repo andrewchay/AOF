@@ -126,3 +126,38 @@ def test_full_snapshot_emits_deterministic_changes_and_schema_drift(tmp_path) ->
     assert changes.schema_drift == {"added_fields": ["email"], "removed_fields": []}
     assert changes.change_set_digest == second.change_set_digest
     assert repository.verify_all()["valid"] is True
+
+
+def test_connector_failure_is_persisted_without_advancing_cursor(tmp_path) -> None:
+    class BrokenConnector:
+        def fetch(self, source, cursor):
+            raise TimeoutError("warehouse request outcome is unknown")
+
+    repository = SqliteContinuousIngestionRepository(tmp_path / "failed.sqlite3")
+    source = repository.register_source(
+        KnowledgeSource.create(
+            source_id="warehouse-orders",
+            tenant_id="acme",
+            source_type="broken",
+            owner="data-platform",
+            config={"dataset": "orders"},
+        )
+    )
+    connectors = SourceConnectorRegistry()
+    connectors.register("broken", BrokenConnector())
+
+    failed = ContinuousIngestionService(repository, connectors).ingest_once(
+        source.source_id,
+        tenant_id="acme",
+        actor="ingestor:worker",
+        attempt_id="attempt-001",
+    )
+
+    assert failed.status == "failed"
+    assert failed.error == {
+        "type": "TimeoutError",
+        "message": "warehouse request outcome is unknown",
+    }
+    assert repository.get_source(source.source_id, tenant_id="acme").cursor is None
+    assert repository.list_runs(tenant_id="acme")[0].run_digest == failed.run_digest
+    assert repository.verify_all()["valid"] is True

@@ -4100,6 +4100,16 @@ class SemanticActionApprovalReq(BaseModel):
     rationale: str = Field(min_length=1)
 
 
+class KnowledgeSourceReq(BaseModel):
+    source_id: str = Field(min_length=1)
+    source_type: str = Field(min_length=1)
+    config: dict[str, Any]
+
+
+class KnowledgeIngestReq(BaseModel):
+    attempt_id: str = Field(min_length=1)
+
+
 def _semantic_governance():
     from bridge.semantic_core.compilers import default_compiler_registry
     from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
@@ -4298,6 +4308,35 @@ def _semantic_action_connectors(registry_type):
     return registry
 
 
+def _continuous_ingestion_control():
+    from bridge.semantic_core import (
+        ContinuousIngestionControlPlane,
+        SignedPrincipalVerifier,
+        SourceConnectorRegistry,
+        SqliteContinuousIngestionRepository,
+    )
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    connectors = getattr(app.state, 'knowledge_source_connectors', None)
+    if connectors is None:
+        connectors = SourceConnectorRegistry()
+        app.state.knowledge_source_connectors = connectors
+    database = Path(os.environ.get(
+        'AOF_CONTINUOUS_INGESTION_DATABASE',
+        str(AOF_ROOT / 'data' / 'continuous_ingestion' / 'state.sqlite3'),
+    ))
+    return ContinuousIngestionControlPlane(
+        SqliteContinuousIngestionRepository(database),
+        connectors,
+        SignedPrincipalVerifier(
+            key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+            secret=secret,
+        ),
+    )
+
+
 def _semantic_governance_error(exc: Exception) -> HTTPException:
     if isinstance(exc, HTTPException):
         return exc
@@ -4357,6 +4396,23 @@ def _semantic_action_error(exc: Exception) -> HTTPException:
         token in message
         for token in ('does not match', 'separation of duties', 'already ', 'cannot ')
     ):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _continuous_ingestion_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif 'already ' in message or 'concurrently' in message:
         status_code = 409
     else:
         status_code = 422
@@ -4678,6 +4734,46 @@ async def get_governed_semantic_action_run(
         )
     except Exception as exc:
         raise _semantic_action_error(exc) from exc
+
+
+@app.post('/v1/knowledge/sources', status_code=201)
+async def register_continuous_knowledge_source(req: KnowledgeSourceReq, request: Request) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().register(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
+
+
+@app.get('/v1/knowledge/sources')
+async def list_continuous_knowledge_sources(request: Request) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().list_sources(headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
+
+
+@app.post('/v1/knowledge/sources/{source_id}/ingest', status_code=201)
+async def ingest_continuous_knowledge_source(source_id: str, req: KnowledgeIngestReq, request: Request) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().ingest(source_id, req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
+
+
+@app.get('/v1/knowledge/ingestion-runs')
+async def list_continuous_ingestion_runs(request: Request, source_id: Optional[str] = None) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().list_runs(source_id=source_id, headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
+
+
+@app.get('/v1/knowledge/ingestion-runs/{run_id}')
+async def get_continuous_ingestion_run(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().get_run(run_id, headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
 
 
 # ==================== Ontology governance & deterministic reasoning ====================

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from .canonical import canonical_data, canonical_json, content_digest
+from .identity import SignedPrincipalVerifier
 
 
 class ContinuousIngestionError(ValueError):
@@ -149,6 +150,7 @@ class IngestionRun:
     change_set_digest: str
     actor: str
     status: str
+    error: Mapping[str, Any] | None
     run_digest: str
 
     @classmethod
@@ -188,6 +190,45 @@ class IngestionRun:
             "change_set_digest": change_set.change_set_digest,
             "actor": _text(actor, "actor"),
             "status": "succeeded",
+            "error": None,
+        }
+        return cls(**payload, run_digest=content_digest(payload))
+
+    @classmethod
+    def failed(
+        cls,
+        source: KnowledgeSource,
+        *,
+        actor: str,
+        attempt_id: str,
+        error: Exception,
+    ) -> "IngestionRun":
+        failure = {"type": type(error).__name__, "message": str(error)}
+        identity = content_digest(
+            {
+                "tenant_id": source.tenant_id,
+                "source_id": source.source_id,
+                "source_revision": source.revision_id,
+                "cursor": source.cursor,
+                "attempt_id": _text(attempt_id, "attempt_id"),
+            }
+        )
+        empty_digest = content_digest([])
+        payload = {
+            "run_id": f"ingest-{identity.split(':', 1)[-1][:24]}",
+            "tenant_id": source.tenant_id,
+            "source_id": source.source_id,
+            "source_revision": source.revision_id,
+            "cursor_from": source.cursor,
+            "cursor_to": source.cursor or "unstarted",
+            "record_count": 0,
+            "records_digest": empty_digest,
+            "source_snapshot_digest": empty_digest,
+            "batch_digest": empty_digest,
+            "change_set_digest": empty_digest,
+            "actor": _text(actor, "actor"),
+            "status": "failed",
+            "error": failure,
         }
         return cls(**payload, run_digest=content_digest(payload))
 
@@ -444,6 +485,53 @@ class SqliteContinuousIngestionRepository:
         finally:
             db.close()
 
+    def commit_failure(self, run: IngestionRun) -> IngestionRun:
+        if run.status != "failed":
+            raise ContinuousIngestionError("commit_failure requires a failed run")
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT payload FROM ingestion_runs WHERE run_id=?", (run.run_id,)
+            ).fetchone()
+            if row:
+                existing = IngestionRun.from_dict(json.loads(row[0]))
+                if existing.run_digest != run.run_digest:
+                    raise ContinuousIngestionError(
+                        "failed ingestion run digest conflict"
+                    )
+                return existing
+            db.execute(
+                "INSERT INTO ingestion_runs VALUES (?, ?, ?, ?, ?)",
+                (
+                    run.run_id,
+                    run.tenant_id,
+                    run.source_id,
+                    run.run_digest,
+                    canonical_json(run.to_dict()),
+                ),
+            )
+        return run
+
+    def list_sources(self, *, tenant_id: str) -> list[KnowledgeSource]:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT payload FROM knowledge_sources WHERE tenant_id=? ORDER BY source_id",
+                (tenant_id,),
+            ).fetchall()
+        return [self._source(json.loads(row[0])) for row in rows]
+
+    def list_runs(
+        self, *, tenant_id: str, source_id: str | None = None
+    ) -> list[IngestionRun]:
+        query = "SELECT payload FROM ingestion_runs WHERE tenant_id=?"
+        params: list[Any] = [tenant_id]
+        if source_id is not None:
+            query += " AND source_id=?"
+            params.append(source_id)
+        query += " ORDER BY rowid DESC"
+        with self._connect() as db:
+            rows = db.execute(query, params).fetchall()
+        return [IngestionRun.from_dict(json.loads(row[0])) for row in rows]
+
     def get_run(self, run_id: str, *, tenant_id: str) -> IngestionRun:
         with self._connect() as db:
             row = db.execute(
@@ -515,10 +603,99 @@ class ContinuousIngestionService:
         self.repository, self.connectors = repository, connectors
 
     def ingest_once(
-        self, source_id: str, *, tenant_id: str, actor: str
+        self,
+        source_id: str,
+        *,
+        tenant_id: str,
+        actor: str,
+        attempt_id: str = "default",
     ) -> IngestionRun:
         source = self.repository.get_source(source_id, tenant_id=tenant_id)
-        batch = self.connectors.get(source.source_type).fetch(source, source.cursor)
+        try:
+            batch = self.connectors.get(source.source_type).fetch(source, source.cursor)
+        except Exception as exc:
+            return self.repository.commit_failure(
+                IngestionRun.failed(
+                    source, actor=actor, attempt_id=attempt_id, error=exc
+                )
+            )
         change_set = self.repository.prepare_change_set(source, batch)
         run = IngestionRun.succeeded(source, batch, change_set, actor=actor)
         return self.repository.commit(source, run, change_set, batch)
+
+
+class ContinuousIngestionControlPlane:
+    """Signed transport-neutral boundary for source registration and ingestion."""
+
+    def __init__(
+        self,
+        repository: SqliteContinuousIngestionRepository,
+        connectors: SourceConnectorRegistry,
+        verifier: SignedPrincipalVerifier,
+    ) -> None:
+        self.repository = repository
+        self.connectors = connectors
+        self.verifier = verifier
+
+    def register(
+        self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
+    ) -> dict[str, Any]:
+        principal = self.verifier.verify(headers)
+        actor = principal.actor_for("source_register")
+        config = payload.get("config")
+        if not isinstance(config, Mapping):
+            raise ContinuousIngestionError("config must be a semantic object")
+        source = KnowledgeSource.create(
+            source_id=_text(payload.get("source_id"), "source_id"),
+            tenant_id=principal.tenant_id,
+            source_type=_text(payload.get("source_type"), "source_type"),
+            owner=actor,
+            config=config,
+        )
+        return self.repository.register_source(source).to_dict()
+
+    def ingest(
+        self, source_id: str, payload: Mapping[str, Any], *, headers: Mapping[str, str]
+    ) -> dict[str, Any]:
+        principal = self.verifier.verify(headers)
+        actor = principal.actor_for("ingest")
+        return (
+            ContinuousIngestionService(self.repository, self.connectors)
+            .ingest_once(
+                source_id,
+                tenant_id=principal.tenant_id,
+                actor=actor,
+                attempt_id=_text(payload.get("attempt_id"), "attempt_id"),
+            )
+            .to_dict()
+        )
+
+    def list_sources(self, *, headers: Mapping[str, str]) -> dict[str, Any]:
+        principal = self.verifier.verify(headers)
+        principal.actor_for("read")
+        sources = self.repository.list_sources(tenant_id=principal.tenant_id)
+        return {
+            "sources": [source.to_dict() for source in sources],
+            "count": len(sources),
+        }
+
+    def list_runs(
+        self, *, source_id: str | None, headers: Mapping[str, str]
+    ) -> dict[str, Any]:
+        principal = self.verifier.verify(headers)
+        principal.actor_for("read")
+        runs = self.repository.list_runs(
+            tenant_id=principal.tenant_id, source_id=source_id
+        )
+        return {"runs": [run.to_dict() for run in runs], "count": len(runs)}
+
+    def get_run(self, run_id: str, *, headers: Mapping[str, str]) -> dict[str, Any]:
+        principal = self.verifier.verify(headers)
+        principal.actor_for("read")
+        run = self.repository.get_run(run_id, tenant_id=principal.tenant_id)
+        payload = run.to_dict()
+        if run.status == "succeeded":
+            payload["change_set"] = self.repository.get_change_set(
+                run_id, tenant_id=principal.tenant_id
+            ).to_dict()
+        return payload

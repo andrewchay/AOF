@@ -3,6 +3,7 @@
 from .canonical import CanonicalizationError, canonical_data, canonical_json, content_digest
 from .continuous_ingest import (
     ContinuousIngestionError,
+    ContinuousIngestionControlPlane,
     ContinuousIngestionService,
     IngestionRun,
     KnowledgeChangeSet,
@@ -122,6 +123,7 @@ from .releases import (
 
 __all__ = [
     "ContinuousIngestionError",
+    "ContinuousIngestionControlPlane",
     "ContinuousIngestionService",
     "IngestionRun",
     "KnowledgeChangeSet",

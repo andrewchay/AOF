@@ -27,6 +27,8 @@ class SemanticPrincipal:
         allowed = {
             "create": ("admin", "owner", "editor"),
             "edit": ("admin", "owner", "editor"),
+            "source_register": ("admin", "owner", "editor"),
+            "ingest": ("admin", "ingestor"),
             "read": ("admin", "owner", "editor", "reviewer", "validator", "risk-owner", "compiler", "publisher", "viewer"),
             "validate": ("admin", "validator"),
             "waive": ("admin", "risk-owner"),
