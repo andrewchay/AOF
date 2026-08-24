@@ -20,6 +20,12 @@ from .source_connectors import (
     JsonlFileSourceConnector,
     SqliteTableSourceConnector,
 )
+from .incremental_reasoning import (
+    IncrementalReasoningError,
+    IncrementalReasoningRun,
+    ReasoningFactChange,
+    SqliteIncrementalReasoningRuntime,
+)
 from .action_contracts import ActionCatalog, ActionContractError
 from .action_plans import (
     ActionPlan,
@@ -144,6 +150,10 @@ __all__ = [
     "HttpJsonSourceConnector",
     "JsonlFileSourceConnector",
     "SqliteTableSourceConnector",
+    "IncrementalReasoningError",
+    "IncrementalReasoningRun",
+    "ReasoningFactChange",
+    "SqliteIncrementalReasoningRuntime",
     "CanonicalizationError",
     "ActionCatalog",
     "ActionContractError",
