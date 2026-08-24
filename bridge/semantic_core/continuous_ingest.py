@@ -9,6 +9,8 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol
 
+from bridge.decision_provenance import DecisionProvenanceStore
+
 from .canonical import canonical_data, canonical_json, content_digest
 from .identity import SignedPrincipalVerifier
 
@@ -532,6 +534,17 @@ class SqliteContinuousIngestionRepository:
             rows = db.execute(query, params).fetchall()
         return [IngestionRun.from_dict(json.loads(row[0])) for row in rows]
 
+    def latest_succeeded(
+        self, source_id: str, *, tenant_id: str
+    ) -> IngestionRun | None:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT payload FROM ingestion_runs WHERE tenant_id=? AND source_id=? "
+                "AND json_extract(payload, '$.status')='succeeded' ORDER BY rowid DESC LIMIT 1",
+                (tenant_id, source_id),
+            ).fetchone()
+        return IngestionRun.from_dict(json.loads(row[0])) if row else None
+
     def get_run(self, run_id: str, *, tenant_id: str) -> IngestionRun:
         with self._connect() as db:
             row = db.execute(
@@ -599,8 +612,55 @@ class ContinuousIngestionService:
         self,
         repository: SqliteContinuousIngestionRepository,
         connectors: SourceConnectorRegistry,
+        *,
+        decisions: DecisionProvenanceStore | None = None,
     ) -> None:
         self.repository, self.connectors = repository, connectors
+        self.decisions = decisions
+
+    @staticmethod
+    def audit_decision_id(run_id: str) -> str:
+        return f"decision:ingestion:{run_id}"
+
+    def _record_audit(self, run: IngestionRun) -> None:
+        if self.decisions is None:
+            return
+        decision_id = self.audit_decision_id(run.run_id)
+        if self.decisions.get(decision_id) is not None:
+            return
+        self.decisions.record(
+            decision_id=decision_id,
+            agent_id=run.actor,
+            decision_type=f"knowledge_ingestion_{run.status}",
+            conclusion=f"knowledge ingestion {run.status}: {run.run_id}",
+            rationale=(
+                "The immutable source run and its cursor outcome were persisted; "
+                "failed runs do not advance the source cursor."
+            ),
+            evidence=[
+                {
+                    "id": run.run_id,
+                    "type": "ingestion_run",
+                    "content_hash": run.run_digest,
+                },
+                {
+                    "id": run.source_revision,
+                    "type": "knowledge_source_revision",
+                    "content_hash": run.source_revision,
+                },
+            ],
+            output_entities=[
+                {
+                    "id": f"source-cursor:{run.tenant_id}:{run.source_id}",
+                    "type": "source_cursor",
+                    "cursor": run.cursor_to,
+                    "advanced": run.status == "succeeded",
+                }
+            ],
+            status="completed" if run.status == "succeeded" else "failed",
+            tenant_id=run.tenant_id,
+            tags=["continuous-ingestion", run.status],
+        )
 
     def ingest_once(
         self,
@@ -613,15 +673,35 @@ class ContinuousIngestionService:
         source = self.repository.get_source(source_id, tenant_id=tenant_id)
         try:
             batch = self.connectors.get(source.source_type).fetch(source, source.cursor)
+            if source.cursor is not None and batch.cursor_to == source.cursor:
+                latest = self.repository.latest_succeeded(
+                    source.source_id, tenant_id=source.tenant_id
+                )
+                if latest is None:
+                    raise ContinuousIngestionError(
+                        "source cursor has no corresponding successful run"
+                    )
+                if (
+                    latest.records_digest != content_digest(batch.records)
+                    or latest.source_snapshot_digest
+                    != content_digest(batch.source_snapshot)
+                ):
+                    raise ContinuousIngestionError(
+                        "connector reused a cursor for different source content"
+                    )
+                self._record_audit(latest)
+                return latest
+            change_set = self.repository.prepare_change_set(source, batch)
+            run = IngestionRun.succeeded(source, batch, change_set, actor=actor)
+            committed = self.repository.commit(source, run, change_set, batch)
         except Exception as exc:
-            return self.repository.commit_failure(
+            committed = self.repository.commit_failure(
                 IngestionRun.failed(
                     source, actor=actor, attempt_id=attempt_id, error=exc
                 )
             )
-        change_set = self.repository.prepare_change_set(source, batch)
-        run = IngestionRun.succeeded(source, batch, change_set, actor=actor)
-        return self.repository.commit(source, run, change_set, batch)
+        self._record_audit(committed)
+        return committed
 
 
 class ContinuousIngestionControlPlane:
@@ -632,10 +712,20 @@ class ContinuousIngestionControlPlane:
         repository: SqliteContinuousIngestionRepository,
         connectors: SourceConnectorRegistry,
         verifier: SignedPrincipalVerifier,
+        decisions: DecisionProvenanceStore | None = None,
     ) -> None:
         self.repository = repository
         self.connectors = connectors
         self.verifier = verifier
+        self.decisions = decisions
+
+    def _run_payload(self, run: IngestionRun) -> dict[str, Any]:
+        payload = run.to_dict()
+        if self.decisions is not None:
+            decision_id = ContinuousIngestionService.audit_decision_id(run.run_id)
+            if self.decisions.get(decision_id) is not None:
+                payload["audit_decision_id"] = decision_id
+        return payload
 
     def register(
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
@@ -659,16 +749,15 @@ class ContinuousIngestionControlPlane:
     ) -> dict[str, Any]:
         principal = self.verifier.verify(headers)
         actor = principal.actor_for("ingest")
-        return (
-            ContinuousIngestionService(self.repository, self.connectors)
-            .ingest_once(
-                source_id,
-                tenant_id=principal.tenant_id,
-                actor=actor,
-                attempt_id=_text(payload.get("attempt_id"), "attempt_id"),
-            )
-            .to_dict()
+        run = ContinuousIngestionService(
+            self.repository, self.connectors, decisions=self.decisions
+        ).ingest_once(
+            source_id,
+            tenant_id=principal.tenant_id,
+            actor=actor,
+            attempt_id=_text(payload.get("attempt_id"), "attempt_id"),
         )
+        return self._run_payload(run)
 
     def list_sources(self, *, headers: Mapping[str, str]) -> dict[str, Any]:
         principal = self.verifier.verify(headers)
@@ -687,13 +776,13 @@ class ContinuousIngestionControlPlane:
         runs = self.repository.list_runs(
             tenant_id=principal.tenant_id, source_id=source_id
         )
-        return {"runs": [run.to_dict() for run in runs], "count": len(runs)}
+        return {"runs": [self._run_payload(run) for run in runs], "count": len(runs)}
 
     def get_run(self, run_id: str, *, headers: Mapping[str, str]) -> dict[str, Any]:
         principal = self.verifier.verify(headers)
         principal.actor_for("read")
         run = self.repository.get_run(run_id, tenant_id=principal.tenant_id)
-        payload = run.to_dict()
+        payload = self._run_payload(run)
         if run.status == "succeeded":
             payload["change_set"] = self.repository.get_change_set(
                 run_id, tenant_id=principal.tenant_id

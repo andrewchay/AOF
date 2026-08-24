@@ -1,5 +1,6 @@
 """Governed source ingestion is cursor-bound, immutable, and restart-safe."""
 
+from bridge.decision_provenance import DecisionProvenanceStore
 from bridge.semantic_core import (
     KnowledgeSource,
     SourceBatch,
@@ -161,3 +162,47 @@ def test_connector_failure_is_persisted_without_advancing_cursor(tmp_path) -> No
     assert repository.get_source(source.source_id, tenant_id="acme").cursor is None
     assert repository.list_runs(tenant_id="acme")[0].run_digest == failed.run_digest
     assert repository.verify_all()["valid"] is True
+
+
+def test_unchanged_snapshot_reuses_prior_run_and_records_decision_audit(tmp_path) -> None:
+    class StableConnector:
+        def fetch(self, source, cursor):
+            return SourceBatch.create(
+                cursor_from=cursor,
+                cursor_to="snapshot:stable",
+                records=[{"id": "asset:1", "name": "Handbook"}],
+                source_snapshot={"snapshot": "stable"},
+            )
+
+    repository = SqliteContinuousIngestionRepository(tmp_path / "idempotent.sqlite3")
+    source = repository.register_source(
+        KnowledgeSource.create(
+            source_id="stable-assets",
+            tenant_id="acme",
+            source_type="stable",
+            owner="knowledge-platform",
+            config={"snapshot_mode": "full"},
+        )
+    )
+    connectors = SourceConnectorRegistry()
+    connectors.register("stable", StableConnector())
+    decisions = DecisionProvenanceStore(tmp_path / "decisions.jsonl")
+    service = ContinuousIngestionService(repository, connectors, decisions=decisions)
+
+    first = service.ingest_once(
+        source.source_id, tenant_id="acme", actor="ingestor:worker"
+    )
+    repeated = service.ingest_once(
+        source.source_id,
+        tenant_id="acme",
+        actor="ingestor:worker",
+        attempt_id="retry-1",
+    )
+
+    assert repeated.run_id == first.run_id
+    assert len(repository.list_runs(tenant_id="acme")) == 1
+    audit = decisions.find_precedents(
+        "knowledge_ingestion_succeeded", tenant_id="acme"
+    )
+    assert len(audit) == 1
+    assert audit[0]["decision"]["decision"]["evidence"][0]["id"] == first.run_id

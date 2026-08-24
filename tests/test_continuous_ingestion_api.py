@@ -73,6 +73,7 @@ def test_signed_rest_source_ingestion_is_tenant_isolated_and_auditable(
     assert unauthorized.status_code == 401
     assert created.status_code == 201 and created.json()["owner"] == "owner:alice"
     assert run.status_code == 201 and run.json()["status"] == "succeeded"
+    assert run.json()["audit_decision_id"].startswith("decision:ingestion:")
     assert stored.json()["change_set"]["summary"] == {
         "added": 1,
         "updated": 0,

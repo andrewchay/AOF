@@ -4344,6 +4344,7 @@ def _continuous_ingestion_control():
             key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
             secret=secret,
         ),
+        decisions=_decision_store(),
     )
 
 
