@@ -44,6 +44,8 @@ class QueryControlPlane:
         query_runs: SqliteQueryRunRepository | None = None,
         evidence_attestor: HmacQueryEvidenceAttestor | None = None,
         executor_factory: Callable[[TrustedSnapshotResolver], QueryExecutor] | None = None,
+        compilation_repository_factory: Callable[[Path], CompilationRunRepository]
+        | None = None,
     ) -> None:
         self.root = Path(root)
         self.verifier = verifier
@@ -56,6 +58,12 @@ class QueryControlPlane:
             secret=hashlib.sha256(b"aof-query-evidence\0" + verifier.secret).digest(),
         )
         self.executor_factory = executor_factory or QueryExecutor
+        self.compilation_repository_factory = (
+            compilation_repository_factory or CompilationRunRepository
+        )
+
+    def _compilation_repository(self, tenant_id: str) -> CompilationRunRepository:
+        return self.compilation_repository_factory(self.root / tenant_id)
 
     def execute(
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
@@ -82,7 +90,7 @@ class QueryControlPlane:
         replay_of: str | None,
         expected_governed_result_digest: str | None = None,
     ) -> dict[str, Any]:
-        repository = CompilationRunRepository(self.root / principal.tenant_id)
+        repository = self._compilation_repository(principal.tenant_id)
         resolver = TrustedSnapshotResolver(repository)
         request = QueryRequest.create(
             channel=self._required(payload, "channel"),
@@ -227,7 +235,7 @@ class QueryControlPlane:
         if expected != source.run_digest:
             raise QueryControlPlaneError("query replay source digest mismatch")
         self._verify_attestation(source)
-        repository = CompilationRunRepository(self.root / principal.tenant_id)
+        repository = self._compilation_repository(principal.tenant_id)
         resolver = TrustedSnapshotResolver(repository)
         request = QueryRequest.create(
             channel=str(source.request["channel"]),

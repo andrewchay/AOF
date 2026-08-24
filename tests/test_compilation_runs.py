@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -11,6 +12,7 @@ from bridge.semantic_core import KnowledgeRelease, ResourceKind, SemanticResourc
 from bridge.semantic_core.compilers import (
     CompilationRunError,
     CompilationRunRepository,
+    SqliteCompilationRunRepository,
     CompilationRunService,
     CompilerPolicy,
     default_compiler_registry,
@@ -176,3 +178,101 @@ def test_compilation_run_identity_is_immutable(tmp_path) -> None:
     run_path.write_text(json.dumps(tampered), encoding="utf-8")
     with pytest.raises(CompilationRunError, match="run_digest"):
         service.repository.get("sales-compile-001")
+
+
+def test_sqlite_compilation_state_survives_restart_and_full_backup(tmp_path) -> None:
+    concept, release, registry, plan, policy = _inputs()
+    root = tmp_path / "compiler-state"
+    repository = SqliteCompilationRunRepository(root)
+    service = CompilationRunService(
+        repository,
+        registry=registry,
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+    )
+    first = service.execute(
+        run_id="sales-sqlite-001",
+        plan=plan,
+        policy=policy,
+        release=release,
+        resources=[concept],
+        actor="compiler:ci",
+        rationale="Create transactional compiler state.",
+    )
+    replay = service.replay(
+        first.run_id,
+        run_id="sales-sqlite-002",
+        policy=policy,
+        release=release,
+        resources=[concept],
+        actor="compiler:replay-ci",
+        rationale="Verify reproducibility before promotion.",
+    )
+    service.promote(
+        replay.run_id,
+        channel="production",
+        actor="publisher:bob",
+        approved_by="reviewer:alice",
+        rationale="Promote the transactional state.",
+    )
+
+    restarted = SqliteCompilationRunRepository(root)
+    assert restarted.get(replay.run_id) == replay
+    assert restarted.get_channel("production")["run_id"] == replay.run_id
+    assert restarted.schema_version() == 1
+    assert restarted.verify_all() == {
+        "valid": True,
+        "run_count": 2,
+        "channel_count": 1,
+        "errors": [],
+    }
+
+    backup_root = restarted.backup_to(tmp_path / "backup")
+    restored = SqliteCompilationRunRepository(backup_root)
+    assert restored.get(replay.run_id) == replay
+    assert restored.get_channel("production")["pointer_digest"] == (
+        restarted.get_channel("production")["pointer_digest"]
+    )
+    assert restored.verify_all()["valid"] is True
+
+
+def test_sqlite_compilation_repository_serializes_channel_updates_and_detects_tampering(
+    tmp_path,
+) -> None:
+    concept, release, registry, plan, policy = _inputs()
+    root = tmp_path / "compiler-state"
+    repository = SqliteCompilationRunRepository(root)
+    service = CompilationRunService(
+        repository,
+        registry=registry,
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+    )
+    run = service.execute(
+        run_id="sales-sqlite-001",
+        plan=plan,
+        policy=policy,
+        release=release,
+        resources=[concept],
+        actor="compiler:ci",
+        rationale="Create a run for concurrent pointer updates.",
+    )
+    event = {
+        "action": "promote",
+        "run_id": run.run_id,
+        "actor": "publisher:test",
+        "rationale": "Exercise transactional pointer history.",
+    }
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        pointers = list(
+            pool.map(lambda _: repository.advance_channel("canary", event), range(24))
+        )
+
+    assert sorted(pointer["version"] for pointer in pointers) == list(range(1, 25))
+    assert repository.get_channel("canary")["version"] == 24
+    assert repository.verify_all()["valid"] is True
+
+    artifact = next((root / "artifacts" / run.run_id).rglob("*.json"))
+    artifact.write_text("{}", encoding="utf-8")
+    report = repository.verify_all()
+    assert report["valid"] is False
+    assert any("artifact digest mismatch" in error for error in report["errors"])

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import shutil
+import sqlite3
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -249,6 +252,232 @@ class CompilationRunRepository:
         temporary = path.with_suffix(path.suffix + ".tmp")
         temporary.write_text(canonical_json(value) + "\n", encoding="utf-8")
         temporary.replace(path)
+
+
+class SqliteCompilationRunRepository:
+    """Transactional compiler state with filesystem-backed immutable artifacts."""
+
+    def __init__(self, root: str | Path, database: str | Path | None = None) -> None:
+        self.root = Path(root)
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.database = Path(database) if database is not None else self.root / "state.sqlite3"
+        self.database.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.execute("PRAGMA journal_mode=WAL")
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS compilation_runs (
+                    run_id TEXT PRIMARY KEY,
+                    run_digest TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS compilation_channels (
+                    channel TEXT PRIMARY KEY,
+                    pointer_digest TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute("PRAGMA user_version=1")
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.database, timeout=30)
+        connection.execute("PRAGMA foreign_keys=ON")
+        return connection
+
+    def put(self, run: CompilationRun) -> CompilationRun:
+        payload = canonical_json(run.to_dict())
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT payload FROM compilation_runs WHERE run_id = ?",
+                (run.run_id,),
+            ).fetchone()
+            if row is not None:
+                current = CompilationRun.from_dict(json.loads(row[0]))
+                if current.run_digest != run.run_digest:
+                    raise CompilationRunError(
+                        f"compilation run cannot be overwritten: {run.run_id}"
+                    )
+                connection.commit()
+                return current
+            connection.execute(
+                "INSERT INTO compilation_runs (run_id, run_digest, payload) VALUES (?, ?, ?)",
+                (run.run_id, run.run_digest, payload),
+            )
+            connection.commit()
+            return run
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    def get(self, run_id: str) -> CompilationRun | None:
+        _validate_id(run_id, "run_id")
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT run_digest, payload FROM compilation_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        run = CompilationRun.from_dict(json.loads(row[1]))
+        if run.run_digest != row[0]:
+            raise CompilationRunError("stored compilation run digest mismatch")
+        return run
+
+    def get_channel(self, channel: str) -> dict[str, Any] | None:
+        _validate_id(channel, "channel")
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT pointer_digest, payload FROM compilation_channels WHERE channel = ?",
+                (channel,),
+            ).fetchone()
+        if row is None:
+            return None
+        pointer = json.loads(row[1])
+        supplied = pointer.get("pointer_digest")
+        payload = {key: value for key, value in pointer.items() if key != "pointer_digest"}
+        if supplied != row[0] or supplied != content_digest(payload):
+            raise CompilationRunError(f"channel pointer digest mismatch: {channel}")
+        return pointer
+
+    def advance_channel(self, channel: str, event: Mapping[str, Any]) -> dict[str, Any]:
+        _validate_id(channel, "channel")
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT payload FROM compilation_channels WHERE channel = ?",
+                (channel,),
+            ).fetchone()
+            current = json.loads(row[0]) if row is not None else None
+            if current is not None:
+                supplied = current.get("pointer_digest")
+                current_payload = {
+                    key: value for key, value in current.items() if key != "pointer_digest"
+                }
+                if supplied != content_digest(current_payload):
+                    raise CompilationRunError(
+                        f"channel pointer digest mismatch: {channel}"
+                    )
+            history = list(current["history"]) if current else []
+            normalized_event = canonical_data(dict(event))
+            event_payload = {
+                key: value for key, value in normalized_event.items() if key != "event_digest"
+            }
+            normalized_event["event_digest"] = content_digest(event_payload)
+            history.append(normalized_event)
+            payload = {
+                "api_version": "aof.compilation-channel/v1",
+                "channel": channel,
+                "run_id": normalized_event["run_id"],
+                "version": len(history),
+                "history": history,
+            }
+            pointer = {**payload, "pointer_digest": content_digest(payload)}
+            serialized = canonical_json(pointer)
+            connection.execute(
+                "INSERT INTO compilation_channels (channel, pointer_digest, payload) "
+                "VALUES (?, ?, ?) ON CONFLICT(channel) DO UPDATE SET "
+                "pointer_digest = excluded.pointer_digest, payload = excluded.payload",
+                (channel, pointer["pointer_digest"], serialized),
+            )
+            connection.commit()
+            return pointer
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    def schema_version(self) -> int:
+        with self._connect() as connection:
+            return int(connection.execute("PRAGMA user_version").fetchone()[0])
+
+    def verify_all(self) -> dict[str, Any]:
+        errors = []
+        with self._connect() as connection:
+            run_rows = connection.execute(
+                "SELECT run_id, run_digest, payload FROM compilation_runs"
+            ).fetchall()
+            channel_rows = connection.execute(
+                "SELECT channel, pointer_digest, payload FROM compilation_channels"
+            ).fetchall()
+            integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+        if integrity != "ok":
+            errors.append(f"sqlite integrity check failed: {integrity}")
+        run_ids = set()
+        for run_id, run_digest, payload in run_rows:
+            try:
+                run = CompilationRun.from_dict(json.loads(payload))
+                if run.run_id != run_id or run.run_digest != run_digest:
+                    raise CompilationRunError(
+                        "indexed compilation run identity does not match payload"
+                    )
+                run_ids.add(run_id)
+                self._verify_artifacts(run)
+            except Exception as exc:
+                errors.append(f"run/{run_id}: {exc}")
+        for channel, pointer_digest, serialized in channel_rows:
+            try:
+                pointer = json.loads(serialized)
+                payload = {
+                    key: value for key, value in pointer.items() if key != "pointer_digest"
+                }
+                if pointer.get("pointer_digest") != pointer_digest:
+                    raise CompilationRunError("indexed pointer digest does not match payload")
+                if pointer_digest != content_digest(payload):
+                    raise CompilationRunError("channel pointer digest mismatch")
+                if pointer.get("run_id") not in run_ids:
+                    raise CompilationRunError("channel points to a missing compilation run")
+            except Exception as exc:
+                errors.append(f"channel/{channel}: {exc}")
+        return {
+            "valid": not errors,
+            "run_count": len(run_rows),
+            "channel_count": len(channel_rows),
+            "errors": errors,
+        }
+
+    def _verify_artifacts(self, run: CompilationRun) -> None:
+        for artifact in run.artifacts:
+            path = (
+                self.root
+                / "artifacts"
+                / run.run_id
+                / str(artifact.get("target", ""))
+                / str(artifact.get("uri", ""))
+            )
+            try:
+                digest = f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+            except OSError as exc:
+                raise CompilationRunError(f"compiled artifact is missing: {path.name}") from exc
+            if digest != artifact.get("content_hash"):
+                raise CompilationRunError(
+                    f"compiled artifact digest mismatch: {artifact.get('target', '')}"
+                )
+
+    def backup_to(self, destination_root: str | Path) -> Path:
+        target = Path(destination_root)
+        target.mkdir(parents=True, exist_ok=True)
+        source = self._connect()
+        backup = sqlite3.connect(target / "state.sqlite3")
+        try:
+            source.backup(backup)
+        finally:
+            backup.close()
+            source.close()
+        artifacts = self.root / "artifacts"
+        if artifacts.exists():
+            shutil.copytree(artifacts, target / "artifacts", dirs_exist_ok=True)
+        return target
 
 
 class CompilationRunService:

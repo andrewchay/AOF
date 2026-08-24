@@ -13,7 +13,11 @@ from bridge.semantic_core import (
     SemanticResource,
     SignedPrincipalVerifier,
 )
-from bridge.semantic_core.compilers import CompilerControlPlane, default_compiler_registry
+from bridge.semantic_core.compilers import (
+    CompilerControlPlane,
+    SqliteCompilationRunRepository,
+    default_compiler_registry,
+)
 
 
 def _headers(role: str, subject: str, tenant: str = "acme") -> dict[str, str]:
@@ -126,6 +130,42 @@ def test_control_plane_rejects_bad_signature_and_cross_tenant_content(tmp_path) 
 
     with pytest.raises(ValueError, match="tenant"):
         control.plan(_payload(), headers=_headers("compiler", "ci", tenant="beta"))
+
+
+def test_control_plane_reopens_transactional_state_after_restart(tmp_path) -> None:
+    root = tmp_path / "compiler"
+    verifier = SignedPrincipalVerifier(
+        key_id="compiler-identity", secret=b"identity-secret"
+    )
+    control = CompilerControlPlane(
+        root,
+        verifier=verifier,
+        registry=default_compiler_registry(),
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+        repository_factory=SqliteCompilationRunRepository,
+    )
+    payload = _payload()
+    plan = control.plan(payload, headers=_headers("compiler", "ci"))
+    run = control.execute(
+        {
+            **payload,
+            "run_id": "sales-compile-restart-001",
+            "expected_plan_digest": plan["plan_digest"],
+            "rationale": "Persist a run across control-plane restart.",
+        },
+        headers=_headers("compiler", "ci"),
+    )
+
+    restarted = CompilerControlPlane(
+        root,
+        verifier=verifier,
+        registry=default_compiler_registry(),
+        decision_store=DecisionProvenanceStore(tmp_path / "decisions.jsonl"),
+        repository_factory=SqliteCompilationRunRepository,
+    )
+    assert restarted.get_run(
+        run["run_id"], headers=_headers("viewer", "auditor")
+    )["run_digest"] == run["run_digest"]
 
 
 def test_rest_compiler_control_plane_uses_signed_principals(tmp_path, monkeypatch) -> None:

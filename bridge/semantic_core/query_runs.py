@@ -302,6 +302,7 @@ class SqliteQueryRunRepository:
                 )
                 """
             )
+            connection.execute("PRAGMA user_version=1")
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=30)
@@ -310,7 +311,9 @@ class SqliteQueryRunRepository:
 
     def put(self, run: QueryRun) -> QueryRun:
         payload = canonical_json(run.to_dict())
-        with self._connect() as connection:
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
             existing = connection.execute(
                 "SELECT payload FROM query_runs WHERE tenant_id = ? AND query_run_id = ?",
                 (run.tenant_id, run.query_run_id),
@@ -321,13 +324,20 @@ class SqliteQueryRunRepository:
                     raise QueryRunError(
                         f"query run cannot be overwritten: {run.query_run_id}"
                     )
+                connection.commit()
                 return current
             connection.execute(
                 "INSERT INTO query_runs (tenant_id, query_run_id, run_digest, payload) "
                 "VALUES (?, ?, ?, ?)",
                 (run.tenant_id, run.query_run_id, run.run_digest, payload),
             )
-        return run
+            connection.commit()
+            return run
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     def get(self, query_run_id: str, *, tenant_id: str) -> QueryRun | None:
         with self._connect() as connection:
@@ -342,6 +352,46 @@ class SqliteQueryRunRepository:
         if run.run_digest != row[0] or run.tenant_id != tenant_id:
             raise QueryRunError("stored query run integrity check failed")
         return run
+
+    def schema_version(self) -> int:
+        with self._connect() as connection:
+            return int(connection.execute("PRAGMA user_version").fetchone()[0])
+
+    def verify_all(self) -> dict[str, Any]:
+        errors = []
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT tenant_id, query_run_id, run_digest, payload FROM query_runs"
+            ).fetchall()
+            integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+        if integrity != "ok":
+            errors.append(f"sqlite integrity check failed: {integrity}")
+        for tenant_id, query_run_id, run_digest, payload in rows:
+            try:
+                run = QueryRun.from_dict(json.loads(payload))
+                if run.tenant_id != tenant_id or run.query_run_id != query_run_id:
+                    raise QueryRunError("indexed query run identity does not match payload")
+                if run.run_digest != run_digest:
+                    raise QueryRunError("indexed query run digest does not match payload")
+            except Exception as exc:
+                errors.append(f"{tenant_id}/{query_run_id}: {exc}")
+        return {
+            "valid": not errors,
+            "query_run_count": len(rows),
+            "errors": errors,
+        }
+
+    def backup_to(self, destination: str | Path) -> Path:
+        target = Path(destination)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source = self._connect()
+        backup = sqlite3.connect(target)
+        try:
+            source.backup(backup)
+        finally:
+            backup.close()
+            source.close()
+        return target
 
 
 class HmacQueryEvidenceAttestor:

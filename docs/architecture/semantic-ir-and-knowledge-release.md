@@ -345,6 +345,13 @@ liveness、metrics、readiness 和 SLO 诊断入口，其余业务流量 fail cl
 逐 Manifest 摘要/租户/索引一致性扫描，以及 SQLite online backup。备份文件可直接由新 Repository
 实例恢复并再次执行完整性验证；同一 tenant/release 的冲突摘要仍由事务唯一键阻断。
 
+生产编译状态由 `SqliteCompilationRunRepository` 管理：不可变 CompilationRun 与 channel pointer 在
+`BEGIN IMMEDIATE` 事务内提交，产物仍按内容摘要保存到文件系统。`verify_all()` 联合检查 SQLite、Run、
+pointer history 和实际产物 bytes；`backup_to()` 使用 SQLite online backup 并复制产物树。生产 REST 与
+MCP 的编译和查询控制面注入同一 Repository 类型，进程重启后继续解析相同 channel。QueryRun 仓库同样
+串行化并发幂等写、提供 schema version、全库完整性扫描和 online backup。恢复验收必须先执行
+`verify_all()`，不得把“数据库可打开”视为证据链完整。
+
 签名层统一使用 `DetachedSigningProvider`，Release 与 Query evidence 分别由
 `ProviderReleaseAttestor`、`ProviderQueryEvidenceAttestor` 消费相同的小接口：读取 current key ID、
 对规范化 bytes 签名、按 attestation key ID 验签。`LocalSigningKeyProvider` 是本地参考实现，轮换 current

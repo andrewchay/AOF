@@ -25,6 +25,7 @@ from .runs import (
     CompilationRunError,
     CompilationRunRepository,
     CompilationRunService,
+    SqliteCompilationRunRepository,
 )
 
 
@@ -48,6 +49,7 @@ __all__ = [
     "CompilationRunError",
     "CompilationRunRepository",
     "CompilationRunService",
+    "SqliteCompilationRunRepository",
     "CompilationWaiver",
     "CompilerError",
     "CompilerControlPlane",

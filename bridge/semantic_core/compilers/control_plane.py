@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -40,11 +40,13 @@ class CompilerControlPlane:
         verifier: SignedPrincipalVerifier,
         registry: CompilerRegistry,
         decision_store: DecisionProvenanceStore,
+        repository_factory: Callable[[Path], CompilationRunRepository] | None = None,
     ) -> None:
         self.root = Path(root)
         self.verifier = verifier
         self.registry = registry
         self.decision_store = decision_store
+        self.repository_factory = repository_factory or CompilationRunRepository
 
     def plan(self, payload: Mapping[str, Any], *, headers: Mapping[str, str]) -> dict[str, Any]:
         principal, _ = self._authorize(headers, "compile")
@@ -186,7 +188,7 @@ class CompilerControlPlane:
         )
 
     def _repository(self, principal: SemanticPrincipal) -> CompilationRunRepository:
-        return CompilationRunRepository(self.root / principal.tenant_id)
+        return self.repository_factory(self.root / principal.tenant_id)
 
     def _service(self, principal: SemanticPrincipal) -> CompilationRunService:
         return CompilationRunService(

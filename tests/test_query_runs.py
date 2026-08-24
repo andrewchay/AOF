@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -78,3 +79,31 @@ def test_query_evidence_attestation_binds_run_tenant_and_package() -> None:
     assert attestor.verify(attestation, run=_run(run_id="query-002")) is False
     tampered = {**attestation, "evidence_package_digest": "sha256:other"}
     assert attestor.verify(tampered, run=run) is False
+
+
+def test_query_run_repository_verifies_and_restores_online_backup(tmp_path) -> None:
+    repository = SqliteQueryRunRepository(tmp_path / "live.sqlite3")
+    run = _run()
+    repository.put(run)
+
+    assert repository.schema_version() == 1
+    assert repository.verify_all() == {
+        "valid": True,
+        "query_run_count": 1,
+        "errors": [],
+    }
+
+    backup = repository.backup_to(tmp_path / "backups" / "query-runs.sqlite3")
+    restored = SqliteQueryRunRepository(backup)
+    assert restored.get(run.query_run_id, tenant_id="acme") == run
+
+
+def test_query_run_repository_serializes_concurrent_idempotent_writes(tmp_path) -> None:
+    repository = SqliteQueryRunRepository(tmp_path / "query-runs.sqlite3")
+    run = _run()
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        stored = list(pool.map(lambda _: repository.put(run), range(32)))
+
+    assert {item.run_digest for item in stored} == {run.run_digest}
+    assert repository.verify_all()["query_run_count"] == 1

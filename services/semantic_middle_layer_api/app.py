@@ -4072,7 +4072,12 @@ def _semantic_governance():
 
 
 def _semantic_compiler_control():
-    from bridge.semantic_core.compilers import CompilerControlPlane, default_compiler_registry
+    from bridge.semantic_core.compilers import (
+        CompilationRunRepository,
+        CompilerControlPlane,
+        SqliteCompilationRunRepository,
+        default_compiler_registry,
+    )
     from bridge.semantic_core.identity import SignedPrincipalVerifier
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
@@ -4086,6 +4091,11 @@ def _semantic_compiler_control():
         ),
         registry=default_compiler_registry(),
         decision_store=_decision_store(),
+        repository_factory=(
+            SqliteCompilationRunRepository
+            if os.environ.get('AOF_RUNTIME_MODE', 'development').lower() == 'production'
+            else CompilationRunRepository
+        ),
     )
 
 
@@ -4099,6 +4109,10 @@ def _semantic_query_control():
     from bridge.semantic_core.keys import (
         LocalSigningKeyProvider,
         ProviderQueryEvidenceAttestor,
+    )
+    from bridge.semantic_core.compilers import (
+        CompilationRunRepository,
+        SqliteCompilationRunRepository,
     )
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
@@ -4159,6 +4173,11 @@ def _semantic_query_control():
             )
         ),
         executor_factory=executor_factory,
+        compilation_repository_factory=(
+            SqliteCompilationRunRepository
+            if os.environ.get('AOF_RUNTIME_MODE', 'development').lower() == 'production'
+            else CompilationRunRepository
+        ),
     )
 
 
