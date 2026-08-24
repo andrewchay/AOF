@@ -4311,8 +4311,10 @@ def _semantic_action_connectors(registry_type):
 def _continuous_ingestion_control():
     from bridge.semantic_core import (
         ContinuousIngestionControlPlane,
+        JsonlFileSourceConnector,
         SignedPrincipalVerifier,
         SourceConnectorRegistry,
+        SqliteTableSourceConnector,
         SqliteContinuousIngestionRepository,
     )
 
@@ -4322,6 +4324,14 @@ def _continuous_ingestion_control():
     connectors = getattr(app.state, 'knowledge_source_connectors', None)
     if connectors is None:
         connectors = SourceConnectorRegistry()
+        configured_roots = os.environ.get(
+            'AOF_INGESTION_FILE_ROOTS', str(AOF_ROOT / 'data')
+        )
+        allowed_roots = tuple(
+            Path(item).resolve() for item in configured_roots.split(os.pathsep) if item
+        )
+        connectors.register('jsonl', JsonlFileSourceConnector(allowed_roots=allowed_roots))
+        connectors.register('sqlite', SqliteTableSourceConnector(allowed_roots=allowed_roots))
         app.state.knowledge_source_connectors = connectors
     database = Path(os.environ.get(
         'AOF_CONTINUOUS_INGESTION_DATABASE',

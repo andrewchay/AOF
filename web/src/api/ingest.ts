@@ -40,3 +40,10 @@ export async function documentParse(path: string, opts: { async?: boolean; lang?
   return data as ParseResult & { task_id?: string }
 }
 
+export interface KnowledgeSource { source_id: string; source_type: string; owner: string; revision_id: string; cursor?: string; config: Record<string, unknown> }
+export interface IngestionRun { run_id: string; source_id: string; status: 'succeeded' | 'failed'; cursor_from?: string; cursor_to: string; record_count: number; source_snapshot_digest: string; change_set_digest: string; run_digest: string; error?: { type: string; message: string } }
+export async function listKnowledgeSources() { const { data } = await client.get('/knowledge/sources'); return data as { sources: KnowledgeSource[]; count: number } }
+export async function registerKnowledgeSource(payload: { source_id: string; source_type: string; config: Record<string, unknown> }) { const { data } = await client.post('/knowledge/sources', payload); return data as KnowledgeSource }
+export async function runKnowledgeIngestion(sourceId: string, attemptId: string) { const { data } = await client.post(`/knowledge/sources/${sourceId}/ingest`, { attempt_id: attemptId }); return data as IngestionRun }
+export async function listIngestionRuns(sourceId?: string) { const { data } = await client.get('/knowledge/ingestion-runs', { params: { source_id: sourceId } }); return data as { runs: IngestionRun[]; count: number } }
+export async function getIngestionRun(runId: string) { const { data } = await client.get(`/knowledge/ingestion-runs/${runId}`); return data as IngestionRun & { change_set?: { summary: Record<string, number>; schema_drift: Record<string, string[]> } } }

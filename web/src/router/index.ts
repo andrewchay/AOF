@@ -15,7 +15,7 @@ const routes: RouteRecordRaw[] = [
         path: 'ingest',
         name: 'ingest',
         component: () => import('@/views/IngestView.vue'),
-        meta: { title: '知识摄取', icon: 'UploadFilled' },
+        meta: { title: '持续接入', icon: 'UploadFilled' },
       },
       {
         path: 'okf',

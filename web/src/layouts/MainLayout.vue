@@ -7,7 +7,7 @@ const router = useRouter()
 
 const menuItems = [
   { path: '/', title: '资产总览', icon: 'Odometer' },
-  { path: '/ingest', title: '知识摄取', icon: 'UploadFilled' },
+  { path: '/ingest', title: '持续接入', icon: 'UploadFilled' },
   { path: '/okf', title: 'OKF 知识包', icon: 'Collection' },
   { path: '/graph', title: '知识图谱', icon: 'Share' },
   { path: '/ontology', title: '本体治理', icon: 'Connection' },

@@ -14,6 +14,12 @@ from .continuous_ingest import (
     SqliteContinuousIngestionRepository,
 )
 from .continuous_compile import ContinuousCompilePolicy, ContinuousKnowledgeCompiler
+from .source_connectors import (
+    EventStreamSourceConnector,
+    HttpJsonSourceConnector,
+    JsonlFileSourceConnector,
+    SqliteTableSourceConnector,
+)
 from .action_contracts import ActionCatalog, ActionContractError
 from .action_plans import (
     ActionPlan,
@@ -134,6 +140,10 @@ __all__ = [
     "SqliteContinuousIngestionRepository",
     "ContinuousCompilePolicy",
     "ContinuousKnowledgeCompiler",
+    "EventStreamSourceConnector",
+    "HttpJsonSourceConnector",
+    "JsonlFileSourceConnector",
+    "SqliteTableSourceConnector",
     "CanonicalizationError",
     "ActionCatalog",
     "ActionContractError",
