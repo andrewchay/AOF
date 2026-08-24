@@ -182,3 +182,30 @@ def test_action_compiler_rejects_cyclic_workflow() -> None:
 
     assert plan.valid is False
     assert "dependency graph contains a cycle" in plan.diagnostics[0]["message"]
+
+
+def test_release_generates_agent_sdk_and_mcp_action_contracts(tmp_path) -> None:
+    resources = _action_resources()
+    release = KnowledgeRelease.build(
+        release_id="crm-actions@agent.1",
+        resources=resources,
+        scope={"tenant_id": "acme"},
+    )
+    registry = default_compiler_registry()
+
+    sdk = registry.compile(
+        "agent-sdk", release, tmp_path / "sdk", resources=resources
+    )
+    mcp = registry.compile("mcp", release, tmp_path / "mcp", resources=resources)
+    sdk_payload = json.loads((tmp_path / "sdk" / sdk.uri).read_text())
+    mcp_payload = json.loads((tmp_path / "mcp" / mcp.uri).read_text())
+
+    operation = sdk_payload["operations"][0]
+    tool = next(item for item in mcp_payload["mcp_tools"] if item["kind"] == "action")
+    assert operation["action_type_revision"].startswith("sha256:")
+    assert operation["control_plane"]["plan"] == "/v1/semantic/actions/plan"
+    assert operation["input_schema"]["properties"]["reason"]["type"] == "string"
+    assert tool["mutating"] is False
+    assert tool["action_type_id"] == operation["action_type_id"]
+    assert tool["contract_digest"] == operation["contract_digest"]
+    assert "connector" not in tool

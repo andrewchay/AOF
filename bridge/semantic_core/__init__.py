@@ -18,6 +18,7 @@ from .action_runs import (
     ActionRunService,
     SqliteActionRunRepository,
 )
+from .action_control import ActionControlPlane, ActionControlPlaneError
 from .bitemporal import BitemporalError, BitemporalObjectStore
 from .events import (
     DomainEvent,
@@ -123,6 +124,8 @@ __all__ = [
     "ActionRunError",
     "ActionRunService",
     "SqliteActionRunRepository",
+    "ActionControlPlane",
+    "ActionControlPlaneError",
     "BitemporalError",
     "BitemporalObjectStore",
     "DomainEvent",

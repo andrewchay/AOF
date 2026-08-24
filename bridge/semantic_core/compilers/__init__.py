@@ -20,6 +20,7 @@ from .governance import (
 )
 from .runtime_targets import (
     ActionCompiler,
+    AgentSdkCompiler,
     DatalogCompiler,
     McpCompiler,
     OwlCompiler,
@@ -45,6 +46,7 @@ def default_compiler_registry() -> CompilerRegistry:
         DatalogCompiler(),
         RagCompiler(),
         ActionCompiler(),
+        AgentSdkCompiler(),
         McpCompiler(),
     ])
 
@@ -74,6 +76,7 @@ __all__ = [
     "DatalogCompiler",
     "RagCompiler",
     "ActionCompiler",
+    "AgentSdkCompiler",
     "McpCompiler",
     "default_compiler_registry",
     "VerificationReport",

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ..canonical import canonical_json
+from ..canonical import canonical_data, canonical_json, content_digest
 from ..action_contracts import ActionCatalog, ActionContractError
 from ..models import ResourceKind, SemanticResource
 from .base import CompilationInput, CompiledArtifact, SemanticCompiler, VerificationReport
@@ -131,6 +131,91 @@ class ActionCompiler(_RuntimeJsonCompiler):
         return ActionCatalog.build(compilation.release, compilation.resources).to_dict()
 
 
+def _agent_action_contracts(compilation: CompilationInput) -> list[dict[str, Any]]:
+    catalog = ActionCatalog.build(compilation.release, compilation.resources)
+    contracts = []
+    for action in catalog.action_types:
+        request_schema = {
+            "type": "object",
+            "properties": {
+                "channel": {"type": "string"},
+                "object_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": 1,
+                },
+                "inputs": canonical_data(action["input_schema"]),
+                "purpose": {"type": "string"},
+                "idempotency_key": {"type": "string"},
+                "policy_resource_id": {"type": "string"},
+            },
+            "required": [
+                "channel",
+                "object_ids",
+                "inputs",
+                "purpose",
+                "idempotency_key",
+                "policy_resource_id",
+            ],
+            "additionalProperties": False,
+        }
+        payload = {
+            "api_version": "aof.agent-action-contract/v1",
+            "source_release_id": compilation.release.release_id,
+            "source_release_digest": compilation.release.release_digest,
+            "action_type_id": action["resource_id"],
+            "action_type_revision": action["revision_id"],
+            "effect_class": action["effect_class"],
+            "idempotency_scope": action["idempotency_scope"],
+            "required_approval_roles": canonical_data(
+                action["required_approval_roles"]
+            ),
+            "input_schema": canonical_data(action["input_schema"]),
+            "request_schema": request_schema,
+            "control_plane": {
+                "plan": "/v1/semantic/actions/plan",
+                "submit": "/v1/semantic/action-runs",
+                "approve": "/v1/semantic/action-runs/{run_id}/approve",
+                "execute": "/v1/semantic/action-runs/{run_id}/execute",
+                "get": "/v1/semantic/action-runs/{run_id}",
+            },
+        }
+        contracts.append({**payload, "contract_digest": content_digest(payload)})
+    return contracts
+
+
+class AgentSdkCompiler(_RuntimeJsonCompiler):
+    target = "agent-sdk"
+    version = "1"
+    filename = "agent-action-sdk.json"
+    media_type = "application/vnd.aof.agent-action-sdk+json"
+    supported_kinds = frozenset(
+        {ResourceKind.ACTION_TYPE, ResourceKind.FUNCTION, ResourceKind.WORKFLOW}
+    )
+    ignored_kinds = frozenset(ResourceKind) - supported_kinds
+    requires_targets = ("actions", "semantic-json")
+
+    def validate(self, compilation: CompilationInput) -> VerificationReport:
+        report = super().validate(compilation)
+        if not report.valid:
+            return report
+        try:
+            ActionCatalog.build(compilation.release, compilation.resources)
+        except ActionContractError as exc:
+            return VerificationReport(False, (str(exc),))
+        return report
+
+    def payload(
+        self, compilation: CompilationInput, resources: tuple[SemanticResource, ...]
+    ) -> dict[str, Any]:
+        return {
+            "api_version": "aof.agent-action-sdk/v1",
+            "source_release_id": compilation.release.release_id,
+            "source_release_digest": compilation.release.release_digest,
+            "operations": _agent_action_contracts(compilation),
+        }
+
+
 class McpCompiler(_RuntimeJsonCompiler):
     target = "mcp"
     version = "1"
@@ -167,4 +252,23 @@ class McpCompiler(_RuntimeJsonCompiler):
                 ResourceKind.RETRIEVAL_PROFILE,
             }
         ]
+        if any(
+            resource.kind is ResourceKind.ACTION_TYPE
+            for resource in compilation.resources
+        ):
+            payload["mcp_tools"].extend(
+                {
+                    "name": "plan_" + contract["action_type_id"].rsplit("/", 1)[-1].replace("-", "_"),
+                    "description": "Plan a governed action through AOF; this tool never calls the connector directly.",
+                    "kind": "action",
+                    "mutating": False,
+                    "action_type_id": contract["action_type_id"],
+                    "action_type_revision": contract["action_type_revision"],
+                    "input_schema": contract["request_schema"],
+                    "control_plane": contract["control_plane"],
+                    "contract_digest": contract["contract_digest"],
+                }
+                for contract in _agent_action_contracts(compilation)
+            )
+            payload["mcp_tools"].sort(key=lambda item: item["name"])
         return payload

@@ -4081,6 +4081,25 @@ class SemanticQueryReplayReq(BaseModel):
     session_id: Optional[str] = None
 
 
+class SemanticActionReq(BaseModel):
+    channel: str = Field(min_length=1)
+    action_type_id: str = Field(min_length=1)
+    object_ids: list[str] = Field(min_length=1)
+    inputs: dict[str, Any]
+    purpose: str = Field(min_length=1)
+    idempotency_key: str = Field(min_length=1)
+    policy_resource_id: str = Field(min_length=1)
+
+
+class SemanticActionSubmitReq(SemanticActionReq):
+    expected_plan_digest: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+class SemanticActionApprovalReq(BaseModel):
+    rationale: str = Field(min_length=1)
+
+
 def _semantic_governance():
     from bridge.semantic_core.compilers import default_compiler_registry
     from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
@@ -4224,6 +4243,61 @@ def _semantic_query_control():
     )
 
 
+def _semantic_action_control(headers: Mapping[str, str]):
+    from bridge.semantic_core import (
+        ActionConnectorRegistry,
+        ActionControlPlane,
+        SignedPrincipalVerifier,
+        SqliteActionRunRepository,
+    )
+    from bridge.semantic_core.compilers import (
+        CompilationRunRepository,
+        SqliteCompilationRunRepository,
+    )
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    verifier = SignedPrincipalVerifier(
+        key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+        secret=secret,
+    )
+    principal = verifier.verify(headers)
+    state_root = Path(
+        os.environ.get(
+            'AOF_COMPILER_STATE_DIR', str(AOF_ROOT / 'data' / 'semantic_compiler')
+        )
+    )
+    repository_type = (
+        SqliteCompilationRunRepository
+        if os.environ.get('AOF_RUNTIME_MODE', 'development').lower() == 'production'
+        else CompilationRunRepository
+    )
+    return ActionControlPlane(
+        repository_type(state_root / principal.tenant_id),
+        verifier=verifier,
+        action_runs=SqliteActionRunRepository(
+            Path(
+                os.environ.get(
+                    'AOF_ACTION_RUN_DATABASE',
+                    str(AOF_ROOT / 'data' / 'semantic_actions' / 'action-runs.sqlite3'),
+                )
+            )
+        ),
+        connectors=_semantic_action_connectors(ActionConnectorRegistry),
+        decision_store=_decision_store(),
+    )
+
+
+def _semantic_action_connectors(registry_type):
+    """Return the process-wide provider registry; an empty registry fails closed."""
+    registry = getattr(app.state, 'semantic_action_connectors', None)
+    if registry is None:
+        registry = registry_type()
+        app.state.semantic_action_connectors = registry
+    return registry
+
+
 def _semantic_governance_error(exc: Exception) -> HTTPException:
     if isinstance(exc, HTTPException):
         return exc
@@ -4264,6 +4338,26 @@ def _semantic_query_error(exc: Exception) -> HTTPException:
         status_code = 401
     elif 'not found:' in message or 'not in the trusted release:' in message:
         status_code = 404
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _semantic_action_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif any(
+        token in message
+        for token in ('does not match', 'separation of duties', 'already ', 'cannot ')
+    ):
+        status_code = 409
     else:
         status_code = 422
     return HTTPException(status_code=status_code, detail=message)
@@ -4524,6 +4618,66 @@ async def get_trusted_semantic_query_run(
         return _semantic_query_control().get_run(query_run_id, headers=request.headers)
     except Exception as exc:
         raise _semantic_query_error(exc) from exc
+
+
+@app.post('/v1/semantic/actions/plan')
+async def plan_governed_semantic_action(
+    req: SemanticActionReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).plan(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
+
+
+@app.post('/v1/semantic/action-runs', status_code=201)
+async def submit_governed_semantic_action(
+    req: SemanticActionSubmitReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).submit(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
+
+
+@app.post('/v1/semantic/action-runs/{run_id}/approve')
+async def approve_governed_semantic_action(
+    run_id: str, req: SemanticActionApprovalReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).approve(
+            {'run_id': run_id, **req.model_dump()}, headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
+
+
+@app.post('/v1/semantic/action-runs/{run_id}/execute')
+async def execute_governed_semantic_action(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).execute(
+            {'run_id': run_id}, headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
+
+
+@app.get('/v1/semantic/action-runs/{run_id}')
+async def get_governed_semantic_action_run(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).get_run(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
 
 
 # ==================== Ontology governance & deterministic reasoning ====================

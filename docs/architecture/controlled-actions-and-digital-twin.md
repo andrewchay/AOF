@@ -101,8 +101,23 @@ derived proof、ActionType 和 Policy，并记录 Decision Provenance。Trigger 
 当前实现选择“持久事实增量 + 批量固定点”作为可复现基线，不宣称是 Rete。只有真实吞吐/撤回/延迟基线要求
 更高时才替换为 Rete 网络；替换实现必须保持相同 subscription digest、derived fact 与 ActionTrigger 语义。
 
-## 当前完成边界
+## Agent 合约与统一控制面
 
-当前已完成统一资源类型、确定性 catalog、release-pinned ActionPlan、事务型 ActionRun，以及双时态
-Object/Fact point-in-time 查询，以及 release-bound 事件增量规则与 ActionTrigger。生成式 MCP/SDK 行动契约
-和统一生产 E2E 属于后续 Slice；完成前不得声称完整企业行动平台已生产就绪。
+`agent-sdk@1` 从同一 Release 生成 `agent-action-sdk.json`，为每个 ActionType 固定 revision、effect class、
+idempotency scope、审批角色、输入/请求 schema、控制面路径和 contract digest。`mcp@1` 同步生成只负责
+`plan_*` 的非副作用工具契约；MCP/Agent 都不能拿到 connector 名称或绕过 ActionPlan 直接执行。
+
+`ActionControlPlane` 是 REST、SDK 和其他 transport 共用的签名边界。REST 暴露 plan、submit、approve、execute
+和 get；每一步重新验证签名 principal 与 tenant，submit 还必须携带客户端实际审阅过的 `expected_plan_digest`。
+生产 API 使用进程级 Connector registry：provider 必须在启动期显式注册，未注册时 plan/submit/approve 仍可用，
+execute 则拒绝并保持审计状态，不做隐式网络发现或凭据加载。
+
+## 生产验收边界
+
+生产链路 E2E 已覆盖：确定性编译与独立 replay、channel promotion、Release-bound Event/Rule trigger、签名
+ActionPlan、职责分离审批、幂等 Connector 执行、ActionRun 关联双时态 Fact、point-in-time snapshot、进程重启后
+Event/Action 状态恢复，以及 Agent SDK/MCP artifact 与 Decision Provenance 完整性校验。
+
+这里的“生产底座”指具备安全控制面、持久化、恢复和审计语义，并不代表任意企业 Connector 已随核心发布。
+具体部署仍须注册经过鉴权、超时、幂等和回执验证的 provider，并执行真实下游的 canary、灾备恢复演练与容量
+基准。当前规则运行时仍是持久事实增量加批量固定点；Rete 是性能优化项，不是当前能力声明。
