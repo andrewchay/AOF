@@ -19,6 +19,13 @@ from .action_runs import (
     SqliteActionRunRepository,
 )
 from .bitemporal import BitemporalError, BitemporalObjectStore
+from .events import (
+    DomainEvent,
+    EventRuleError,
+    EventRuleSubscription,
+    IncrementalActionRuleRuntime,
+    PublishedEventSubscriptionResolver,
+)
 from .attestations import HmacReleaseAttestor
 from .identity import PrincipalVerificationError, SemanticPrincipal, SignedPrincipalVerifier
 from .runtime import SemanticRuntimeConsumer
@@ -118,6 +125,11 @@ __all__ = [
     "SqliteActionRunRepository",
     "BitemporalError",
     "BitemporalObjectStore",
+    "DomainEvent",
+    "EventRuleError",
+    "EventRuleSubscription",
+    "IncrementalActionRuleRuntime",
+    "PublishedEventSubscriptionResolver",
     "HmacReleaseAttestor",
     "PrincipalVerificationError",
     "SemanticPrincipal",

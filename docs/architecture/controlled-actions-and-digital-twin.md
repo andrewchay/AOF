@@ -85,8 +85,24 @@ values、Fact version/digest、source、valid/transaction intervals 及关联 Ac
 Fact 会被视为歧义而拒绝，不用隐式 last-write-wins 掩盖冲突。Store 按 tenant 隔离，并提供 digest scan、
 schema version 和 SQLite online backup。
 
+## 事件订阅与增量确定性规则
+
+RuleSet 可在 spec 中声明 `event_subscription`：接收的 event types、trigger predicate、同 Release 的
+ActionType、purpose 与 Action Policy。`DatalogCompiler` 将该契约写入 release-bound artifact；
+`PublishedEventSubscriptionResolver` 同时验证 reproduced channel、Datalog artifact、Action catalog bytes 和
+Release digest，禁止 Rule 与 Action 跨 Release 拼接。
+
+`IncrementalActionRuleRuntime` 对 event ID、subscription ID 和 asserted facts 做事务去重，持久保存 subscription
+事实集合。每个新事件重新计算确定性 Datalog fixed point，但只对首次出现的目标 derived fact 生成一个稳定
+ActionTrigger；重启或重复投递不会再次触发。Trigger 绑定 Event digest、Subscription/ruleset version、Release、
+derived proof、ActionType 和 Policy，并记录 Decision Provenance。Trigger 只是受治理的 ActionRequest 候选，仍须
+经过 ActionPlan、Policy、影响、审批与 ActionRun，不能直接调用 Connector。
+
+当前实现选择“持久事实增量 + 批量固定点”作为可复现基线，不宣称是 Rete。只有真实吞吐/撤回/延迟基线要求
+更高时才替换为 Rete 网络；替换实现必须保持相同 subscription digest、derived fact 与 ActionTrigger 语义。
+
 ## 当前完成边界
 
 当前已完成统一资源类型、确定性 catalog、release-pinned ActionPlan、事务型 ActionRun，以及双时态
-Object/Fact point-in-time 查询。事件规则和生成式 MCP 行动工具属于后续 Slice；在统一生产 E2E 完成前不得
-声称完整企业行动平台已生产就绪。
+Object/Fact point-in-time 查询，以及 release-bound 事件增量规则与 ActionTrigger。生成式 MCP/SDK 行动契约
+和统一生产 E2E 属于后续 Slice；完成前不得声称完整企业行动平台已生产就绪。

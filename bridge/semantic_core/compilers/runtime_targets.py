@@ -78,6 +78,7 @@ class DatalogCompiler(_RuntimeJsonCompiler):
                 "revision_id": resource.revision_id,
                 "language": resource.spec.get("language", "datalog"),
                 "program": resource.spec.get("program", ""),
+                "event_subscription": resource.spec.get("event_subscription"),
             }
             for resource in resources
         ]
