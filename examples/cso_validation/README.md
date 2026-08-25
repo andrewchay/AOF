@@ -79,3 +79,35 @@ cd /Users/chaihao/LLM/AOF
 
 即可用 `build_graph.py` 验证：
 "AOF 从通用图谱 → 领域图谱" 的跃迁是否发生，从而判断领域 ontology 是否定义正确。
+
+---
+
+## 补充洞察：AOF + 领域 ontology = 类 + 实例
+
+**验证发现（用户关键观察）**：AOF + ontology 能提取出**纯 ontology 没有显式定义的实体实例**。
+
+### 对比三类来源
+| 来源 | 能提供的 | 示例 |
+|------|---------|------|
+| **纯 ontology** | 类层次 + 预设个体骨架 | `Endpoint`(类)、`SimonTwoStageDesign`(个体) |
+| **AOF 从文本提取(无ontology)** | 零散命名实体，类型不统一 | `simon optimal two-stage design`(文本)、`safety population`(短语) |
+| **AOF + ontology** | **ontology 类引导 + 文本实例化个体** | `overall survival (os)` 作为 `Endpoint` 实例 |
+
+### 关键证据（实测）
+AOF + ontology 从文本提取的15个实体中，**绝大多数是 ontology 未显式定义的实例**：
+```
+non-progression rate (npr) at 18 weeks → Endpoint 实例
+simon optimal two-stage design         → StatisticalMethod 实例
+atezolizumab                           → Drug 实例
+advancedsolidtumors                    → Disease 实例
+```
+
+### 本质
+- ontology = 类层次（schema/骨架）："有哪些概念类型"
+- AOF = 实例抽取（填充）："这些类型的具体个体"
+- 结合 = 知识图谱完整闭环
+
+### 架构启示
+AOF 不是"消费 ontology"，而是"**用 ontology 类体系规范文本抽取的实例**"。
+ontology 让 AOF 从"半语义的零散实体"变为"对齐领域的结构化实例"。
+这正是 "Agentic Ontology Factory" 的核心：**类 → 实例 的自动化**。
