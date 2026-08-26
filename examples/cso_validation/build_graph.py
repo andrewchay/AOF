@@ -2,6 +2,14 @@
 """
 CSO 场景反例：用 AOF/cognee 独立建图谱，验证领域 ontology 的价值。
 
+⚠️ 遗留快速验证脚本（已不推荐用于正式抽提）
+----------------------------------------------
+本脚本为早期"能力验证"保留：它直接 ``import cognee`` + 手动设置 ``ONTOLOGY_*``
+环境变量，会**绕过 AOF 的封装层**（preflight / spec / document_parser / ontology_adapter）。
+
+正式抽提请改用官方链路：``run_via_aof_chain.py``（spec 驱动、ontology 走
+``bridge/ontology_adapter.apply_ontology`` 注入、结果落盘）。
+
 用法:
     python examples/cso_validation/build_graph.py [--with-ontology]
 

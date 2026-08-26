@@ -3,6 +3,6 @@
 Thin adapter only: build Cognee ontology config from AOF ontology settings.
 """
 
-from .adapter import build_cognee_ontology_config
+from .adapter import apply_ontology, build_cognee_ontology_config
 
-__all__ = ["build_cognee_ontology_config"]
+__all__ = ["apply_ontology", "build_cognee_ontology_config"]
