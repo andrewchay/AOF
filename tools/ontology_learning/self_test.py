@@ -11,7 +11,7 @@ from tools.ontology_learning import OntologyLearner, write_owl
 def make_seed_owl(tmpdir: str) -> str:
     """构造最小种子 ontology（只含 2 个类）。"""
     seed = Path(tmpdir) / "seed.owl"
-    write_owl(str(seed), {"Endpoint", "Drug"})
+    write_owl(str(seed), {"StudyObjective"})  # 最小种子: 只一个类
     return str(seed)
 
 
@@ -19,11 +19,13 @@ def make_mock_graph_builder():
     """模拟 graph_builder：每轮返回不同数量的 is_a 边（新增概念递减以触发收敛）。"""
     # 每轮提前定义好实体 → 类映射；从第3轮起不再新增，来触发 decay/饱和度收敛
     rounds = [
-        # round 1：新增2类
+        # round 1：2个新类
+        {"endpoint": ["npr", "orr"]},
+        # round 2：+1 个新类
         {"endpoint": ["npr", "orr"], "drug": ["atezolizumab"]},
-        # round 2：再新增1类
+        # round 3：+1 个新类
         {"endpoint": ["npr", "orr"], "drug": ["atezolizumab"], "statisticalmethod": ["simon"]},
-        # round 3（+）：无新增
+        # round 4：无新增(触发收敛)
         {"endpoint": ["npr", "orr"], "drug": ["atezolizumab"], "statisticalmethod": ["simon"]},
     ]
 

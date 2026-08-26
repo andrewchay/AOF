@@ -4,6 +4,18 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path as _Path
+# 复用通用 ontology learning 收敛判据
+try:
+    _AOF_ROOT = str(_Path(__file__).resolve().parents[2])
+    if _AOF_ROOT not in sys.path:
+        sys.path.insert(0, _AOF_ROOT)
+    from tools.ontology_learning.convergence import compute_concept_decay as _compute_concept_decay
+except Exception:
+    def _compute_concept_decay(prev, cur):
+        return cur / max(prev, 1) if prev > 0 else 1.0
+
 import json
 import os
 import re
@@ -653,7 +665,7 @@ def main() -> int:
             if conv_threshold and conv_threshold > 0:
                 conv = "n/a"
                 if prev_added_count is not None and prev_added_count > 0:
-                    decay = len(added) / max(prev_added_count, 1)
+                    decay = _compute_concept_decay(prev_added_count, len(added))
                     conv = f"{decay:.2f}"
                     iter_info["convergence_decay"] = round(decay, 3)
                     if decay < conv_threshold:
