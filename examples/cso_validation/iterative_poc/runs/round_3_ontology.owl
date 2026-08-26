@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+   xmlns:csorb="http://example.org/cso/ontology#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+>
+
+  <!-- ===== CSO 类 ===== -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#AnalysisPopulation">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>AnalysisPopulation</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Disease">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Disease</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Drug">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Drug</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Endpoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Endpoint</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#StatisticalMethod">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>StatisticalMethod</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#StudyObjective">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>StudyObjective</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Timepoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Timepoint</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#clinical trial">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>clinical trial</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#clinicaltrial">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>clinicaltrial</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#date">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>date</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#disease">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>disease</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#drug">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>drug</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#endpoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>endpoint</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#population">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>population</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#statisticalmethod">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>statisticalmethod</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#studydesign">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>studydesign</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#trial phase">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>trial phase</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#trialphase">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>trialphase</rdfs:label>
+  </rdf:Description>
+
+  <!-- ===== 关系(对象属性) ===== -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#isEvaluatedBy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>isEvaluatedBy</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#hasStatisticalMethod">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>hasStatisticalMethod</rdfs:label>
+  </rdf:Description>
+</rdf:RDF>
