@@ -38,6 +38,7 @@ class ResourceKind(str, Enum):
     FUNCTION = "Function"
     ACTION_TYPE = "ActionType"
     WORKFLOW = "Workflow"
+    CONTEXT_ASSERTION = "ContextAssertion"
     POLICY = "Policy"
 
 
