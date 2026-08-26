@@ -521,8 +521,16 @@ def main() -> int:
         default="",
         help="Optional user feedback patches in JSONL (action-based), applied before each alignment iteration",
     )
+    parser.add_argument(
+        "--convergence-threshold",
+        type=float,
+        default=0.2,
+        help="Early-stop when new concepts added this round / cumulative classes < threshold. 0 disables.",
+    )
 
     args = parser.parse_args()
+    conv_threshold = args.convergence_threshold
+
 
     project_root = Path(args.project_root).resolve()
     input_path = Path(args.input).resolve()
@@ -591,6 +599,7 @@ def main() -> int:
         run_script = project_root / "tools" / "run_deepseek_pipeline.sh"
         cognee_root = Path(args.cognee_root).resolve() if args.cognee_root else None
 
+        prev_added_count = None  # 上轮新增概念数(用于收敛判据)
         for i in range(1, args.max_iterations + 1):
             if args.feedback_jsonl:
                 fb = Path(args.feedback_jsonl).resolve()
@@ -639,6 +648,22 @@ def main() -> int:
             added = augment_ontology(ontology_file, stats["unmatched"])
             iter_info["added_from_unmatched"] = added
             print(f"[iter {i}] ontology augmented: +{len(added)} concepts")
+
+            # ---- 收敛增强: 新增概念速率趋缓则提前终止 ----
+            if conv_threshold and conv_threshold > 0:
+                conv = "n/a"
+                if prev_added_count is not None and prev_added_count > 0:
+                    decay = len(added) / max(prev_added_count, 1)
+                    conv = f"{decay:.2f}"
+                    iter_info["convergence_decay"] = round(decay, 3)
+                    if decay < conv_threshold:
+                        report["status"] = "converged_early"
+                        report["converge_reason"] = f"new-concept decay {decay:.2f} < threshold {conv_threshold} (prev={prev_added_count}, cur={len(added)})"
+                        print(f"[conv] 新增概念速率衰减(decay={decay:.2f}) < 阈值({conv_threshold}), 提前终止")
+                        break
+                else:
+                    iter_info["convergence_decay"] = None
+                prev_added_count = len(added)
 
         if "status" not in report:
             report["status"] = "max_iterations_reached"
