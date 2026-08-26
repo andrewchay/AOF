@@ -1964,6 +1964,10 @@ class TrainingDataGenerateReq(BaseModel):
     enable_deduplication: bool = True
     enable_train_val_test_split: bool = False
     system_prompt_template: Optional[str] = None
+    raw_sources: Optional[list[str]] = Field(
+        default=None,
+        description='真实对话消息 / Agent trajectory 源文件路径（配合 generators=["raw"] 使用）',
+    )
 
 
 class TrainingDataJobResp(BaseModel):
@@ -1984,16 +1988,19 @@ async def generate_training_data(req: TrainingDataGenerateReq) -> dict[str, Any]
     """
     生成 AI/Agent 训练数据集。
 
-    基于知识图谱和文档生成结构化训练数据，支持 SFT、RAG 评估、Agent 工具调用三种类型。
+    基于知识图谱和文档生成结构化训练数据，支持 SFT、RAG 评估、Agent 工具调用三种类型；
+    也支持「raw」生成器——把真实企业对话消息 / Agent 运行轨迹直接转换为 SFT 训练样本
+    （无需图谱，忠实保留真实多轮对话与工具调用推理链）。
 
     Args:
         dataset_name: 数据集名称
-        generators: 生成器类型列表 ["sft", "rag_eval", "agent_tool"]
+        generators: 生成器类型列表 ["sft", "rag_eval", "agent_tool", "raw"]
         max_samples: 每种生成器的最大样本数
         quality_threshold: 质量阈值（0-1）
         enable_deduplication: 是否启用去重
         enable_train_val_test_split: 是否拆分为训练/验证/测试集
         system_prompt_template: 自定义 system prompt 模板
+        raw_sources: 真实对话消息 / Agent trajectory 源文件路径（generators 含 "raw" 时必填）
 
     Returns:
         任务信息，包含 job_id 用于后续查询
@@ -2004,6 +2011,7 @@ async def generate_training_data(req: TrainingDataGenerateReq) -> dict[str, Any]
 
     from bridge.training_data import TrainingDataPipeline, QualityConfig, GeneratorConfig
     from bridge.training_data.generators import SFTGenerator, RAGEvalGenerator, AgentToolGenerator
+    from bridge.training_data.raw_trajectory import RawTrajectoryGenerator
 
     job_id = str(uuid.uuid4())
 
@@ -2012,12 +2020,17 @@ async def generate_training_data(req: TrainingDataGenerateReq) -> dict[str, Any]
         'sft': SFTGenerator,
         'rag_eval': RAGEvalGenerator,
         'agent_tool': AgentToolGenerator,
+        'raw': RawTrajectoryGenerator,
     }
     generators = []
     for name in req.generators:
         cls = gen_mapping.get(name)
         if cls:
-            generators.append(cls())
+            gen = cls()
+            # raw 生成器：注入真实对话/轨迹源文件路径
+            if name == 'raw' and req.raw_sources:
+                gen = gen.with_sources(req.raw_sources)
+            generators.append(gen)
 
     if not generators:
         raise HTTPException(status_code=400, detail='No valid generators specified')
@@ -2026,6 +2039,7 @@ async def generate_training_data(req: TrainingDataGenerateReq) -> dict[str, Any]
     gen_config = GeneratorConfig(
         max_samples=req.max_samples,
         system_prompt_template=req.system_prompt_template or '',
+        raw_sources=req.raw_sources,
     )
     quality_config = QualityConfig(
         enable_deduplication=req.enable_deduplication,

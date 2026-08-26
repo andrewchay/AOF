@@ -26,6 +26,7 @@ from typing import Any, Optional
 
 from bridge.training_data import TrainingDataPipeline
 from bridge.training_data.generators import SFTGenerator, RAGEvalGenerator, AgentToolGenerator
+from bridge.training_data.raw_trajectory import RawTrajectoryGenerator
 from bridge.training_data.models import QualityConfig
 
 logger = logging.getLogger(__name__)
@@ -81,16 +82,18 @@ class TrainingDataExporter:
         max_samples: Optional[int] = None,
         quality_config: Optional[QualityConfig] = None,
         enable_split: bool = False,
+        raw_sources: Optional[list[str]] = None,
     ) -> ExportResult:
         """导出训练数据集.
 
         Args:
             dataset_id: 数据集标识
             output_dir: 输出目录
-            generators: 生成器类型列表，如 ["sft", "rag_eval", "agent_tool"]
+            generators: 生成器类型列表，如 ["sft", "rag_eval", "agent_tool", "raw"]
             max_samples: 最大样本数
             quality_config: 质量控制配置
             enable_split: 是否拆分为 train/val/test
+            raw_sources: 真实对话消息 / Agent trajectory 源文件路径（generators 含 "raw" 时必填）
 
         Returns:
             ExportResult 包含导出统计
@@ -99,7 +102,7 @@ class TrainingDataExporter:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # 解析生成器
-        generator_instances = self._resolve_generators(generators or ["sft", "rag_eval"])
+        generator_instances = self._resolve_generators(generators or ["sft", "rag_eval"], raw_sources)
 
         # 创建流水线
         pipeline = TrainingDataPipeline(
@@ -130,18 +133,22 @@ class TrainingDataExporter:
         )
 
     @staticmethod
-    def _resolve_generators(names: list[str]) -> list:
+    def _resolve_generators(names: list[str], raw_sources: Optional[list[str]] = None) -> list:
         """将生成器名称解析为实例."""
         mapping = {
             "sft": SFTGenerator,
             "rag_eval": RAGEvalGenerator,
             "agent_tool": AgentToolGenerator,
+            "raw": RawTrajectoryGenerator,
         }
         instances = []
         for name in names:
             cls = mapping.get(name)
             if cls:
-                instances.append(cls())
+                gen = cls()
+                if name == "raw" and raw_sources:
+                    gen = gen.with_sources(raw_sources)
+                instances.append(gen)
             else:
                 logger.warning(f"Unknown generator type: {name}")
         return instances
@@ -156,6 +163,7 @@ async def export_dataset_to_training_data(
     enable_split: bool = False,
     graph_backend=None,
     dataset_manager=None,
+    raw_sources: Optional[list[str]] = None,
 ) -> ExportResult:
     """便捷函数：导出数据集为训练数据.
 
@@ -167,6 +175,7 @@ async def export_dataset_to_training_data(
         enable_split: 是否拆分数据集
         graph_backend: 图后端实例
         dataset_manager: 数据集管理器实例
+        raw_sources: 真实对话消息 / Agent trajectory 源文件路径（generators 含 "raw" 时必填）
 
     Returns:
         ExportResult
@@ -181,4 +190,5 @@ async def export_dataset_to_training_data(
         generators=generators,
         max_samples=max_samples,
         enable_split=enable_split,
+        raw_sources=raw_sources,
     )

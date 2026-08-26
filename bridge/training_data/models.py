@@ -226,6 +226,8 @@ class GeneratorConfig:
     context_max_length: int = 2000
     # Agent 特有
     tool_schema_source: Optional[str] = None  # 工具 schema 来源路径
+    # Raw 真实轨迹/对话 特有
+    raw_sources: Optional[list[str]] = None  # 真实对话/trajectory 源文件路径列表
 
 
 @dataclass

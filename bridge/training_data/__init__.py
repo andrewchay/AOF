@@ -34,6 +34,7 @@ from .models import (
 from .pipeline import TrainingDataPipeline
 from .quality import QualityFilter
 from .formatters import JSONLFormatter
+from .raw_trajectory import RawTrajectoryLoader, RawTrajectoryGenerator
 
 __all__ = [
     "SampleSource",
@@ -47,4 +48,6 @@ __all__ = [
     "TrainingDataPipeline",
     "QualityFilter",
     "JSONLFormatter",
+    "RawTrajectoryLoader",
+    "RawTrajectoryGenerator",
 ]

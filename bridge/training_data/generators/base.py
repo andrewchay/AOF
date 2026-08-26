@@ -35,6 +35,26 @@ class GeneratorBase(ABC):
         self.name = name or self.__class__.__name__
 
     @property
+    def requires_data_loaders(self) -> bool:
+        """该生成器是否必须依赖图谱/文档加载器.
+
+        默认为 True（既有 sft/rag_eval/agent_tool 都吃图谱/文档）。
+        不依赖加载器的生成器（如 RawTrajectoryGenerator 直接从原始文件读取）可覆写为 False，
+        以便在无 graph_backend/dataset_manager 时也能运行。
+        """
+        return True
+
+    @property
+    def bypass_quality_filter(self) -> bool:
+        """该生成器的样本是否跳过合成样本质量过滤.
+
+        默认为 False。忠实于真实原始数据的生成器（如 RawTrajectoryGenerator）
+        可覆写为 True，避免被为「合成样本」设计的长度阈值（如 min_answer_length=10）
+        误杀真实且短的对话消息。
+        """
+        return False
+
+    @property
     @abstractmethod
     def sample_type(self) -> str:
         """返回此生成器产生的样本类型标识.

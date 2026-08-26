@@ -117,13 +117,20 @@ class TrainingDataPipeline:
         all_samples: list[TrainingSample] = []
 
         # 检查数据加载器可用性
-        if self.graph_loader is None and self.doc_loader is None:
+        # 若全部生成器都不依赖加载器（如 raw 直接从原始文件读），则无需 graph/doc 后端也可运行
+        needs_loaders = any(getattr(gen, "requires_data_loaders", True) for gen in generators)
+        if needs_loaders and self.graph_loader is None and self.doc_loader is None:
             result.errors.append("No data loaders available (graph_backend and dataset_manager are None)")
             return result
 
-        # 为没有加载器的创建 mock
-        graph_loader = self.graph_loader or GraphLoader(_MockBackend())
-        doc_loader = self.doc_loader or DocumentLoader()
+        # 为没有加载器的创建 mock（仅当有生成器需要加载器时）
+        if needs_loaders:
+            graph_loader = self.graph_loader or GraphLoader(_MockBackend())
+            doc_loader = self.doc_loader or DocumentLoader()
+        else:
+            # 全部生成器不依赖加载器（如 raw）：直接传 None，生成器会忽略它们
+            graph_loader = self.graph_loader
+            doc_loader = self.doc_loader
 
         # 并行执行各生成器
         logger.info(f"Starting pipeline with {len(generators)} generators for dataset '{dataset_name}'")
@@ -146,8 +153,9 @@ class TrainingDataPipeline:
                 result.samples_by_type[sample_type] = len(samples)
                 logger.info(f"Generator '{gen.name}' produced {len(samples)} {sample_type} samples")
 
-                # 质量过滤
-                if q_config.enable_deduplication or q_config.min_question_length > 0:
+                # 质量过滤（忠实数据的生成器如 raw 可跳过合成样本质量过滤）
+                bypass = bool(getattr(gen, "bypass_quality_filter", False))
+                if not bypass and (q_config.enable_deduplication or q_config.min_question_length > 0):
                     filtered_samples, report = quality_filter.filter(samples)
                     logger.info(
                         f"Quality filter for {sample_type}: {report.passed}/{report.total_input} passed"
