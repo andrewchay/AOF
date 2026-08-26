@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+   xmlns:owl="http://www.w3.org/2002/07/owl#"
+>
+  <rdf:Description rdf:about="http://aof.dev/ontology#Conversation">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Conversation</rdfs:label>
+    <rdfs:comment xml:lang="zh">对话 - 一次完整的多轮会话</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#ConversationTurn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">ConversationTurn</rdfs:label>
+    <rdfs:comment xml:lang="zh">对话轮次 - 单次交互回合</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#Message">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Message</rdfs:label>
+    <rdfs:comment xml:lang="zh">消息 - 角色在某轮说出的一条消息</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#AgentRun">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">AgentRun</rdfs:label>
+    <rdfs:comment xml:lang="zh">Agent运行 - 一次 Agent 执行的完整轨迹</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#AgentStep">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">AgentStep</rdfs:label>
+    <rdfs:comment xml:lang="zh">Agent步骤 - 轨迹中的单个执行步骤</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#ToolCall">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">ToolCall</rdfs:label>
+    <rdfs:comment xml:lang="zh">工具调用 - Agent 调用外部工具的一次动作</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#AOFAgent">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">AOFAgent</rdfs:label>
+    <rdfs:comment xml:lang="zh">Agent主体 - 执行任务的主体</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#hasTurn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">包含轮次</rdfs:label>
+    <rdfs:domain rdf:resource="http://aof.dev/ontology#Conversation"/>
+    <rdfs:range rdf:resource="http://aof.dev/ontology#ConversationTurn"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#hasMessage">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">包含消息</rdfs:label>
+    <rdfs:domain rdf:resource="http://aof.dev/ontology#ConversationTurn"/>
+    <rdfs:range rdf:resource="http://aof.dev/ontology#Message"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#hasStep">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">包含步骤</rdfs:label>
+    <rdfs:domain rdf:resource="http://aof.dev/ontology#AgentRun"/>
+    <rdfs:range rdf:resource="http://aof.dev/ontology#AgentStep"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#invokesTool">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">调用工具</rdfs:label>
+    <rdfs:domain rdf:resource="http://aof.dev/ontology#AgentStep"/>
+    <rdfs:range rdf:resource="http://aof.dev/ontology#ToolCall"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#performedBy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">由谁执行</rdfs:label>
+    <rdfs:domain rdf:resource="http://aof.dev/ontology#AgentRun"/>
+    <rdfs:range rdf:resource="http://aof.dev/ontology#AOFAgent"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://aof.dev/ontology#sequenceNumber">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">序号</rdfs:label>
+    <rdfs:domain rdf:resource="http://aof.dev/ontology#AgentStep"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#int"/>
+  </rdf:Description>
+</rdf:RDF>

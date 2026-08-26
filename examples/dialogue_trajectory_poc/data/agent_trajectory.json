@@ -1,0 +1,13 @@
+{
+  "run_id": "run-9f3c2a",
+  "agent": "inventory-planner",
+  "started_at": "2026-08-25T10:00:00Z",
+  "goal": "判断 2026-Q3 华东区库存是否需要补货",
+  "steps": [
+    {"seq": 1, "action": "reason", "input": "获取华东区当前库存水位", "output": "决定调用查库存工具", "tool_call": {"tool": "query_inventory", "args": {"region": "east_china", "sku": "NB-100"}}},
+    {"seq": 2, "action": "tool_result", "input": "query_inventory", "output": "库存水位 12%，低于阈值 20%", "tool_call": null},
+    {"seq": 3, "action": "reason", "input": "库存水位12%低于阈值", "output": "触发补货决策，评估补货量", "tool_call": {"tool": "calc_reorder_qty", "args": {"sku": "NB-100", "safety_stock": 500}}},
+    {"seq": 4, "action": "tool_result", "input": "calc_reorder_qty", "output": "建议补货 800 台", "tool_call": null},
+    {"seq": 5, "action": "decide", "input": "建议补货800台", "output": "批准生成补货采购单 PO-2026-0901，状态=approved", "tool_call": {"tool": "create_purchase_order", "args": {"sku": "NB-100", "qty": 800}}}
+  ]
+}

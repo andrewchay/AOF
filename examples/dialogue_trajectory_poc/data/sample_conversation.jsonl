@@ -1,0 +1,6 @@
+{"session_id": "conv-2026-0801", "role": "customer", "message": "你好，我最近购买的笔记本无法开机，黑屏了。请帮我看看怎么解决。"}
+{"session_id": "conv-2026-0801", "role": "agent", "message": "很抱歉给您带来不便。请问是全新机器吗？开机时电源指示灯是否亮起？"}
+{"session_id": "conv-2026-0801", "role": "customer", "message": "是的，上个月刚买的，电源指示灯亮着但屏幕是黑的。"}
+{"session_id": "conv-2026-0801", "role": "agent", "message": "已为您登记售后工单 TKT-88421，检测到您的设备在保修期内，将安排免费上门检测维修。"}
+{"session_id": "conv-2026-0802", "role": "customer", "message": "我同事说你们的物流最近严重延迟，会影响我们项目交付。是真的吗？"}
+{"session_id": "conv-2026-0802", "role": "agent", "message": "抱歉让您担忧。经查询，您所在区域物流目前正常运行，平均时效 2-3 天，未发现异常延迟。"}
