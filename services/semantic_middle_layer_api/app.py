@@ -2191,6 +2191,185 @@ def get_training_data_templates() -> dict[str, Any]:
     }
 
 
+# ==================== Harness Trainer Endpoints ====================
+
+_HARNESS_SESSION_MANAGER: Optional[Any] = None
+
+
+def _get_harness_manager() -> Any:
+    global _HARNESS_SESSION_MANAGER
+    if _HARNESS_SESSION_MANAGER is None:
+        from bridge.harness_trainer import HarnessSessionManager
+        _HARNESS_SESSION_MANAGER = HarnessSessionManager()
+    return _HARNESS_SESSION_MANAGER
+
+
+class HarnessCreateSessionReq(BaseModel):
+    """创建驯化会话请求."""
+    problem_statement: str
+    pattern_type: str = ''
+    domain: str = ''
+    scenario: str = ''
+    satisfaction_threshold: float = 4.0
+
+
+class HarnessAddIterationReq(BaseModel):
+    """添加迭代请求."""
+    agent_response: str
+    asset_version: str = ''
+    expert_score: dict[str, float] = Field(default_factory=dict)
+    expert_feedback: str = ''
+    tool_calls: list[dict[str, Any]] = Field(default_factory=list)
+
+
+@app.post('/v1/harness/sessions')
+async def harness_create_session(req: HarnessCreateSessionReq) -> dict[str, Any]:
+    """创建 Agent 驯化会话."""
+    manager = _get_harness_manager()
+    
+    session = manager.create_session(
+        problem_statement=req.problem_statement,
+        pattern_type=req.pattern_type,
+        domain=req.domain,
+        scenario=req.scenario,
+        satisfaction_threshold=req.satisfaction_threshold,
+    )
+    
+    return {
+        'status': 'success',
+        'session': {
+            'id': session.id,
+            'problem_statement': session.problem_statement,
+            'pattern_type': session.pattern_type,
+            'status': session.status.value,
+            'current_score': session.current_score,
+            'iteration_count': 0,
+        },
+    }
+
+
+@app.get('/v1/harness/sessions/{session_id}')
+async def harness_get_session(session_id: str) -> dict[str, Any]:
+    """获取驯化会话详情."""
+    manager = _get_harness_manager()
+    session = manager.get_session(session_id)
+    
+    if not session:
+        raise HTTPException(status_code=404, detail=f'Session not found: {session_id}')
+    
+    return {'status': 'success', 'session': session.to_dict()}
+
+
+@app.post('/v1/harness/sessions/{session_id}/iterations')
+async def harness_add_iteration(session_id: str, req: HarnessAddIterationReq) -> dict[str, Any]:
+    """向驯化会话添加迭代."""
+    manager = _get_harness_manager()
+    session = manager.get_session(session_id)
+    
+    if not session:
+        raise HTTPException(status_code=404, detail=f'Session not found: {session_id}')
+    
+    from bridge.harness_trainer import ExpertScore, IterationEngine
+    
+    score = ExpertScore.for_scenario(session.scenario)
+    for key in ['structure', 'accuracy', 'completeness', 'style', 'reasoning']:
+        if key in req.expert_score:
+            setattr(score, key, req.expert_score[key])
+    
+    engine = IterationEngine(enable_explicit_tracking=True)
+    iteration = engine.run_iteration(
+        problem=session.problem_statement,
+        agent_response=req.agent_response,
+        asset_version=req.asset_version,
+        expert_score=score,
+        expert_feedback=req.expert_feedback,
+        tool_calls=req.tool_calls,
+    )
+    
+    session = manager.add_iteration(session_id, iteration)
+    
+    return {
+        'status': 'success',
+        'iteration': {
+            'number': iteration.number,
+            'is_satisfactory': iteration.is_satisfactory,
+            'score': iteration.expert_score.overall,
+        },
+        'session_status': session.status.value,
+    }
+
+
+@app.get('/v1/harness/sessions/{session_id}/attribution')
+async def harness_get_attribution(session_id: str) -> dict[str, Any]:
+    """获取驯化会话的归因报告."""
+    manager = _get_harness_manager()
+    session = manager.get_session(session_id)
+    
+    if not session:
+        raise HTTPException(status_code=404, detail=f'Session not found: {session_id}')
+    
+    if len(session.iterations) < 2:
+        return {'status': 'error', 'message': '至少需要 2 轮迭代才能生成归因报告'}
+    
+    from bridge.harness_trainer import AttributionEngine
+    report = AttributionEngine().analyze(session)
+    
+    return {'status': 'success', 'report': report.to_dict()}
+
+
+@app.post('/v1/harness/sessions/{session_id}/export')
+async def harness_export(session_id: str) -> dict[str, Any]:
+    """导出驯化会话的训练数据."""
+    manager = _get_harness_manager()
+    session = manager.get_session(session_id)
+    
+    if not session:
+        raise HTTPException(status_code=404, detail=f'Session not found: {session_id}')
+    
+    from bridge.harness_trainer import TrainingDataExtractor
+    samples = TrainingDataExtractor().extract_from_session(session)
+    
+    return {
+        'status': 'success',
+        'sample_count': len(samples),
+        'samples': [s.to_dict() for s in samples],
+    }
+
+
+@app.get('/v1/harness/sessions')
+async def harness_list_sessions(
+    pattern_type: Optional[str] = None,
+    status: Optional[str] = None,
+) -> dict[str, Any]:
+    """列驯化会话."""
+    manager = _get_harness_manager()
+    from bridge.harness_trainer import SessionStatus
+    
+    status_enum = None
+    if status:
+        try:
+            status_enum = SessionStatus(status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f'Invalid status: {status}')
+    
+    sessions = manager.list_sessions(pattern_type=pattern_type, status=status_enum)
+    
+    return {
+        'status': 'success',
+        'sessions': [
+            {
+                'id': s.id,
+                'problem_statement': s.problem_statement,
+                'pattern_type': s.pattern_type,
+                'status': s.status.value,
+                'current_score': s.current_score,
+                'iteration_count': len(s.iterations),
+            }
+            for s in sessions
+        ],
+    }
+
+
 # ==================== Incremental Ingestion Endpoints ====================
 
 class IncrementalIngestReq(BaseModel):
