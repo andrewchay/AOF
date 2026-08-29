@@ -10,6 +10,7 @@ from bridge.harness_trainer import (
     AttributionEngine,
     ChangeType,
     ExpertScore,
+    ExplicitAssetTracker,
     HarnessSession,
     HarnessSessionManager,
     Iteration,
@@ -104,6 +105,79 @@ class TestIterationEngine:
             agent_response="库存情况良好",
         )
         assert iteration.assets_used == []
+
+    def test_explicit_asset_tracking(self):
+        engine = IterationEngine(enable_explicit_tracking=True)
+        engine.register_asset("库存周转率", "inv_turnover", AssetType.ONTOLOGY_CLASS)
+        
+        # 模拟 Agent 的 function calling
+        tool_calls = [
+            {
+                "id": "call_1",
+                "type": "function",
+                "function": {
+                    "name": "query_asset",
+                    "arguments": '{"asset_type": "ontology_class", "asset_id": "inv_turnover", "query": "查询库存周转率"}',
+                },
+            }
+        ]
+        
+        iteration = engine.run_iteration(
+            problem="分析库存",
+            agent_response="根据库存周转率分析，建议补货",
+            tool_calls=tool_calls,
+        )
+        
+        assert len(iteration.assets_used) == 1
+        assert iteration.assets_used[0].asset_id == "inv_turnover"
+        assert iteration.assets_used[0].relevance_score == 1.0  # 显式追踪相关度为 1.0
+        assert iteration.assets_used[0].is_critical is True
+
+    def test_hybrid_fallback_to_implicit(self):
+        engine = IterationEngine(enable_explicit_tracking=True)
+        engine.register_asset("安全库存", "safety_stock", AssetType.KNOWLEDGE_CHUNK)
+        
+        # 无 tool_calls，应 fallback 到隐式推断
+        iteration = engine.run_iteration(
+            problem="分析库存",
+            agent_response="根据安全库存分析，建议补货",
+        )
+        
+        assert len(iteration.assets_used) == 1
+        assert iteration.assets_used[0].asset_name == "安全库存"
+
+
+class TestExplicitAssetTracker:
+    def test_track_from_tool_calls(self):
+        tracker = ExplicitAssetTracker()
+        
+        tool_calls = [
+            {
+                "function": {
+                    "name": "query_asset",
+                    "arguments": '{"asset_type": "ontology_class", "asset_id": "inv_turnover"}',
+                },
+            },
+            {
+                "function": {
+                    "name": "other_tool",  # 非 query_asset，应忽略
+                    "arguments": '{}',
+                },
+            },
+        ]
+        
+        usages = tracker.track_from_tool_calls(tool_calls)
+        assert len(usages) == 1
+        assert usages[0].asset_id == "inv_turnover"
+        assert usages[0].asset_type == AssetType.ONTOLOGY_CLASS
+
+    def test_build_query_tool_schema(self):
+        tracker = ExplicitAssetTracker()
+        schema = tracker.build_query_tool_schema()
+        
+        assert schema["type"] == "function"
+        assert schema["function"]["name"] == "query_asset"
+        assert "asset_type" in schema["function"]["parameters"]["properties"]
 
 
 class TestAttributionEngine:

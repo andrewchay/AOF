@@ -348,25 +348,28 @@ def extract_training_data(iteration: Iteration) -> AgentToolSample:
 
 **我的判断**: 可以，但需要标记问题的"模式类型"（如"区域库存分析"），同类问题共享训练数据。
 
-## 实施建议
+## 实施阶段
 
-### Phase 1: MVP（2-3 周）
-1. `HarnessSession` + `Iteration` 数据模型
-2. 简单的资产使用追踪（文本匹配）
-3. 专家评分（单维度 overall）
-4. 简单归因（改动前后对比）
-5. 从满意迭代提取 SFT 样本（复用 RawTrajectory）
+### Phase 1: MVP（已完成 ✅）
+- [x] `HarnessSession` + `Iteration` 数据模型
+- [x] 简单的资产使用追踪（文本匹配隐式推断）
+- [x] 专家评分（多维度 + 场景自定义权重）
+- [x] 满意判定（单轮 overall >= threshold）
+- [x] 简单归因（改动前后对比 + 置信度）
+- [x] 从满意迭代提取 Agent-Tool 样本
+- [x] 11 个测试，全量 636 通过
 
-### Phase 2: 精细归因（2-3 周）
-1. function calling 方式资产查询
-2. 多维度专家评分
-3. 控制实验（单变量改动）
-4. 归因置信度评估
+### Phase 2: 精细归因 + 显式资产追踪（进行中 🔄）
+- [x] **显式资产追踪**: `ExplicitAssetTracker` 通过 function calling 解析 Agent 的 `query_asset` 工具调用
+- [x] **混合模式**: `IterationEngine` 优先显式追踪，无记录时 fallback 到隐式推断
+- [x] **工具 schema 生成**: 自动生成 `query_asset` 工具定义供 Agent 使用
+- [ ] 控制实验（单变量改动）
+- [ ] 归因因果推断升级
 
-### Phase 3: 产品化（2-3 周）
-1. Web UI：驯化会话管理、迭代可视化、归因报告
-2. 训练数据自动导出到模型微调 pipeline
-3. 跨会话训练数据复用（同类问题聚合）
+### Phase 3: 产品化（待开始 ⏳）
+- [ ] Web UI：驯化会话管理、迭代可视化、归因报告
+- [ ] 与 AOF `/v1/training-data/generate` 集成（直接产出训练数据）
+- [ ] 跨会话训练数据聚合（按 pattern_type 自动复用）
 
 ## 产出物
 

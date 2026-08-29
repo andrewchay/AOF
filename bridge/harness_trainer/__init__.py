@@ -51,10 +51,11 @@ from .models import (
     DEFAULT_WEIGHTS,
     SCENARIO_WEIGHTS,
 )
-from .session_manager import HarnessSessionManager
+from .explicit_asset_tracker import ExplicitAssetTracker
 from .iteration_engine import IterationEngine
 from .attribution_engine import AttributionEngine
 from .training_extractor import TrainingDataExtractor
+from .session_manager import HarnessSessionManager
 
 __all__ = [
     # 模型
@@ -75,6 +76,7 @@ __all__ = [
     # 引擎
     "HarnessSessionManager",
     "IterationEngine",
+    "ExplicitAssetTracker",
     "AttributionEngine",
     "TrainingDataExtractor",
 ]
