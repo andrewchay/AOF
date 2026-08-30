@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
@@ -40,7 +40,7 @@ class SemanticFinding:
     message: str
     resource_id: str | None = None
     waiver_allowed: bool = False
-    details: Mapping[str, Any] = MappingProxyType({})
+    details: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
 
     def to_dict(self) -> dict[str, Any]:
         return {
