@@ -15,6 +15,7 @@ from typing import Any, Mapping
 from .contracts import ContextExchangeError, ContextSpace, ContextVisibility
 from .gateway import ContextGateway, SqliteContextPacketRepository
 from .mycontext_exporter import MyContextExportBundle
+from .tenant_policy import TenantContextPolicy
 from bridge.decision_provenance import DecisionProvenanceStore
 
 
@@ -91,4 +92,25 @@ class MyContextSubmissionService:
             receipt_decision_id=quarantined.receipt_decision_id,
             status="quarantined",
             target_space=packet.target_space.to_dict(),
+        )
+
+    def submit_routed(
+        self,
+        export: Mapping[str, Any],
+        *,
+        policy: TenantContextPolicy,
+        actor: str,
+        rationale: str,
+    ) -> ContextSubmissionReceipt:
+        """Submit only when every selected evidence source is share-eligible."""
+
+        bundle = MyContextExportBundle.from_dict(export)
+        route = policy.route_export(bundle)
+        return self.submit(
+            export,
+            tenant_id=policy.tenant_id,
+            actor=actor,
+            rationale=rationale,
+            draft_space_id=route.draft_space_id,
+            allowed_purpose=route.allowed_purposes,
         )

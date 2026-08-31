@@ -62,6 +62,10 @@ Only a successfully published public assertion enters `SqlitePublicKnowledgeRepo
 
 Public assertion revocation is append-only: a revocation decision is stored separately from the published assertion, so new catalog queries exclude it while historical releases and QueryRuns remain intact. `PublicKnowledgeQueryControl.replay()` requires the source run ID, its expected digest, and a valid attestation; it only succeeds if the current public catalog produces the identical result digest. A revocation or other catalog change therefore produces a signed failed replay run rather than a misleading successful replay.
 
+## Iteration 9: tenant source-routing policy
+
+`TenantContextPolicy` makes the private/share boundary deployable. A tenant-owned YAML policy maps source-reference prefixes to `private`, `share-eligible`, or `deny`. Unknown sources are private by default. A share-eligible route must name a configured shared-draft space and a subset of that space's allowed purposes. `MyContextSubmissionService.submit_routed()` evaluates every evidence reference before submission: any private or denied source blocks the entire packet, and selected evidence may not span draft spaces. The policy therefore controls eligibility; MyContext still requires user selection, redaction, consent and expiry for each actual export.
+
 ## Iteration-0 acceptance
 
 - Packets cannot target governed spaces directly.

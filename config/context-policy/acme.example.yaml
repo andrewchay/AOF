@@ -1,0 +1,21 @@
+tenant_id: acme
+spaces:
+  project-alpha:
+    draft_space_id: project-alpha-draft
+    allowed_purposes: [project-delivery, delivery-support]
+source_routes:
+  - source_prefix: "local:personal-notes:"
+    disposition: private
+    draft_space: null
+    allowed_purposes: []
+    sensitivity_labels: [personal]
+  - source_prefix: "sharepoint:/Projects/Alpha/"
+    disposition: share-eligible
+    draft_space: project-alpha
+    allowed_purposes: [project-delivery]
+    sensitivity_labels: []
+  - source_prefix: "sharepoint:/HR/"
+    disposition: deny
+    draft_space: null
+    allowed_purposes: []
+    sensitivity_labels: [employee-data]
