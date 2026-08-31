@@ -35,3 +35,4 @@ data/harness_sessions/
 workspace-files/
 _rag_smoke_test.py
 examples/dialogue_trajectory_poc/data/
+.claude/
