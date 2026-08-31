@@ -1,19 +1,64 @@
-# 决策级溯源（PROV-O 风格）
+# 决策级溯源
+
+> **状态**：已实现的证据与审计能力；决策孪生属于后续演进。
 
 ## 目标与边界
 
-决策溯源回答“Agent 为何作出此结论、依据何证据、承接哪些先例、影响什么”，而 `bridge.audit` 继续记录访问与操作。两者互补，不能互相替代。
+决策溯源回答：“谁在何时基于哪些证据、先例和策略做出了什么决策，它影响了什么？”
+它不同于访问审计：访问审计记录发生过什么操作；决策溯源记录为何形成结论、结论如何承接前序判断并影响后续对象。
 
-每条 `Decision` 是一个 Activity：由 `Agent` 执行，`used` 一组不可变 `Entity` 证据，`wasInformedBy` 其前序 Decision，`generated` 输出实体。账本写入 `data/audit/decision_provenance.jsonl`（可由 `AOF_DECISION_PROVENANCE_FILE` 覆盖）；每条记录的 SHA-256 覆盖内容和前序哈希。
+`bridge/decision_provenance.py` 使用 append-only JSONL 账本保存 `DecisionRecord` 与 `EvidenceRef`；每条记录覆盖其内容及前序哈希，支持 SHA-256 链完整性校验和 PROV-O 风格 JSON-LD 审计输出。
 
-## API 闭环
+## 决策模型
 
-1. `POST /v1/decisions`：记录决策。父决策必须已存在，拒绝自环。
-2. `GET /v1/decisions/{id}/causal-chain`：按 ancestors 或 descendants BFS 追溯。
-3. `POST /v1/decisions/precedents/search`：按 `decision_type` 和标签重叠检索先例。
-4. `POST /v1/decisions/impact`：从下游决策链汇总被影响的输出实体。
-5. `GET /v1/decisions/{id}/audit-trail`：输出 PROV-O 风格 JSON-LD、完整性验证和合规摘要。
+```text
+EvidenceRef ─used by→ DecisionRecord
+Prior Decision ─wasInformedBy→ DecisionRecord
+DecisionRecord ─generated→ output entity / result
+DecisionRecord ─subject to→ policy / release / run context
+```
 
-## 后续治理层
+决策可以关联父决策、输入证据、输出实体、标签、适用策略与上下文。记录不可原地修改；修订应作为新决策并保留因果关系。
 
-在数据模型稳定后再引入 SHACL（字段/关系约束）和 OWL（概念对齐）；冲突必须产出审查实体，不能覆盖原始决策。确定性推理应在版本化规则集上运行，并把规则版本、输入快照和推理结果重新写为可审计 Entity。
+## 当前接口
+
+REST、MCP 和客户端入口共同支持：
+
+1. 记录决策及证据；
+2. 读取某一决策；
+3. 追溯 ancestors/descendants；
+4. 按类型和标签检索先例；
+5. 分析受影响的后续决策和实体；
+6. 导出审计轨迹，并验证哈希链和证据完整性。
+
+MCP 入口包括 `aof_record_decision`、`aof_decision_audit_trail` 与 `aof_find_decision_precedents`。
+
+## 与语义治理和运行时的关系
+
+决策溯源不再是孤立账本，也不是“将来才接入治理”的占位设计：
+
+- 本体草稿验证、豁免、审批和发布构成可审计的治理决策；
+- Datalog 规则发布和推理结果可关联规则版本、输入证明与决策记录；
+- Release 为决策、查询、仿真与 Action Plan 提供可定位的语义版本锚点；
+- Action Run、补偿与人工对账应把结果证据回链至计划和相关决策；
+- QueryRun 与编译重放保存当时的请求、计划和 release，避免事后只留下自然语言结论。
+
+因此，消费方不应仅保存“模型回答”。至少应保存所引用的 release、证据、策略/规则版本以及后续结果或未决状态。
+
+## 完整性与局限
+
+哈希链可以发现账本内容或链路被改动，但它不自动证明证据本身真实、权限正确或业务结果有效。生产级不可篡改存储、KMS/HSM、跨系统 receipt、长期保留和灾备需在独立部署中验证。
+
+同样，记录了决策不等于已经形成组织学习。当前先例检索和影响分析是可用机制；以下仍属后续工作：
+
+- 为特定决策类型定义“期望应有的证据、检查和确认”的决策模型；
+- 将实际遥测与该期望模型持续对账；
+- 识别跳过核验、反复被推翻或长期未被消费的决策；
+- 将已验证结果安全地回流为规则、回归样例或治理修订候选。
+
+## 使用原则
+
+1. 决策证据引用不可变来源或可验证摘要，而不是只复制自由文本。
+2. 不确定结果必须显式标注；不要把重试、补偿或人工对账前的状态写成成功。
+3. 决策、授权和执行分开记录；任何一项都不能替代另外两项。
+4. 涉及高风险动作时，溯源是必要证据之一，但不能替代策略检查和独立审批。

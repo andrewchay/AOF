@@ -29,3 +29,9 @@ data/poc/runs/**
 .env.*.local
 tools/retrieval_gain/runs/
 data/parse_cache/
+
+# Local runtime artifacts (agent sessions, workspace files)
+data/harness_sessions/
+workspace-files/
+_rag_smoke_test.py
+examples/dialogue_trajectory_poc/data/

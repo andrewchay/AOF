@@ -1,77 +1,51 @@
-# AOF 架构总览（主入口）
+# AOF 架构专题导航
 
-本文档是 `docs/architecture/` 的统一入口，包含：
+> **主架构真值源**：[ARCHITECTURE.md](../../ARCHITECTURE.md)
+> **职责**：本页只负责导航、术语和文档维护边界；不重复或替代主架构。
 
-1. 主架构图（系统级）
-2. 核心能力边界
-3. 术语表（Glossary）
-4. 分文档导航
-
-最后更新：`2026-03-31`
-
-## 1. 主架构图
+## 架构地图
 
 ```text
-上游输入
-  ├─ 文档（SQL/Markdown/报告）
-  ├─ 元数据（表结构/字段）
-  └─ 反馈（jsonl patches）
-            │
-            ▼
-services/semantic_middle_layer_api (FastAPI 编排层)
-            │
-            ▼
-bridge/ (能力适配层)
-  ├─ 规格与本体: spec_mapper / ontology_adapter
-  ├─ 摄取同步: incremental / url / s3 / batch / sync
-  ├─ 检索反馈: enhanced_search / cypher / memify
-  ├─ 数据与图能力: dataset / visualize / analytics
-  └─ 保障能力: preflight / quality_gate / errors
-            │
-            ▼
-Cognee 引擎层（add / cognify / search / graph）
-            │
-            ▼
-中间层产物（data/middle_layer/<topic>/）
-  ├─ mapping/
-  ├─ regression/
-  └─ artifacts/（manifest, skills suggestions）
-            │
-            ▼
-下游消费（Text-to-SQL / BI Copilot / 指标治理 / 查询审计）
+接入与治理边界
+  → 语义资产生命周期（Draft / Validate / Review / Publish / Release）
+  → 语义运行时（Semantic IR / 编译 / 推理 / 查询与重放）
+  → 仿真与受控动作（Plan / Authorize / Execute / Compensate）
+  → 决策证据与过程资产
+  → 适配与承载层（摄取、Cognee/图存储、SQL/BI、导出、连接器）
 ```
 
-## 2. 核心边界
+Cognee、Bridge、semantic middle layer、OKF、RAG 与 Text-to-SQL 均是上图的输入、适配或消费组件；它们不单独定义 AOF 的系统边界。
 
-- API 层负责协议与编排，不承载复杂业务规则
-- Bridge 层负责能力适配和流程组装
-- Cognee 层负责图谱引擎核心能力
-- `data/middle_layer` 是统一产物契约
+## 专题文档
 
-## 3. 术语表（Glossary）
+| 主题 | 真值文档 | 关注点 |
+|---|---|---|
+| Semantic IR 与发布 | [semantic-ir-and-knowledge-release.md](semantic-ir-and-knowledge-release.md) | 不可变 revision、release、编译契约 |
+| 本体治理与推理 | [ontology-governance-and-reasoning.md](ontology-governance-and-reasoning.md) | OWL/SHACL/SKOS、审查、Datalog |
+| 受控动作与仿真 | [controlled-actions-and-digital-twin.md](controlled-actions-and-digital-twin.md) | ActionPlan、授权、执行、补偿、双时态模拟 |
+| 决策证据 | [decision-provenance.md](decision-provenance.md) | Evidence、Decision、审计、先例与影响 |
+| 确定性企业运行时 | [deterministic-enterprise-runtime.md](deterministic-enterprise-runtime.md) | 回放、事件、恢复与受控执行 |
+| Bridge 适配层 | [bridge-design.md](bridge-design.md) | AOF 与 Cognee、摄取、检索等适配边界 |
+| Cognee 集成 | [cognee-integration.md](cognee-integration.md) | 图谱引擎集成专题，不是全局架构 |
+| 上下文交换 | [context-exchange-v1.md](context-exchange-v1.md) | 跨上下文审批和发布边界 |
+| 真实轨迹数据 | [raw-trajectory-training-data.md](raw-trajectory-training-data.md) | 训练数据通道与隐私/审计边界 |
+
+## 术语
 
 | 术语 | 定义 |
 |---|---|
-| AOF | Agentic Ontology Factory，语义中间层工程 |
-| Semantic Middle Layer | 连接上游数据与下游智能应用的语义抽象层 |
-| Topic | 一次中间层构建的业务主题命名空间 |
-| Mapping Library | 下游生成 SQL/解释语义时使用的映射库 |
-| Regression Library | 下游回归门禁样例库 |
-| Manifest | 一次构建的产物清单与索引文件 |
-| Feedback Loop | 反馈回流并转化为本体/映射改进建议的闭环 |
-| Quality Gate | 构建前后质量检查门禁 |
-| Bridge Layer | AOF 与 Cognee 之间的适配编排层 |
-| Cognify | Cognee 的图谱构建流程入口 |
+| Semantic Asset | 可审阅、可版本化的本体、mapping、规则、样例和相关资源 |
+| Revision / Release | 单资源不可变内容版本 / 可共同运行的修订清单 |
+| Semantic Runtime | 对已发布资产进行编译、推理、查询、仿真与受控行动的运行层 |
+| Bridge | 与图存储、摄取、检索和业务系统连接的适配编排层 |
+| Action Plan / Run | 受策略约束的行动计划 / 实际执行记录；二者不可混同 |
+| Decision Provenance | “为何、基于什么证据、影响什么”的决策记录，不等同访问审计 |
+| Statement / Runtime State | 可读导出本体与实际运行资产；需要漂移对账，当前尚未完全自动化 |
 
-## 4. 文档导航
+## 维护规则
 
-- 桥接层详细设计：[bridge-design.md](/Users/chaihao/LLM/AOF/docs/architecture/bridge-design.md)
-- AOF 与 Cognee 集成：[cognee-integration.md](/Users/chaihao/LLM/AOF/docs/architecture/cognee-integration.md)
-- 能力覆盖与差距快照：[cognee-capabilities-gap-analysis.md](/Users/chaihao/LLM/AOF/docs/architecture/cognee-capabilities-gap-analysis.md)
-- 历史新增功能总结（阶段性）：[new-features-summary.md](/Users/chaihao/LLM/AOF/docs/architecture/new-features-summary.md)
-
-## 5. 维护约定
-
-1. 架构变更先更新本文档主图与术语，再更新分文档细节
-2. 路由与模块统计值以代码为准（`app.py` + `bridge/`）
-3. 历史文档可保留，但需标注“阶段性”避免误读
+1. 改变系统边界、运行主线或能力状态时，先更新 `ARCHITECTURE.md`。
+2. 改变某一具体契约时，更新相应专题文档和测试；不要把专题细节复制回主架构。
+3. 代码、API 和工具数量以实现为准；文档中的计数应避免成为长期事实源。
+4. 已实现机制、待验证业务闭环、生产运行要求必须分别标识。
+5. 历史或阶段性文档应注明适用时间与范围，避免被误读为当前架构。
