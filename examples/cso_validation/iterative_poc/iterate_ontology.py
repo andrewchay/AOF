@@ -22,15 +22,13 @@ sys.path.insert(0, "/Users/chaihao/LLM/AOF")
 sys.path.insert(0, "/Users/chaihao/LLM/cognee")
 logging.disable(logging.WARNING)
 
-from iterate_core import (
+from iterate_core import (  # noqa: E402
     extract_instances_from_nodes,
-    cluster_instances_to_classes,
     map_instances_to_classes,
     compute_concept_saturation,
-    compute_class_stability,
     should_stop,
 )
-from owl_generator import read_class_names, build_owl
+from owl_generator import read_class_names, build_owl  # noqa: E402
 
 BASE = Path(__file__).parent
 SEED_OWL = BASE.parent / "data" / "cso_oncology.owl"
@@ -107,16 +105,15 @@ async def main():
     classes_so_far = set(read_class_names(SEED_OWL))
     relations = [("Endpoint", "isEvaluatedBy", "StudyObjective"),
                  ("Endpoint", "hasStatisticalMethod", "StatisticalMethod")]
-    prev_hierarchy = {}
     prev_classes = set(classes_so_far)
     prev_class_set = set(classes_so_far)
 
-    print(f"=== CSO Ontology 迭代自举 POC ===")
+    print("=== CSO Ontology 迭代自举 POC ===")
     print(f"种子类({len(classes_so_far)}): {sorted(classes_so_far)}\n")
 
     convergence_log = []
     for round_n in range(1, args.rounds + 1):
-        print(f"\n{'='*60}\n[轮 {round_n}] 构造 onSubmit owl...")
+        print(f"\n{'=' * 60}\n[轮 {round_n}] 构造 onSubmit owl...")
         owl_content = build_owl(SEED_OWL, classes_so_far, relations)
 
         run_result = await run_round(round_n, owl_content)
@@ -165,7 +162,7 @@ async def main():
                "review_mode": "manual" if args.review_on else "auto-accept"}
     out_file = OUT_DIR / "summary.json"
     out_file.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"\n=== 完成 ===\n最终类别 {len(classes_so_far)} 个. 摘要: {out_file}")
+    print("\n=== 完成 ===\n最终类别 " + str(len(classes_so_far)) + " 个. 摘要: " + str(out_file))
 
 
 if __name__ == "__main__":

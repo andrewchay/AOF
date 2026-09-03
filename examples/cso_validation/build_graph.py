@@ -85,8 +85,8 @@ async def main(with_ontology: bool):
     )
 
     labels = [str(n.get("label", n.get("name", ""))) for n in nodes if n.get("label") or n.get("name")]
-    generic = [l for l in labels if not _is_cso_entity(l)]
-    domain = [l for l in labels if _is_cso_entity(l)]
+    generic = [label for label in labels if not _is_cso_entity(label)]
+    domain = [label for label in labels if _is_cso_entity(label)]
 
     print(f"[2] 识别出 {len(labels)} 个实体")
     print(f"    通用实体: {generic if generic else '(无)'}")

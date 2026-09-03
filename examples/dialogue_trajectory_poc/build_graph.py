@@ -79,8 +79,8 @@ async def main(with_ontology: bool):
         dataset_name=dataset_name, cognee_root="/Users/chaihao/LLM/cognee"
     )
     labels = [str(n.get("label", n.get("name", ""))) for n in nodes if n.get("label") or n.get("name")]
-    generic = [l for l in labels if not _is_dialogue_entity(l)]
-    dialogue = [l for l in labels if _is_dialogue_entity(l)]
+    generic = [label for label in labels if not _is_dialogue_entity(label)]
+    dialogue = [label for label in labels if _is_dialogue_entity(label)]
 
     print(f"[2] 识别出 {len(labels)} 个实体")
     print(f"    对话/轨迹相关实体: {dialogue if dialogue else '(无)'}")

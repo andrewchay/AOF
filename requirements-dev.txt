@@ -16,4 +16,4 @@ mypy>=1.8.0
 
 # Code formatting (optional)
 black>=24.0.0
-ruff>=0.2.0
+ruff==0.15.9
