@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+   xmlns:owl="http://www.w3.org/2002/07/owl#"
+   xmlns:cso="http://purl.obolibrary.org/obo/cso.owl#"
+>
+
+  <!-- CSO v0.3 - Clinical Study Ontology (OptiMed Extension) -->
+  <!-- Converted from TTL for AOF/cognee compatibility -->
+
+  <!-- ========== Classes ========== -->
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#active_treatment_arm">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>active treatment arm</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000105a</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#administration_schedule">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>administration schedule</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000131</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#adverse_event_specification">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>adverse event specification</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000106a</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#analysis_population">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>analysis population</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000107</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#assessment_schedule">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>assessment schedule</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000109</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#baseline_assessment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>baseline assessment</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000125</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#clinical_study_document">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>clinical study document</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000001</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#clinical_study_protocol">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>clinical study protocol</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000002</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#cohort_definition">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>cohort definition</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000120</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#cohort_treatment_arm">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>cohort treatment arm</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000124</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#data_handling_specification">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>data handling specification</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000121</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#dosage">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>dosage</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000130</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#dose_modification_rule">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>dose modification rule</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000119</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#ecg_assessment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>ECG assessment</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000118</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#efficacy_analysis_specification">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>efficacy analysis specification</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000123</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#efficacy_endpoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>efficacy endpoint</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000102a</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#efficacy_objective">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>efficacy objective</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101a</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#endpoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>endpoint</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000102</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#exclusion_criterion">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>exclusion criterion</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000104</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#exploratory_objective">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>exploratory objective</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101c</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#inclusion_criterion">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>inclusion criterion</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000103</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#intent_to_treat_population">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>intent-to-treat population</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000107a</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#interim_analysis_specification">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>interim analysis specification</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000113</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#laboratory_assessment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>laboratory assessment</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000115</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#per_protocol_population">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>per-protocol population</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000107b</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#pharmacokinetic_objective">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>pharmacokinetic objective</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101d</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#physical_examination">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>physical examination</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000117</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#placebo_arm">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>placebo arm</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000105b</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#population_definition">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>population definition</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000129</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_analysis_specification">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>safety analysis specification</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000122</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_assessment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>safety assessment</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000106</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_endpoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>safety endpoint</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000102b</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_objective">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>safety objective</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101b</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_parameter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>safety parameter</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000127</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#sample_size_specification">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>sample size specification</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000114</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#serious_adverse_event_specification">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>serious adverse event specification</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000106b</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#statistical_analysis_plan">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>statistical analysis plan</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000003</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#statistical_design">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>statistical design</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000128</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#statistical_method">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>statistical method</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000108</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#study_discontinuation_rule">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>study discontinuation rule</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000112</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#study_information">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>study information</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000111</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#study_objective">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>study objective</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#study_rationale">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>study rationale</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000110</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#timepoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>timepoint</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000126</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#treatment_arm">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>treatment arm</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000105</rdfs:comment>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#vital_sign_assessment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>vital sign assessment</rdfs:label>
+    <rdfs:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000116</rdfs:comment>
+  </rdf:Description>
+
+  <!-- ========== Object Properties ========== -->
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#analyzed_by">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>analyzed by</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#assessed_at">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>assessed at</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#based_on">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>based on</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#evaluates">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>evaluates</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_administration_schedule">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has administration schedule</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_analysis_population">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has analysis population</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_assessment_schedule">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has assessment schedule</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_baseline_assessment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has baseline assessment</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_cohort">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has cohort</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_collection_timepoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has collection timepoint</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_data_handling">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has data handling</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_dosage">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has dosage</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_endpoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has endpoint</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_endpoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has endpoint</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_exclusion_criterion">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has exclusion criterion</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_inclusion_criterion">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has inclusion criterion</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_interim_analysis">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has interim analysis</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_objective">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has objective</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_population_definition">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has population definition</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_rationale">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has rationale</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_safety_analysis">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has safety analysis</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_safety_assessment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has safety assessment</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_safety_parameter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has safety parameter</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_sample_size">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has sample size</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_statistical_design">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has statistical design</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_statistical_method">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has statistical method</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_statistical_method">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has statistical method</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_stopping_rule">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has stopping rule</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_study_information">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has study information</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_timepoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has timepoint</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_treatment_arm">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has treatment arm</rdfs:label>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#is_evaluated_by">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>is evaluated by</rdfs:label>
+  </rdf:Description>
+
+</rdf:RDF>

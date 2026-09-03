@@ -1,0 +1,8 @@
+{
+  "knowledge_repo": "/Users/chaihao/LLM/AOF/data/cso_clinical",
+  "dataset": "cto_via_aof_chain",
+  "ontology": {
+    "file": "/Users/chaihao/LLM/AOF/examples/cso_validation/data/cto_clinical.rdf.xml",
+    "matching_cutoff": 0.7
+  }
+}
