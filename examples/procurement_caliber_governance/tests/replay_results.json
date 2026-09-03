@@ -1,0 +1,2550 @@
+{
+  "total_cases": 15,
+  "cases_passed": 0,
+  "cases_failed": 15,
+  "case_results": [
+    {
+      "case_id": "PRC-2025-001",
+      "title": "差旅费是否计入部门采购支出",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-001",
+            "actor": "finance_analyst:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "procurement_manager:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-002",
+      "title": "紧急采购是否适用标准审批阈值",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-002",
+            "actor": "procurement_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "internal_audit:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-003",
+      "title": "供应商预付款是否计入当期采购支出",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-003",
+            "actor": "finance_analyst:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "procurement_manager:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-004",
+      "title": "框架协议采购是否按合同额还是实际下单额统计",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-004",
+            "actor": "procurement_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "finance_analyst:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-005",
+      "title": "跨部门共享服务采购的归属问题",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-005",
+            "actor": "it_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "finance_analyst:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-006",
+      "title": "采购退货是否冲减当月支出",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-006",
+            "actor": "procurement_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "finance_analyst:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-007",
+      "title": "采购员个人垫付费用的报销归属",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-007",
+            "actor": "procurement_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "finance_analyst:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-008",
+      "title": "外币采购的汇率折算时点",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-008",
+            "actor": "finance_analyst:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "procurement_manager:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-009",
+      "title": "样品采购是否计入正式采购支出",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-009",
+            "actor": "rd_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "procurement_manager:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-010",
+      "title": "年度框架协议的预算分摊方式",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-010",
+            "actor": "procurement_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "finance_analyst:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-011",
+      "title": "采购折扣的确认时点",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-011",
+            "actor": "procurement_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "finance_analyst:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-012",
+      "title": "内部转移定价是否计入采购支出",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-012",
+            "actor": "procurement_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "finance_analyst:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-013",
+      "title": "采购押金的会计处理",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-013",
+            "actor": "procurement_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "finance_analyst:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-014",
+      "title": "紧急采购的供应商选择是否合规",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-014",
+            "actor": "procurement_manager:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "internal_audit:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    },
+    {
+      "case_id": "PRC-2025-015",
+      "title": "采购支出的预算口径 vs 核算口径",
+      "status": "failed",
+      "steps": [
+        {
+          "step": "create_proposal",
+          "result": {
+            "proposal_id": "prop-prc-2025-015",
+            "actor": "finance_analyst:test_user",
+            "state": "proposed"
+          }
+        },
+        {
+          "step": "review_proposal",
+          "result": {
+            "actor": "procurement_manager:test_reviewer",
+            "conforms": true,
+            "state": "review"
+          }
+        },
+        {
+          "step": "approve_proposal",
+          "result": {
+            "actor": "cfo:test_approver",
+            "state": "approved"
+          }
+        }
+      ],
+      "errors": [
+        "compiler target is not registered: sql"
+      ],
+      "approval_cycle_completed": true
+    }
+  ],
+  "metrics": {
+    "approval_cycles": 15,
+    "disputes_escalated": 0,
+    "new_metrics_created": 0,
+    "policies_updated": 0
+  },
+  "decision_trail": [
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_user",
+        "conclusion": "created proposal prop-prc-2025-001",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:b22931be42336a30cf62e159f33255a261222fab4b3c6b68358db7873e136822",
+            "description": null,
+            "id": "aof://acme/finance/metric/dept_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:60db190f-c644-4493-8035-a3e4eadacb00",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:b91739618416f5c627b167eb6d23ff47ab69510950f5653a11dbcc41bbd60cb3",
+            "id": "proposal:prop-prc-2025-001",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "财务部定义的 dept_procurement_spend 包含差旅费（travel_expense），\n但采购部认为差旅费属于行政费用，不应计入采购支出。\n两个部门在月度经营会上对同一指标给出不同数字。\n",
+        "recorded_at": "2026-08-31T15:56:34.062182+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "de39f5dc8a671d55f9bb15b9ce6bd5cc52afb70c68a65cdc0db1143a394d5d7d"
+      },
+      "previous_hash": null
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:b91739618416f5c627b167eb6d23ff47ab69510950f5653a11dbcc41bbd60cb3",
+            "description": null,
+            "id": "proposal:prop-prc-2025-001:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:250b9a8f-2e04-49ee-bee6-105fa7e6ba25",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:60db190f-c644-4493-8035-a3e4eadacb00"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.063383+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "074f5a4127edcbdd280c06ddcadeef58a76743c77d4c1dbf294aee6b27d7628b"
+      },
+      "previous_hash": "de39f5dc8a671d55f9bb15b9ce6bd5cc52afb70c68a65cdc0db1143a394d5d7d"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-001",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "description": null,
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:d9361cb7-6550-4c35-b3aa-71125555b87b",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-001",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:250b9a8f-2e04-49ee-bee6-105fa7e6ba25"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "差旅费审批流与采购审批流不同，合并统计导致责任边界模糊",
+        "recorded_at": "2026-08-31T15:56:34.064094+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "fd1f2ce4a7ebed3791e6983564e6290c95d156f361d6913f65e31a7e12776305"
+      },
+      "previous_hash": "074f5a4127edcbdd280c06ddcadeef58a76743c77d4c1dbf294aee6b27d7628b"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-002",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:cb84e9ab2995bcc51745f77f790b12b526244023d94dbc5d1e343587dbde529d",
+            "description": null,
+            "id": "aof://acme/finance/metric/emergency_purchase_approval_rate",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:592debf9-d742-4997-a1e5-2a4a43ba33de",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:3f3f83532f9a721e88faed9fe54388e4327d332aaa3228721815cdf826f92473",
+            "id": "proposal:prop-prc-2025-002",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "标准采购审批阈值：>50K 需总监审批，>200K 需VP审批。\n紧急采购（emergency_purchase）在 2025-Q1 有 23 笔超过 50K，\n其中 15 笔走了事后补批，采购部认为这是合理例外，\n内审认为这绕过了审批控制。\n",
+        "recorded_at": "2026-08-31T15:56:34.064800+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "0b348982ef00202d02f2c5b41131a5de9df7509eefbb39e8fe0a68e07eda715e"
+      },
+      "previous_hash": "fd1f2ce4a7ebed3791e6983564e6290c95d156f361d6913f65e31a7e12776305"
+    },
+    {
+      "decision": {
+        "agent_id": "internal_audit:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:3f3f83532f9a721e88faed9fe54388e4327d332aaa3228721815cdf826f92473",
+            "description": null,
+            "id": "proposal:prop-prc-2025-002:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:f064e769-2f2f-4aa2-b51c-c3da7d768db8",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:05280e0c7cc3abe54237b25c84d1a42b913334f826fb91a892da3773ef51c414",
+            "id": "review:sha256:05280e0c7cc3abe54237b25c84d1a42b913334f826fb91a892da3773ef51c414",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:592debf9-d742-4997-a1e5-2a4a43ba33de"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.065496+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "6fbe6cf959135d591417fcd9f12c4fb415f2d1c3ab9777955c4f6d509dd0fca1"
+      },
+      "previous_hash": "0b348982ef00202d02f2c5b41131a5de9df7509eefbb39e8fe0a68e07eda715e"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-002",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:05280e0c7cc3abe54237b25c84d1a42b913334f826fb91a892da3773ef51c414",
+            "description": null,
+            "id": "review:sha256:05280e0c7cc3abe54237b25c84d1a42b913334f826fb91a892da3773ef51c414",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:42b081da-e29e-4aa1-bbc7-ef771e6c5a30",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-002",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:f064e769-2f2f-4aa2-b51c-c3da7d768db8"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "保留紧急采购灵活性，但增加时间约束和追溯要求",
+        "recorded_at": "2026-08-31T15:56:34.066216+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "fd0454d4f0efb9fc92d4fcb2a5a73b5159f364cc1abf30d704d968acdb277c10"
+      },
+      "previous_hash": "6fbe6cf959135d591417fcd9f12c4fb415f2d1c3ab9777955c4f6d509dd0fca1"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_user",
+        "conclusion": "created proposal prop-prc-2025-003",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:c7ece8c7ba6e3401fe27cf3ee116c7c74e3fa768e01d2295eee61a946f799ed0",
+            "description": null,
+            "id": "aof://acme/finance/metric/monthly_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:711d9d28-0e62-4f72-ba8f-acbcfd438870",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:ffd89504c05c2b6aa205ae8aa75941003671fa564fdae0c4453c8d80e3d85e78",
+            "id": "proposal:prop-prc-2025-003",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "供应商预付款（prepayment）在付款当月计入采购支出，\n但货物可能 3 个月后才到。财务部认为应按权责发生制分摊，\n采购部认为预付款是现金流支出，应计入当月。\n导致月度采购支出波动异常大。\n",
+        "recorded_at": "2026-08-31T15:56:34.066938+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "112366caa161254a3b3e40bf069121a6abf9cd4ae2dec3c71f062022b4190424"
+      },
+      "previous_hash": "fd0454d4f0efb9fc92d4fcb2a5a73b5159f364cc1abf30d704d968acdb277c10"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:ffd89504c05c2b6aa205ae8aa75941003671fa564fdae0c4453c8d80e3d85e78",
+            "description": null,
+            "id": "proposal:prop-prc-2025-003:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:e49aab9d-ac88-4add-82d0-c4fd6eee2af5",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:711d9d28-0e62-4f72-ba8f-acbcfd438870"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.067903+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "154d85b4537ade0d886fa9a827adea217f2ceb1231be2e798cd2076938afb6b7"
+      },
+      "previous_hash": "112366caa161254a3b3e40bf069121a6abf9cd4ae2dec3c71f062022b4190424"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-003",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "description": null,
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:a60117f6-636b-475f-9d8c-8ebcd3b2d031",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-003",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:e49aab9d-ac88-4add-82d0-c4fd6eee2af5"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "区分现金流口径和权责口径，避免单月波动误导决策",
+        "recorded_at": "2026-08-31T15:56:34.068665+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "b43f9dc817ab5afdf2f742ea3e1139a977d7b66e9376e618b039032b37b90e63"
+      },
+      "previous_hash": "154d85b4537ade0d886fa9a827adea217f2ceb1231be2e798cd2076938afb6b7"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-004",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:93e1221adc94b81727a77f6eafdbb3af7ba8cf956f1d8974827a279fe10789b0",
+            "description": null,
+            "id": "aof://acme/finance/metric/framework_contract_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:f34f7da2-f62f-45af-9d41-f365fcd2da55",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:2fade71ac36544c85fcdf8344e429398214967bb1cbcb2a47a917d0935d0dce6",
+            "id": "proposal:prop-prc-2025-004",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "框架协议（framework_agreement）年度合同额 500 万，\n但实际下单仅 320 万。采购部按合同额统计（承诺口径），\n财务部按实际下单统计（执行口径）。\n影响供应商绩效评估和预算执行率。\n",
+        "recorded_at": "2026-08-31T15:56:34.069379+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "167fd2f3a1268d0aab5f5905133985de1fed660a7c67f246faeb4bdfcf4b1082"
+      },
+      "previous_hash": "b43f9dc817ab5afdf2f742ea3e1139a977d7b66e9376e618b039032b37b90e63"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:2fade71ac36544c85fcdf8344e429398214967bb1cbcb2a47a917d0935d0dce6",
+            "description": null,
+            "id": "proposal:prop-prc-2025-004:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:7e754243-60cb-468b-88ae-6423d1ac11c2",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:f34f7da2-f62f-45af-9d41-f365fcd2da55"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.070031+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "177a4e68929a83defa7c28beacb488c0c367d0f16964bc3ad747e25e8f6fb238"
+      },
+      "previous_hash": "167fd2f3a1268d0aab5f5905133985de1fed660a7c67f246faeb4bdfcf4b1082"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-004",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "description": null,
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:6e0124f7-08a5-47f9-b5fd-97c53beaee12",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-004",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:7e754243-60cb-468b-88ae-6423d1ac11c2"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "执行口径用于预算执行率，承诺口径用于供应商谈判，两者分开",
+        "recorded_at": "2026-08-31T15:56:34.070817+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "d23b49785a880cd9ddb26ae66920a629a8600bb99d3d0a22a3b1e56c4fc6403c"
+      },
+      "previous_hash": "177a4e68929a83defa7c28beacb488c0c367d0f16964bc3ad747e25e8f6fb238"
+    },
+    {
+      "decision": {
+        "agent_id": "it_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-005",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:b22931be42336a30cf62e159f33255a261222fab4b3c6b68358db7873e136822",
+            "description": null,
+            "id": "aof://acme/finance/metric/dept_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:8000930b-027b-4dc2-bfb0-7791610d5b85",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:774af18e12a01a6d1a4dee3722f4825be813c9baa289e722ef93c5cceb1733a4",
+            "id": "proposal:prop-prc-2025-005",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "IT 部门统一采购的 SaaS 订阅（如 Office 365、Slack）覆盖全公司，\n但费用全部计入 IT 部门采购支出。\n其他部门认为这不公平，应按使用量分摊到各部门。\n导致 IT 部门采购支出虚高，其他部门为零。\n",
+        "recorded_at": "2026-08-31T15:56:34.071690+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "de60f4f0e5bf3120eebe92638d3f924e524b45711623405d2d4fb7e68a0500cd"
+      },
+      "previous_hash": "d23b49785a880cd9ddb26ae66920a629a8600bb99d3d0a22a3b1e56c4fc6403c"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:774af18e12a01a6d1a4dee3722f4825be813c9baa289e722ef93c5cceb1733a4",
+            "description": null,
+            "id": "proposal:prop-prc-2025-005:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:28d01781-c75d-4298-b916-953afa63354c",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:8000930b-027b-4dc2-bfb0-7791610d5b85"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.072363+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "dbb04772b8b66927f42dd8f973b6d4d8c1489c083b0e0465759e862f36c25253"
+      },
+      "previous_hash": "de60f4f0e5bf3120eebe92638d3f924e524b45711623405d2d4fb7e68a0500cd"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-005",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "description": null,
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:481606be-af9c-499c-ad03-2830b5fd48f0",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-005",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:28d01781-c75d-4298-b916-953afa63354c"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "成本归属反映实际受益，避免部门间不公平",
+        "recorded_at": "2026-08-31T15:56:34.072946+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "deffa324a4d931e2558da1001ab3beaa5051a3b35931883f50d372f6cb763640"
+      },
+      "previous_hash": "dbb04772b8b66927f42dd8f973b6d4d8c1489c083b0e0465759e862f36c25253"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-006",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:c7ece8c7ba6e3401fe27cf3ee116c7c74e3fa768e01d2295eee61a946f799ed0",
+            "description": null,
+            "id": "aof://acme/finance/metric/monthly_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:6859687f-4654-40e6-aae1-c350242d02c0",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:5170b1fab7553aa5f50a242496bc47236ede22e959294c66469e7ceec181872e",
+            "id": "proposal:prop-prc-2025-006",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "2025-04 发生一笔 8 万元退货，采购部在当月冲减支出，\n但财务部认为退货应在收到退款时确认，而不是在发起退货时。\n导致 4 月支出在两个系统中差 8 万。\n",
+        "recorded_at": "2026-08-31T15:56:34.073986+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "e607f6affad01fef8007860f335db8acf8f1f180104e908cb1120c4b82c22090"
+      },
+      "previous_hash": "deffa324a4d931e2558da1001ab3beaa5051a3b35931883f50d372f6cb763640"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:5170b1fab7553aa5f50a242496bc47236ede22e959294c66469e7ceec181872e",
+            "description": null,
+            "id": "proposal:prop-prc-2025-006:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:94422cc3-4562-4926-9a79-e4e2413e43fd",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:6859687f-4654-40e6-aae1-c350242d02c0"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.074619+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "29269e9f1a9b2ceebef91e9fe2c755e9334a5901ad1b045032d0bc41a5309045"
+      },
+      "previous_hash": "e607f6affad01fef8007860f335db8acf8f1f180104e908cb1120c4b82c22090"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-006",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "description": null,
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:44c30d67-475f-4e69-944d-26f073aaef55",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-006",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:94422cc3-4562-4926-9a79-e4e2413e43fd"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "以现金流实际发生为准，避免预估冲减导致的误差",
+        "recorded_at": "2026-08-31T15:56:34.075156+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "4a2bd9165d75dbe9eb7e656ca365e88cc9cbba835adb616b4a472502ede9a71b"
+      },
+      "previous_hash": "29269e9f1a9b2ceebef91e9fe2c755e9334a5901ad1b045032d0bc41a5309045"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-007",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:b22931be42336a30cf62e159f33255a261222fab4b3c6b68358db7873e136822",
+            "description": null,
+            "id": "aof://acme/finance/metric/dept_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:9453f2b3-b51a-4f86-a6a5-b55451b13e50",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:836042dad3a56767cd916a4dea2b35f56121b63648842221486281e87b90c230",
+            "id": "proposal:prop-prc-2025-007",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "采购员个人垫付的小额采购（<500 元）通过报销系统处理，\n财务部将其计入行政费用，采购部认为应计入采购支出。\n金额虽小但频率高，影响部门预算执行率。\n",
+        "recorded_at": "2026-08-31T15:56:34.076255+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "185efe7e8fa52310e385bc04938b0e074386c7006290721716bf5fca350c7073"
+      },
+      "previous_hash": "4a2bd9165d75dbe9eb7e656ca365e88cc9cbba835adb616b4a472502ede9a71b"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:836042dad3a56767cd916a4dea2b35f56121b63648842221486281e87b90c230",
+            "description": null,
+            "id": "proposal:prop-prc-2025-007:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:8885e37b-4a7d-4eb2-9f32-496452626935",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:9453f2b3-b51a-4f86-a6a5-b55451b13e50"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.076909+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "71338a7d86df2b6fc085b1c2845d30d922c745e215024008575f8983bc91eee9"
+      },
+      "previous_hash": "185efe7e8fa52310e385bc04938b0e074386c7006290721716bf5fca350c7073"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-007",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "description": null,
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:471c0ae1-98dd-4da6-8248-0426e199c6c1",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-007",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:8885e37b-4a7d-4eb2-9f32-496452626935"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "业务实质优先：垫付是为了采购，不是行政开支",
+        "recorded_at": "2026-08-31T15:56:34.077428+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "3ed9ecbfe19d9556a5ab2f561e8e083de14ad7b92f4128e708593c1741b48cb2"
+      },
+      "previous_hash": "71338a7d86df2b6fc085b1c2845d30d922c745e215024008575f8983bc91eee9"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_user",
+        "conclusion": "created proposal prop-prc-2025-008",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:c7ece8c7ba6e3401fe27cf3ee116c7c74e3fa768e01d2295eee61a946f799ed0",
+            "description": null,
+            "id": "aof://acme/finance/metric/monthly_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:f8bcd129-5ee8-4747-8ac5-87bd73b37689",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:ee34f0ef3d7d92cc769f5ae1213ffe3789c67a163e4e97ec20a770c01b49cfa1",
+            "id": "proposal:prop-prc-2025-008",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "外币采购在合同签订日、付款日、收货日汇率不同。\n财务部按付款日汇率折算，采购部按合同签订日。\n2025-05 一笔 10 万美元采购，汇率差导致 2 万元差异。\n",
+        "recorded_at": "2026-08-31T15:56:34.078057+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "0f57d70f698388ebb6a6e48552d3d1d0f802ed765a40c48848a5cd89628a2374"
+      },
+      "previous_hash": "3ed9ecbfe19d9556a5ab2f561e8e083de14ad7b92f4128e708593c1741b48cb2"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:ee34f0ef3d7d92cc769f5ae1213ffe3789c67a163e4e97ec20a770c01b49cfa1",
+            "description": null,
+            "id": "proposal:prop-prc-2025-008:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:dcd47d15-1daa-4c57-8e5d-e8b76b0b1d38",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:f8bcd129-5ee8-4747-8ac5-87bd73b37689"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.079212+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "4641996a58331ea52a05eb37ecdeb7a72435f489c9703187e82b1ad9da6a6fd8"
+      },
+      "previous_hash": "0f57d70f698388ebb6a6e48552d3d1d0f802ed765a40c48848a5cd89628a2374"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-008",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "description": null,
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:ca1aa425-2040-43a5-87c4-ed810ebcd7a6",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-008",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:dcd47d15-1daa-4c57-8e5d-e8b76b0b1d38"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "以现金流实际发生为准，汇率波动单独跟踪",
+        "recorded_at": "2026-08-31T15:56:34.079808+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "edc9f1589f92dd796b90bdee42b8982b6168c443b5021b73d7d3b5d0260e18a7"
+      },
+      "previous_hash": "4641996a58331ea52a05eb37ecdeb7a72435f489c9703187e82b1ad9da6a6fd8"
+    },
+    {
+      "decision": {
+        "agent_id": "rd_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-009",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:b22931be42336a30cf62e159f33255a261222fab4b3c6b68358db7873e136822",
+            "description": null,
+            "id": "aof://acme/finance/metric/dept_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:f4755416-a217-4c0d-bfa6-e3a523e2d73f",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:4ada50b890e64db2508afbaab8215d4b9549ffdc0157dec5a38c48b9a2f205ef",
+            "id": "proposal:prop-prc-2025-009",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "研发部申请样品采购 3 万元，采购部计入研发部采购支出，\n但财务部认为样品属于研发材料，应计入研发费用而非采购支出。\n影响两个部门的预算执行率。\n",
+        "recorded_at": "2026-08-31T15:56:34.080430+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "58e6879016d2a31c9648d468adfb583b165a1aff732ecd0ec986b22b377a8f5e"
+      },
+      "previous_hash": "edc9f1589f92dd796b90bdee42b8982b6168c443b5021b73d7d3b5d0260e18a7"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:4ada50b890e64db2508afbaab8215d4b9549ffdc0157dec5a38c48b9a2f205ef",
+            "description": null,
+            "id": "proposal:prop-prc-2025-009:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:daa81c1b-2266-417c-8045-adb427627f7c",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:f4755416-a217-4c0d-bfa6-e3a523e2d73f"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.081066+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "bb17813389c8f347ef3c9c6720ffeb72601384ed29be27c3dd5a425d99a7a8ec"
+      },
+      "previous_hash": "58e6879016d2a31c9648d468adfb583b165a1aff732ecd0ec986b22b377a8f5e"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-009",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "description": null,
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:abf7820c-7388-435a-ab0b-979b82df7ff2",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-009",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:daa81c1b-2266-417c-8045-adb427627f7c"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "样品目的是研发验证，不是生产采购，口径应区分",
+        "recorded_at": "2026-08-31T15:56:34.081763+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "ae198a50bbd256618da4f04728b0af66b8a1ed86d18e11570203a3abab77d2b7"
+      },
+      "previous_hash": "bb17813389c8f347ef3c9c6720ffeb72601384ed29be27c3dd5a425d99a7a8ec"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-010",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:da36012bddcce1782bb562d77e8a2debbf2de73856117655186b28915f3a6604",
+            "description": null,
+            "id": "aof://acme/finance/metric/monthly_budget_execution_rate",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:ec12a146-03bb-43bb-9315-4dc954fa2fa7",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:5daf3a179734ee08b5aa770170090f4d90dceea4e5e4316cccfa127eaa08e460",
+            "id": "proposal:prop-prc-2025-010",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "年度框架协议 120 万，采购部在签订当月一次性计入，\n导致当月预算执行率 300%，后续月份为 0%。\n财务部要求按月分摊，但采购部认为合同已签，应一次性确认。\n",
+        "recorded_at": "2026-08-31T15:56:34.082493+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "b65ab6190dd038b818538073f5b5ebec45a2eaffc28d302c1696a2639c814d00"
+      },
+      "previous_hash": "ae198a50bbd256618da4f04728b0af66b8a1ed86d18e11570203a3abab77d2b7"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:5daf3a179734ee08b5aa770170090f4d90dceea4e5e4316cccfa127eaa08e460",
+            "description": null,
+            "id": "proposal:prop-prc-2025-010:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:615736c5-2186-44ac-9991-1a1af527a375",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:ec12a146-03bb-43bb-9315-4dc954fa2fa7"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.083052+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "7b2b86356948d0819d3489027cbe8280cd88a473afd176b14a13a9b8b364ea4e"
+      },
+      "previous_hash": "b65ab6190dd038b818538073f5b5ebec45a2eaffc28d302c1696a2639c814d00"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-010",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "description": null,
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:145d79ec-d01f-452a-b73e-fac0ce6e5a41",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-010",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:615736c5-2186-44ac-9991-1a1af527a375"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "预算执行率应反映实际消耗节奏，不是合同签订节奏",
+        "recorded_at": "2026-08-31T15:56:34.083811+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "1acf3a3aac3dcdad59ad96747f45d65ef1a3f32d573553fb2c76176cb5944e34"
+      },
+      "previous_hash": "7b2b86356948d0819d3489027cbe8280cd88a473afd176b14a13a9b8b364ea4e"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-011",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:bf7e2f3f89cf6f4c0c18d4e76f30157cd7b90b62a5504e17365b28ccb9153ac6",
+            "description": null,
+            "id": "aof://acme/finance/metric/net_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:14c797f1-9f3f-4916-ab20-21c2a09a3df4",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:a3d47c3a29140e06fdac3571805719ee64c219790de6226401f624890b02aca1",
+            "id": "proposal:prop-prc-2025-011",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "供应商提供季度返利 5 万元，采购部在收到返利时冲减支出，\n但财务部认为应按采购比例分摊到各月。\n导致月度净支出波动异常。\n",
+        "recorded_at": "2026-08-31T15:56:34.084521+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "bec7fce347d4ce2b98dbc91acd1c2b9bae94f479986706dffeb432e503d81486"
+      },
+      "previous_hash": "1acf3a3aac3dcdad59ad96747f45d65ef1a3f32d573553fb2c76176cb5944e34"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:a3d47c3a29140e06fdac3571805719ee64c219790de6226401f624890b02aca1",
+            "description": null,
+            "id": "proposal:prop-prc-2025-011:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:c3589b0d-44bb-4850-93f3-f2eb6726d352",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:14c797f1-9f3f-4916-ab20-21c2a09a3df4"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.085073+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "ac2c141e5ed523dfc4a437c11e1a34b055f9cb973b2ca613435055321167617d"
+      },
+      "previous_hash": "bec7fce347d4ce2b98dbc91acd1c2b9bae94f479986706dffeb432e503d81486"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-011",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "description": null,
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:143abc43-7811-4982-a243-ea48c2772b5a",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-011",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:c3589b0d-44bb-4850-93f3-f2eb6726d352"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "返利本质是采购价格的调整，应按受益期间分摊",
+        "recorded_at": "2026-08-31T15:56:34.085627+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "11f5d8f06a3199ba9ada5751b648378b73c2612dcf69cdbba8f3b7561290b81c"
+      },
+      "previous_hash": "ac2c141e5ed523dfc4a437c11e1a34b055f9cb973b2ca613435055321167617d"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-012",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:b22931be42336a30cf62e159f33255a261222fab4b3c6b68358db7873e136822",
+            "description": null,
+            "id": "aof://acme/finance/metric/dept_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:7ccf1f6d-48e7-4753-a282-d30faae0b1d8",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:44c509bb09f76c07fe8d403e0c3fed657556fa08d888bf43f1ac0861fdc42b34",
+            "id": "proposal:prop-prc-2025-012",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "生产部从集团内部采购原材料，内部转移价 60 万，\n采购部计入采购支出，但财务部认为这是内部交易，\n不应计入外部采购支出。\n影响供应商集中度分析和采购谈判。\n",
+        "recorded_at": "2026-08-31T15:56:34.086479+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "ef1ec7c725281ed67859cefba858784800100498ca242b089d878463ca709776"
+      },
+      "previous_hash": "11f5d8f06a3199ba9ada5751b648378b73c2612dcf69cdbba8f3b7561290b81c"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:44c509bb09f76c07fe8d403e0c3fed657556fa08d888bf43f1ac0861fdc42b34",
+            "description": null,
+            "id": "proposal:prop-prc-2025-012:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:f95e7640-eb5d-402c-8813-eb3396a9b1b2",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:7ccf1f6d-48e7-4753-a282-d30faae0b1d8"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.087101+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "43cb708f509a42b9a93a43528f41b1d05be99f31a3fb6b51655fe7b44f1faa40"
+      },
+      "previous_hash": "ef1ec7c725281ed67859cefba858784800100498ca242b089d878463ca709776"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-012",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "description": null,
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:7f0813db-8180-4154-b6f3-dd3ca7bcb202",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-012",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:f95e7640-eb5d-402c-8813-eb3396a9b1b2"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "外部采购支出用于供应商管理和谈判，内部交易应分开",
+        "recorded_at": "2026-08-31T15:56:34.087704+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "8ead30daafdefdbb4122821e396b6d0f0e7ab8e78eb7739b05b8df5768b19843"
+      },
+      "previous_hash": "43cb708f509a42b9a93a43528f41b1d05be99f31a3fb6b51655fe7b44f1faa40"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-013",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:c7ece8c7ba6e3401fe27cf3ee116c7c74e3fa768e01d2295eee61a946f799ed0",
+            "description": null,
+            "id": "aof://acme/finance/metric/monthly_procurement_spend",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:d7805f1a-4ed6-4279-9ffe-6d5ecfca16ae",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:b0c05cd860d06f72271232df38c2d537bd035d5e7e665a120bd93d120761686d",
+            "id": "proposal:prop-prc-2025-013",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "供应商押金 10 万元，采购部计入当月采购支出，\n但财务部认为押金是资产（其他应收款），不是费用。\n导致当月支出虚高 10 万。\n",
+        "recorded_at": "2026-08-31T15:56:34.088491+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "51a46e1a30da1c95a63f9e92e0fc03b4e9d754c47ce5380fd57aaa18212356e8"
+      },
+      "previous_hash": "8ead30daafdefdbb4122821e396b6d0f0e7ab8e78eb7739b05b8df5768b19843"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:b0c05cd860d06f72271232df38c2d537bd035d5e7e665a120bd93d120761686d",
+            "description": null,
+            "id": "proposal:prop-prc-2025-013:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:4a9f3be0-c3b0-4f65-b576-ae92d629b735",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:d7805f1a-4ed6-4279-9ffe-6d5ecfca16ae"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.089210+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "b5e27abfd443fc6c235fec6f18e7860f0d6fa7d7358bf1b7d00f865706de2321"
+      },
+      "previous_hash": "51a46e1a30da1c95a63f9e92e0fc03b4e9d754c47ce5380fd57aaa18212356e8"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-013",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "description": null,
+            "id": "review:sha256:8e7e0b2d3f92294886c84fa404f79e8f0895552828c9eb66d269a50a5cdd3de5",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:b8a8367d-3da1-4cb5-9ed3-3c5a515998f5",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-013",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:4a9f3be0-c3b0-4f65-b576-ae92d629b735"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "押金是资产不是费用，口径必须区分",
+        "recorded_at": "2026-08-31T15:56:34.089791+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "b148b82bd47b87ef9d71e6896814382c03e7c8ded32ca170fcaa1ffe8abf57e9"
+      },
+      "previous_hash": "b5e27abfd443fc6c235fec6f18e7860f0d6fa7d7358bf1b7d00f865706de2321"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_user",
+        "conclusion": "created proposal prop-prc-2025-014",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:c558c42c15c9aac52a3b80ff38838d3beed6eaae7eaf7b65dfda12c625bbb1bd",
+            "description": null,
+            "id": "aof://acme/finance/metric/single_source_ratio",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:51a8daca-f432-4841-98e9-4f7cc6ed1687",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:fb29a63f1f1f9e5e6852ddc09be577b2bd7ccc4a78b92a99d9f8fc459ab3e648",
+            "id": "proposal:prop-prc-2025-014",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "2025-Q1 紧急采购中，单一来源采购占比 45%，\n内审认为这绕过了竞争性谈判要求，\n采购部认为紧急情况下来不及招标。\n影响采购合规率和供应商多样性。\n",
+        "recorded_at": "2026-08-31T15:56:34.090468+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "8d1538bb4c1102d2dea14be1bc75fedceb48ecc883c9431ed0c4281b7eb12d24"
+      },
+      "previous_hash": "b148b82bd47b87ef9d71e6896814382c03e7c8ded32ca170fcaa1ffe8abf57e9"
+    },
+    {
+      "decision": {
+        "agent_id": "internal_audit:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:fb29a63f1f1f9e5e6852ddc09be577b2bd7ccc4a78b92a99d9f8fc459ab3e648",
+            "description": null,
+            "id": "proposal:prop-prc-2025-014:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:b674a5bc-e0ef-46b5-9bdd-2e8448b0030f",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:05280e0c7cc3abe54237b25c84d1a42b913334f826fb91a892da3773ef51c414",
+            "id": "review:sha256:05280e0c7cc3abe54237b25c84d1a42b913334f826fb91a892da3773ef51c414",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:51a8daca-f432-4841-98e9-4f7cc6ed1687"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.091198+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "114400a4bcd329700983a5816a278c61575c11076370dce43f1a5cdcaa0e4fb9"
+      },
+      "previous_hash": "8d1538bb4c1102d2dea14be1bc75fedceb48ecc883c9431ed0c4281b7eb12d24"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-014",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:05280e0c7cc3abe54237b25c84d1a42b913334f826fb91a892da3773ef51c414",
+            "description": null,
+            "id": "review:sha256:05280e0c7cc3abe54237b25c84d1a42b913334f826fb91a892da3773ef51c414",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:537e3950-fca1-4d37-84f2-ee8b57875178",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-014",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:b674a5bc-e0ef-46b5-9bdd-2e8448b0030f"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "保留紧急灵活性，但增加透明度和追溯要求",
+        "recorded_at": "2026-08-31T15:56:34.091851+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "b80b40be3a1b1ab2d5d21e9a6e5ea149236bf8fdffc98e7619a963a71bb3a656"
+      },
+      "previous_hash": "114400a4bcd329700983a5816a278c61575c11076370dce43f1a5cdcaa0e4fb9"
+    },
+    {
+      "decision": {
+        "agent_id": "finance_analyst:test_user",
+        "conclusion": "created proposal prop-prc-2025-015",
+        "decision_type": "semantic_proposal",
+        "evidence": [
+          {
+            "content_hash": "sha256:a948ff021968aad5be42a7deeee193bc43791aedcbf9f172335c11b817172355",
+            "description": null,
+            "id": "aof://acme/finance/metric/budget_vs_actual_variance",
+            "metadata": {},
+            "type": "Metric",
+            "uri": null
+          }
+        ],
+        "id": "decision:1d5e0c90-8433-4cf3-8e60-af278b20d6aa",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:5a21603371e5c0dba7a066c3f1d966b9c4cc37085cc7f7711a5829ed24791122",
+            "id": "proposal:prop-prc-2025-015",
+            "type": "semantic_proposal"
+          }
+        ],
+        "parent_decision_ids": [],
+        "policies": [
+          "policy:semantic-release-governance"
+        ],
+        "rationale": "预算系统按\"承诺口径\"（合同签订）统计采购支出，\n核算系统按\"执行口径\"（实际付款）统计。\n2025-06 预算执行率 120%，但核算支出仅 80%，\n管理层无法判断是超支还是时间差。\n",
+        "recorded_at": "2026-08-31T15:56:34.092496+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "proposal",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "723d212a00328ac12f6ef5d90746b9a53033882ae4c861febf17f901bfa93f3e"
+      },
+      "previous_hash": "b80b40be3a1b1ab2d5d21e9a6e5ea149236bf8fdffc98e7619a963a71bb3a656"
+    },
+    {
+      "decision": {
+        "agent_id": "procurement_manager:test_reviewer",
+        "conclusion": "validation passed",
+        "decision_type": "semantic_validation",
+        "evidence": [
+          {
+            "content_hash": "sha256:5a21603371e5c0dba7a066c3f1d966b9c4cc37085cc7f7711a5829ed24791122",
+            "description": null,
+            "id": "proposal:prop-prc-2025-015:candidate",
+            "metadata": {},
+            "type": "release_candidate",
+            "uri": null
+          }
+        ],
+        "id": "decision:19216b78-44de-4641-81d6-3372883c9a43",
+        "metadata": {},
+        "output_entities": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "type": "semantic_review"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:1d5e0c90-8433-4cf3-8e60-af278b20d6aa"
+        ],
+        "policies": [
+          "policy:semantic-release-validation"
+        ],
+        "rationale": "Validated 1 frozen semantic revisions.",
+        "recorded_at": "2026-08-31T15:56:34.093109+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "semantic",
+          "validation"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "89a6818d4abb7c14f4903d4ddc7164e8f2afa6c658cec346909839e5462897d4"
+      },
+      "previous_hash": "723d212a00328ac12f6ef5d90746b9a53033882ae4c861febf17f901bfa93f3e"
+    },
+    {
+      "decision": {
+        "agent_id": "cfo:test_approver",
+        "conclusion": "approved prop-prc-2025-015",
+        "decision_type": "semantic_approval",
+        "evidence": [
+          {
+            "content_hash": "sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "description": null,
+            "id": "review:sha256:e12df1bce792a346224b03c5e63b473d2db90227f40286ba0a4ee95031997b5c",
+            "metadata": {},
+            "type": "semantic_review",
+            "uri": null
+          }
+        ],
+        "id": "decision:95e1420f-867e-4011-9a1c-0ba4863d668b",
+        "metadata": {},
+        "output_entities": [
+          {
+            "id": "approval:prop-prc-2025-015",
+            "type": "semantic_approval"
+          }
+        ],
+        "parent_decision_ids": [
+          "decision:19216b78-44de-4641-81d6-3372883c9a43"
+        ],
+        "policies": [
+          "policy:semantic-release-approval"
+        ],
+        "rationale": "两种口径都有业务意义，但必须显式区分，避免混淆",
+        "recorded_at": "2026-08-31T15:56:34.093873+00:00",
+        "session_id": null,
+        "status": "completed",
+        "tags": [
+          "approval",
+          "semantic"
+        ],
+        "tenant_id": null
+      },
+      "integrity": {
+        "algorithm": "sha256",
+        "hash": "b3dd7513be4b521b9d2403ef23addae2c9c275e67fb719673d1c2c2c5b620897"
+      },
+      "previous_hash": "89a6818d4abb7c14f4903d4ddc7164e8f2afa6c658cec346909839e5462897d4"
+    }
+  ]
+}
