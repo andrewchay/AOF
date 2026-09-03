@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Iterable, Mapping
@@ -52,10 +52,13 @@ class KnowledgeRelease:
     resources: tuple[ResourceRevisionRef, ...]
     release_digest: str
     parent_release: str | None = None
-    scope: Mapping[str, Any] = MappingProxyType({})
+    # MappingProxyType is immutable but Python 3.11 rejects it as a dataclass
+    # default.  A factory keeps the same empty, immutable public contract while
+    # letting modules that import releases (including Context Exchange) load.
+    scope: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     compiled_artifacts: tuple[Mapping[str, Any], ...] = ()
-    validation: Mapping[str, Any] = MappingProxyType({})
-    governance: Mapping[str, Any] = MappingProxyType({})
+    validation: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
+    governance: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     api_version: str = "aof.release/v1"
 
     @classmethod
