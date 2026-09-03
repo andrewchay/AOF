@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-013/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-013: 采购押金的会计处理 ===== -->
+    <!-- 核心语义: Deposit —— 押金是 asset（其他应收款），不是 expense -->
+
+    <!-- 押金 -->
+    <owl:Class rdf:about="&aof;Deposit">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000031"/>
+        <!-- generically dependent continuant: 押金是可收回的权利 -->
+        <rdfs:label xml:lang="zh">押金</rdfs:label>
+        <skos:definition xml:lang="zh">支付给供应商的可收回保证金，属于资产</skos:definition>
+    </owl:Class>
+
+    <!-- 押金实例 -->
+    <aof:Deposit rdf:about="&aof-case;PRC-2025-013/supplier_deposit_2025_03">
+        <rdfs:label>2025-03 供应商押金</rdfs:label>
+        <skos:definition>供应商押金10万元</skos:definition>
+        <skos:note>原计入采购支出，后确认为资产</skos:note>
+    </aof:Deposit>
+
+    <!-- 押金流出指标 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-013/deposit_outflow">
+        <rdfs:label>押金流出金额</rdfs:label>
+        <skos:definition>押金实际支付的现金流指标</skos:definition>
+        <skos:note>押金是资产不是费用，单独列示</skos:note>
+    </aof:MetricDefinition>
+
+    <!-- 指标争议：资产 vs 费用 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-013/asset_vs_expense_dispute">
+        <rdfs:label>押金资产性质争议</rdfs:label>
+        <skos:definition>押金应计入采购支出还是作为资产</skos:definition>
+        <skos:note>本质：asset vs expense 的会计分类</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-013/deposit_decision">
+        <rdfs:label>押金会计处理决策</rdfs:label>
+        <skos:definition>押金单独列示为 deposit_outflow，不计入采购支出</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-013/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-013/deposit_policy"/>
+        <skos:note>押金是资产不是费用，口径必须区分</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-013/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-013/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-013/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-013/deposit_policy">
+        <rdfs:label>押金会计处理政策</rdfs:label>
+        <skos:definition>押金单独列示，作为资产处理</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - Deposit 是 generically dependent continuant（可收回的权利模式）
+        - 不是 expense，不是 procurement spend 的一部分
+        - 决策体现 asset vs expense 的会计本质区分
+        - 这展示了 BFO continuant 概念在会计分类中的实用价值
+    -->
+
+</rdf:RDF>

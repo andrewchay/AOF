@@ -663,10 +663,8 @@ def main() -> int:
 
             # ---- 收敛增强: 新增概念速率趋缓则提前终止 ----
             if conv_threshold and conv_threshold > 0:
-                conv = "n/a"
                 if prev_added_count is not None and prev_added_count > 0:
                     decay = _compute_concept_decay(prev_added_count, len(added))
-                    conv = f"{decay:.2f}"
                     iter_info["convergence_decay"] = round(decay, 3)
                     if decay < conv_threshold:
                         report["status"] = "converged_early"

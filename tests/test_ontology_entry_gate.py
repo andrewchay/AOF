@@ -54,6 +54,10 @@ def test_apply_ontology_missing_file_raises():
 
 
 def test_apply_ontology_builds_resolver():
+    pytest.importorskip(
+        "cognee",
+        reason="requires the externally provisioned Cognee ontology runtime",
+    )
     from bridge.ontology_adapter import apply_ontology
     spec = _spec({"file": "examples/cso_validation/data/cso_oncology.owl", "matching_cutoff": 0.8})
     cfg = apply_ontology(spec)

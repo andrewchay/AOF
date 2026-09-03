@@ -1,0 +1,575 @@
+# Procurement Caliber Governance — Semantic Resources
+# 定义采购支出控制领域的指标、动作、工作流和策略
+
+# ========== Metrics ==========
+# 采购支出核心指标，每个指标有明确的口径定义
+
+- resource_id: aof://acme/finance/metric/monthly_procurement_spend
+  kind: Metric
+  name: monthly_procurement_spend
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "月度采购支出（执行口径）"
+    formula: "SUM(actual_payment_amount) WHERE payment_status = 'completed' AND month = period"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      执行口径：以实际付款完成为准。
+      不含：预付款、押金、内部转移、样品采购。
+    data_sources: [erp_ap, procurement_system]
+    dimensions: [department, month]
+    owner_role: finance_analyst
+    approval_required: true
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/budget_vs_actual_variance
+  kind: Metric
+  name: budget_vs_actual_variance
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "预算 vs 实际差异"
+    formula: "(actual_spend - budget_amount) / budget_amount"
+    unit: ratio
+    frequency: monthly
+    caliber_definition: |
+      预算按承诺口径，核算按执行口径。
+      差异分析用于预算控制。
+    data_sources: [budget_system, erp_ap]
+    dimensions: [department, month]
+    owner_role: finance_analyst
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/framework_contract_spend
+  kind: Metric
+  name: framework_contract_spend
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "框架协议支出（已废弃，拆分为 commitment 和 execution）"
+    formula: "SUM(contract_amount) WHERE contract_type = 'framework'"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      已废弃：拆分为 framework_commitment（承诺口径）和 framework_execution（执行口径）。
+    data_sources: [contract_system, procurement_system]
+    dimensions: [supplier, month]
+    owner_role: procurement_manager
+    approval_required: true
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/emergency_purchase_approval_rate
+  kind: Metric
+  name: emergency_purchase_approval_rate
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "紧急采购审批率"
+    formula: "COUNT(emergency_purchases WITH approval) / COUNT(emergency_purchases)"
+    unit: ratio
+    frequency: monthly
+    caliber_definition: |
+      紧急采购>50K 必须在 48h 内完成补批。
+      审批率反映控制有效性。
+    data_sources: [procurement_system, approval_log]
+    dimensions: [department, month]
+    owner_role: internal_audit
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/monthly_budget_execution_rate
+  kind: Metric
+  name: monthly_budget_execution_rate
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "月度预算执行率"
+    formula: "actual_spend / monthly_budget"
+    unit: ratio
+    frequency: monthly
+    caliber_definition: |
+      预算执行率反映预算控制效果。
+      框架协议按 12 个月均摊确认。
+    data_sources: [budget_system, erp_ap]
+    dimensions: [department, month]
+    owner_role: finance_analyst
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/net_procurement_spend
+  kind: Metric
+  name: net_procurement_spend
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "净采购支出（扣除返利）"
+    formula: "SUM(actual_payment_amount) - SUM(rebate_accrual)"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      净支出 = 实际付款 - 返利应计。
+      返利按采购比例分摊到各月。
+    data_sources: [erp_ap, procurement_system]
+    dimensions: [department, month]
+    owner_role: finance_analyst
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/dept_procurement_spend
+  kind: Metric
+  name: dept_procurement_spend
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "部门采购支出（执行口径）"
+    formula: "SUM(actual_payment_amount) WHERE payment_status = 'completed'"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      执行口径：以实际付款完成为准。
+      不含：预付款（prepayment）、押金（deposit）、内部转移（internal_transfer）、
+            样品采购（sample_procurement）、差旅费（admin_travel_spend）。
+      含：正常采购付款、个人垫付采购报销。
+    data_sources: [erp_ap, procurement_system, expense_system]
+    dimensions: [department, supplier, category, month]
+    owner_role: finance_analyst
+    approval_required: true
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/prepayment_outflow
+  kind: Metric
+  name: prepayment_outflow
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "供应商预付款流出（现金流口径）"
+    formula: "SUM(prepayment_amount) WHERE prepayment_date IN period"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      现金流口径：以预付款实际支付为准。
+      按月摊销计入 dept_procurement_spend。
+    data_sources: [erp_ap, contract_system]
+    dimensions: [department, supplier, month]
+    owner_role: finance_analyst
+    approval_required: true
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/framework_commitment
+  kind: Metric
+  name: framework_commitment
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "框架协议承诺金额（承诺口径）"
+    formula: "SUM(contract_amount) WHERE contract_type = 'framework'"
+    unit: CNY
+    frequency: yearly
+    caliber_definition: |
+      承诺口径：以合同签订金额为准。
+      用于供应商谈判和预算规划。
+      实际执行见 framework_execution。
+    data_sources: [contract_system]
+    dimensions: [supplier, category, year]
+    owner_role: procurement_manager
+    approval_required: true
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/framework_execution
+  kind: Metric
+  name: framework_execution
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "框架协议执行金额（执行口径）"
+    formula: "SUM(actual_order_amount) WHERE contract_type = 'framework'"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      执行口径：以实际下单金额为准。
+      用于预算执行率计算。
+      承诺口径见 framework_commitment。
+    data_sources: [procurement_system]
+    dimensions: [supplier, category, month]
+    owner_role: procurement_manager
+    approval_required: true
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/shared_service_allocation
+  kind: Metric
+  name: shared_service_allocation
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "共享服务分摊金额"
+    formula: "SUM(shared_cost * dept_active_user_count / total_active_users)"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      按部门 active_user_count 分摊共享服务采购成本。
+      避免 IT 部门采购支出虚高。
+    data_sources: [procurement_system, it_asset_system, hr_system]
+    dimensions: [department, service, month]
+    owner_role: finance_analyst
+    approval_required: true
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/pending_return
+  kind: Metric
+  name: pending_return
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "待退货金额（中间状态）"
+    formula: "SUM(return_amount) WHERE return_status = 'pending'"
+    unit: CNY
+    frequency: daily
+    caliber_definition: |
+      退货在收到退款时确认，pending 状态单独跟踪。
+      避免预估冲减导致的误差。
+    data_sources: [procurement_system, erp_ap]
+    dimensions: [supplier, department, day]
+    owner_role: finance_analyst
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/fx_variance
+  kind: Metric
+  name: fx_variance
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "汇率差异影响"
+    formula: "SUM(amount * (payment_rate - contract_rate))"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      外币采购统一按付款日汇率折算。
+      汇率波动单独跟踪，不混入采购支出。
+    data_sources: [procurement_system, erp_ap, fx_rate_feed]
+    dimensions: [currency, supplier, month]
+    owner_role: finance_analyst
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/sample_procurement
+  kind: Metric
+  name: sample_procurement
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "样品采购金额"
+    formula: "SUM(amount) WHERE purpose = 'sample'"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      样品采购目的是研发验证，不是生产采购。
+      单独列示，不计入正式采购支出。
+    data_sources: [procurement_system, expense_system]
+    dimensions: [department, supplier, month]
+    owner_role: finance_analyst
+    approval_required: true
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/rebate_accrual
+  kind: Metric
+  name: rebate_accrual
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "返利应计金额"
+    formula: "SUM(rebate_amount * purchase_ratio)"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      返利按采购比例分摊到各月，不是收到时一次性确认。
+      本质是采购价格的调整。
+    data_sources: [procurement_system, erp_ap]
+    dimensions: [supplier, month]
+    owner_role: finance_analyst
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/internal_transfer_spend
+  kind: Metric
+  name: internal_transfer_spend
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "内部转移金额"
+    formula: "SUM(amount) WHERE supplier_type = 'internal'"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      内部转移定价单独列示，不计入外部采购支出。
+      外部采购支出用于供应商管理和谈判。
+    data_sources: [erp_ap, internal_transfer_system]
+    dimensions: [department, month]
+    owner_role: finance_analyst
+    approval_required: true
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/deposit_outflow
+  kind: Metric
+  name: deposit_outflow
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "押金流出金额"
+    formula: "SUM(deposit_amount) WHERE deposit_status = 'paid'"
+    unit: CNY
+    frequency: monthly
+    caliber_definition: |
+      押金是资产（其他应收款），不是费用。
+      单独列示，不计入采购支出。
+    data_sources: [procurement_system, erp_ap]
+    dimensions: [supplier, month]
+    owner_role: finance_analyst
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/emergency_purchase_sla
+  kind: Metric
+  name: emergency_purchase_sla
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "紧急采购补批及时率"
+    formula: "COUNT(emergency_purchases WHERE补批时间 <= 48h) / COUNT(emergency_purchases)"
+    unit: ratio
+    frequency: monthly
+    caliber_definition: |
+      紧急采购>50K 必须在 48h 内完成补批。
+      超时触发例外升级。
+    data_sources: [procurement_system, approval_log]
+    dimensions: [department, month]
+    owner_role: internal_audit
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/single_source_ratio
+  kind: Metric
+  name: single_source_ratio
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "单一来源采购占比"
+    formula: "COUNT(single_source_purchases) / COUNT(total_purchases)"
+    unit: ratio
+    frequency: monthly
+    caliber_definition: |
+      单一来源采购需在 48h 内提交书面说明。
+      连续 3 次触发供应商审查。
+    data_sources: [procurement_system, approval_log]
+    dimensions: [department, category, month]
+    owner_role: internal_audit
+    approval_required: false
+    version: 1.0.0
+
+- resource_id: aof://acme/finance/metric/commitment_vs_execution
+  kind: Metric
+  name: commitment_vs_execution
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "承诺口径 vs 执行口径差异"
+    formula: "framework_commitment / framework_execution"
+    unit: ratio
+    frequency: monthly
+    caliber_definition: |
+      预算按承诺口径，核算按执行口径。
+      两种口径显式区分，避免混淆。
+    data_sources: [budget_system, erp_ap, contract_system]
+    dimensions: [department, month]
+    owner_role: finance_analyst
+    approval_required: false
+    version: 1.0.0
+
+# ========== Action Types ==========
+# 采购支出控制领域的动作类型
+
+- resource_id: aof://acme/finance/action-type/propose-caliber-change
+  kind: ActionType
+  name: propose-caliber-change
+  domain: finance
+  owner: finance-team
+  depends_on:
+    - aof://acme/finance/metric/dept_procurement_spend
+    - aof://acme/finance/function/update-metric-definition
+  spec:
+    function_id: aof://acme/finance/function/update-metric-definition
+    target_object_type_id: aof://acme/finance/object-type/metric-definition
+    effect_class: reversible
+    idempotency_scope: request
+    required_approval_roles: [finance_analyst]
+    input_schema:
+      type: object
+      properties:
+        metric_id: {type: string}
+        current_definition: {type: string}
+        proposed_definition: {type: string}
+        rationale: {type: string}
+        affected_periods: {type: array, items: {type: string}}
+        requester: {type: string}
+      required: [metric_id, proposed_definition, rationale, requester]
+
+- resource_id: aof://acme/finance/action-type/review-caliber-change
+  kind: ActionType
+  name: review-caliber-change
+  domain: finance
+  owner: finance-team
+  depends_on:
+    - aof://acme/finance/metric/dept_procurement_spend
+    - aof://acme/finance/function/review-metric-definition
+  spec:
+    function_id: aof://acme/finance/function/review-metric-definition
+    target_object_type_id: aof://acme/finance/object-type/metric-definition
+    effect_class: reversible
+    idempotency_scope: request
+    required_approval_roles: [procurement_manager, finance_analyst]
+    input_schema:
+      type: object
+      properties:
+        proposal_id: {type: string}
+        review_decision: {type: string, enum: [approve, reject, request_changes]}
+        review_comments: {type: string}
+        reviewer: {type: string}
+      required: [proposal_id, review_decision, reviewer]
+
+- resource_id: aof://acme/finance/action-type/approve-caliber-change
+  kind: ActionType
+  name: approve-caliber-change
+  domain: finance
+  owner: finance-team
+  depends_on:
+    - aof://acme/finance/metric/dept_procurement_spend
+    - aof://acme/finance/function/approve-metric-definition
+  spec:
+    function_id: aof://acme/finance/function/approve-metric-definition
+    target_object_type_id: aof://acme/finance/object-type/metric-definition
+    effect_class: reversible
+    idempotency_scope: request
+    required_approval_roles: [cfo]
+    input_schema:
+      type: object
+      properties:
+        proposal_id: {type: string}
+        approval_decision: {type: string, enum: [approve, reject]}
+        approval_comments: {type: string}
+        approver: {type: string}
+      required: [proposal_id, approval_decision, approver]
+
+- resource_id: aof://acme/finance/action-type/publish-metric-version
+  kind: ActionType
+  name: publish-metric-version
+  domain: finance
+  owner: finance-team
+  depends_on:
+    - aof://acme/finance/metric/dept_procurement_spend
+    - aof://acme/finance/function/publish-metric-version
+  spec:
+    function_id: aof://acme/finance/function/publish-metric-version
+    target_object_type_id: aof://acme/finance/object-type/metric-definition
+    effect_class: reversible
+    idempotency_scope: object
+    required_approval_roles: [cfo]
+    input_schema:
+      type: object
+      properties:
+        metric_id: {type: string}
+        new_version: {type: string}
+        effective_date: {type: string, format: date}
+        changelog: {type: string}
+      required: [metric_id, new_version, effective_date]
+
+- resource_id: aof://acme/finance/action-type/escalate-dispute
+  kind: ActionType
+  name: escalate-dispute
+  domain: finance
+  owner: finance-team
+  depends_on:
+    - aof://acme/finance/metric/dept_procurement_spend
+    - aof://acme/finance/function/escalate-dispute
+  spec:
+    function_id: aof://acme/finance/function/escalate-dispute
+    target_object_type_id: aof://acme/finance/object-type/metric-dispute
+    effect_class: reversible
+    idempotency_scope: request
+    required_approval_roles: [cfo]
+    input_schema:
+      type: object
+      properties:
+        dispute_id: {type: string}
+        escalation_reason: {type: string}
+        escalated_to: {type: string}
+        escalated_by: {type: string}
+      required: [dispute_id, escalation_reason, escalated_to, escalated_by]
+
+# ========== Workflows ==========
+# 指标口径变更的审批工作流
+
+- resource_id: aof://acme/finance/workflow/caliber-change-approval
+  kind: Workflow
+  name: caliber-change-approval
+  domain: finance
+  owner: finance-team
+  depends_on:
+    - aof://acme/finance/action-type/propose-caliber-change
+    - aof://acme/finance/action-type/review-caliber-change
+    - aof://acme/finance/action-type/approve-caliber-change
+    - aof://acme/finance/action-type/publish-metric-version
+  spec:
+    nodes:
+      - node_id: propose
+        action_type_id: aof://acme/finance/action-type/propose-caliber-change
+        depends_on: []
+      - node_id: review
+        action_type_id: aof://acme/finance/action-type/review-caliber-change
+        depends_on: [propose]
+      - node_id: approve
+        action_type_id: aof://acme/finance/action-type/approve-caliber-change
+        depends_on: [review]
+      - node_id: publish
+        action_type_id: aof://acme/finance/action-type/publish-metric-version
+        depends_on: [approve]
+
+# ========== Policies ==========
+# 权限矩阵：谁可以提议、审核、批准、发布
+
+- resource_id: aof://acme/finance/policy/caliber-governance-roles
+  kind: Policy
+  name: caliber-governance-roles
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "指标口径治理权限矩阵"
+    rules:
+      - action: propose-caliber-change
+        allowed_roles: [finance_analyst, procurement_manager]
+        description: "数据团队和采购经理可以提议口径变更"
+      - action: review-caliber-change
+        allowed_roles: [procurement_manager, finance_analyst]
+        description: "采购经理和数据团队交叉审核"
+      - action: approve-caliber-change
+        allowed_roles: [cfo]
+        description: "CFO 最终批准"
+      - action: publish-metric-version
+        allowed_roles: [cfo]
+        description: "CFO 发布新版本"
+      - action: escalate-dispute
+        allowed_roles: [cfo]
+        description: "CFO 处理争议升级"
+    separation_of_duties:
+      - [propose, approve]  # 提议人不能批准
+      - [review, publish]   # 审核人不能发布
+    exception_handling:
+      emergency_changes:
+        max_amount: 50000
+        required_approvals: [cfo]
+        sla_hours: 48
+      dispute_escalation:
+        max_attempts: 2
+        escalate_to: [ceo]
+        sla_hours: 24

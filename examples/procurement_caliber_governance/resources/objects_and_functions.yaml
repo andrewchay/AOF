@@ -1,0 +1,103 @@
+# Procurement Caliber Governance — Object Types and Functions
+# 补充 ActionContract 编译所需的 ObjectType 和 Function 资源
+
+# ========== Object Types ==========
+
+- resource_id: aof://acme/finance/object-type/metric-definition
+  kind: ObjectType
+  name: metric-definition
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "指标定义对象"
+    properties:
+      metric_id: {type: string}
+      name: {type: string}
+      formula: {type: string}
+      caliber_definition: {type: string}
+      version: {type: string}
+      status: {type: string, enum: [draft, proposed, review, approved, published, retired]}
+      owner_role: {type: string}
+      created_at: {type: string, format: date-time}
+      updated_at: {type: string, format: date-time}
+
+- resource_id: aof://acme/finance/object-type/metric-dispute
+  kind: ObjectType
+  name: metric-dispute
+  domain: finance
+  owner: finance-team
+  spec:
+    description: "指标争议对象"
+    properties:
+      dispute_id: {type: string}
+      metric_id: {type: string}
+      dispute_type: {type: string}
+      description: {type: string}
+      status: {type: string, enum: [open, under_review, escalated, resolved]}
+      raised_by: {type: string}
+      resolved_by: {type: string}
+      resolution: {type: string}
+      created_at: {type: string, format: date-time}
+      resolved_at: {type: string, format: date-time}
+
+# ========== Functions ==========
+
+- resource_id: aof://acme/finance/function/update-metric-definition
+  kind: Function
+  name: update-metric-definition
+  domain: finance
+  owner: finance-team
+  spec:
+    connector: internal
+    operation: update_metric_definition
+    side_effects: true
+    timeout_ms: 5000
+    description: "更新指标定义（草稿状态）"
+
+- resource_id: aof://acme/finance/function/review-metric-definition
+  kind: Function
+  name: review-metric-definition
+  domain: finance
+  owner: finance-team
+  spec:
+    connector: internal
+    operation: review_metric_definition
+    side_effects: true
+    timeout_ms: 5000
+    description: "审核指标定义变更提议"
+
+- resource_id: aof://acme/finance/function/approve-metric-definition
+  kind: Function
+  name: approve-metric-definition
+  domain: finance
+  owner: finance-team
+  spec:
+    connector: internal
+    operation: approve_metric_definition
+    side_effects: true
+    timeout_ms: 5000
+    description: "批准指标定义变更"
+
+- resource_id: aof://acme/finance/function/publish-metric-version
+  kind: Function
+  name: publish-metric-version
+  domain: finance
+  owner: finance-team
+  spec:
+    connector: internal
+    operation: publish_metric_version
+    side_effects: true
+    timeout_ms: 5000
+    description: "发布指标新版本"
+
+- resource_id: aof://acme/finance/function/escalate-dispute
+  kind: Function
+  name: escalate-dispute
+  domain: finance
+  owner: finance-team
+  spec:
+    connector: internal
+    operation: escalate_dispute
+    side_effects: true
+    timeout_ms: 5000
+    description: "升级指标争议"

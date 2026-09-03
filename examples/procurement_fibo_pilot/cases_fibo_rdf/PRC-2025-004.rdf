@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-004/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-004: 框架协议承诺 vs 执行 ===== -->
+
+    <!-- 框架协议实例 -->
+    <aof:FrameworkAgreement rdf:about="&aof-case;PRC-2025-004/framework_agreement_2025">
+        <rdfs:label>2025年度框架协议</rdfs:label>
+        <skos:definition>年度框架协议，合同额 500 万</skos:definition>
+        <aof:hasCommitment rdf:resource="&aof-case;PRC-2025-004/framework_commitment_2025"/>
+    </aof:FrameworkAgreement>
+
+    <!-- 承诺口径 = Commitment（continuant） -->
+    <aof:ProcurementCommitment rdf:about="&aof-case;PRC-2025-004/framework_commitment_2025">
+        <rdfs:label>框架协议承诺金额</rdfs:label>
+        <skos:definition>框架协议约定的年度总金额（承诺口径）</skos:definition>
+        <aof:commitmentAmount rdf:datatype="&xsd;decimal">5000000</aof:commitmentAmount>
+        <aof:currency>CNY</aof:currency>
+        <fibo-agr:isObligationOf rdf:resource="&aof-case;PRC-2025-004/buyer_role"/>
+        <fibo-agr:hasObligation rdf:resource="&aof-case;PRC-2025-004/supplier_role"/>
+    </aof:ProcurementCommitment>
+
+    <!-- 执行口径 = 实际 process 的量化（occurrent 的度量） -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-004/framework_execution_H1">
+        <rdfs:label>框架协议执行金额（H1）</rdfs:label>
+        <skos:definition>框架协议下实际下单并完成的金额（执行口径）</skos:definition>
+        <aof:executionAmount rdf:datatype="&xsd;decimal">3200000</aof:executionAmount>
+        <aof:currency>CNY</aof:currency>
+        <aof:calculatedFrom rdf:resource="&aof-case;PRC-2025-004/purchase_process_H1"/>
+    </aof:MetricDefinition>
+
+    <!-- 采购过程（occurrent） -->
+    <aof:PurchasePhase rdf:about="&aof-case;PRC-2025-004/purchase_process_H1">
+        <rdfs:label>2025-H1 采购执行过程</rdfs:label>
+        <skos:note>实际下单 320 万</skos:note>
+    </aof:PurchasePhase>
+
+    <!-- 角色 -->
+    <aof:BuyerRole rdf:about="&aof-case;PRC-2025-004/buyer_role">
+        <rdfs:label>买方角色</rdfs:label>
+    </aof:BuyerRole>
+
+    <aof:SupplierRole rdf:about="&aof-case;PRC-2025-004/supplier_role">
+        <rdfs:label>供应商角色</rdfs:label>
+    </aof:SupplierRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-004/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 指标争议：双口径混淆 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-004/dual_metric_dispute">
+        <rdfs:label>承诺口径 vs 执行口径争议</rdfs:label>
+        <skos:definition>采购部按承诺口径（500万），财务部按执行口径（320万），差异180万</skos:definition>
+        <aof:involvesContract rdf:resource="&aof-case;PRC-2025-004/framework_agreement_2025"/>
+    </aof:MetricDispute>
+
+    <!-- 决策：拆分双指标 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-004/dual_metric_decision">
+        <rdfs:label>双口径拆分决策</rdfs:label>
+        <skos:definition>framework_contract_spend 按实际下单统计；新增 framework_commitment 指标按合同额统计</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-004/cfo_role"/>
+        <skos:note>执行口径用于预算执行率，承诺口径用于供应商谈判，两者分开</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 关键语义区分说明 -->
+    <!-- 
+        本案例展示了 BFO continuant vs occurrent 的核心区分：
+        
+        - framework_commitment_2025 是 continuant（generically dependent continuant）
+          → 它在时间中持续存在，即使还没下单，承诺仍在
+          → 类比：合同文本是 continuant，合同签订是过程边界
+        
+        - framework_execution_H1 是对 occurrent（purchase_process_H1）的量化
+          → 它度量的是一个过程的结果
+          → 类比：跑步是 process，跑了 5 公里是对 process 的度量
+        
+        这个区分解释了为什么"承诺 500 万"和"执行 320 万"可以同时为真而不矛盾：
+        一个是持续存在的义务，一个是已发生过程的度量。
+    -->
+
+</rdf:RDF>

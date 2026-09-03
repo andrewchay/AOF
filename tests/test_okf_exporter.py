@@ -137,8 +137,8 @@ def test_export_writes_okf_bundle_structure(tmp_path):
     # 文件结构
     assert (tmp_path / "index.md").exists()
     assert (tmp_path / "log.md").exists()
-    assert (tmp_path / "person" / "alice.md").exists()
-    assert (tmp_path / "company" / "techcorp.md").exists()
+    assert (tmp_path / "person" / "Alice.md").exists()
+    assert (tmp_path / "company" / "TechCorp.md").exists()
 
     index = (tmp_path / "index.md").read_text(encoding="utf-8")
     assert "## person" in index

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-012/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-012: 内部转移定价是否计入采购支出 ===== -->
+    <!-- 核心语义: InternalTransfer —— 关联交易 vs 外部采购的语义隔离 -->
+
+    <!-- 内部转移协议 -->
+    <owl:Class rdf:about="&aof;InternalTransferAgreement">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">内部转移协议</rdfs:label>
+        <skos:definition xml:lang="zh">集团内部部门/法人之间的转移定价协议</skos:definition>
+    </owl:Class>
+
+    <!-- 外部采购支出指标 -->
+    <aof:ProcurementSpendMetric rdf:about="&aof-case;PRC-2025-012/external_procurement_spend">
+        <rdfs:label>外部采购支出</rdfs:label>
+        <skos:definition>仅包含外部供应商的采购支出</skos:definition>
+    </aof:ProcurementSpendMetric>
+
+    <!-- 内部转移实例 -->
+    <aof:InternalTransferAgreement rdf:about="&aof-case;PRC-2025-012/internal_transfer_2025_q2">
+        <rdfs:label>2025-Q2 内部转移</rdfs:label>
+        <skos:definition>生产部从集团内部采购原材料，内部转移价60万</skos:definition>
+        <skos:note>原计入采购支出，后单独列示</skos:note>
+    </aof:InternalTransferAgreement>
+
+    <!-- 指标争议：关联交易 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-012/related_party_dispute">
+        <rdfs:label>关联交易口径争议</rdfs:label>
+        <skos:definition>内部转移是否应计入外部采购支出</skos:definition>
+        <skos:note>影响供应商集中度分析和采购谈判</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-012/internal_transfer_decision">
+        <rdfs:label>内部转移口径决策</rdfs:label>
+        <skos:definition>内部转移单独列示为 internal_transfer_spend，不计入外部采购支出</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-012/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-012/internal_transfer_policy"/>
+        <skos:note>外部采购支出用于供应商管理和谈判，内部交易应分开</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-012/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-012/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-012/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-012/internal_transfer_policy">
+        <rdfs:label>内部转移口径政策</rdfs:label>
+        <skos:definition>内部转移单独列示，不计入外部采购支出</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - InternalTransferAgreement 是 Contract 的子类
+        - 但不同于 PurchaseOrder（外部采购）
+        - 决策将 related party transaction 从 external procurement 中隔离
+        - 这展示了 FIBO 如何支持关联交易和外部交易的语义区分
+    -->
+
+</rdf:RDF>

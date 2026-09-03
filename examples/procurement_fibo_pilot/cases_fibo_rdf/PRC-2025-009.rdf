@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-009/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-009: 样品采购是否计入正式采购支出 ===== -->
+    <!-- 核心语义: PurposeBasedClassification —— 按采购目的分类，不是按部门分类 -->
+
+    <!-- 样品采购 —— 研发目的的特殊采购 -->
+    <owl:Class rdf:about="&aof;SampleProcurement">
+        <rdfs:subClassOf rdf:resource="&aof;PurchaseOrder"/>
+        <rdfs:label xml:lang="zh">样品采购</rdfs:label>
+        <skos:definition xml:lang="zh">用于研发验证的样品采购</skos:definition>
+    </owl:Class>
+
+    <!-- 研发采购 -->
+    <owl:Class rdf:about="&aof;RDProcurement">
+        <rdfs:subClassOf rdf:resource="&aof;PurchaseOrder"/>
+        <rdfs:label xml:lang="zh">研发采购</rdfs:label>
+        <skos:definition xml:lang="zh">用于研发活动的采购</skos:definition>
+    </owl:Class>
+
+    <!-- 样品采购实例 -->
+    <aof:SampleProcurement rdf:about="&aof-case;PRC-2025-009/sample_procurement_2025_04">
+        <rdfs:label>2025-04 样品采购</rdfs:label>
+        <skos:definition>研发部申请样品采购3万元</skos:definition>
+        <skos:note>原计入研发部采购支出，后单独列示</skos:note>
+    </aof:SampleProcurement>
+
+    <!-- 指标争议：目的分类 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-009/purpose_classification_dispute">
+        <rdfs:label>采购目的分类争议</rdfs:label>
+        <skos:definition>样品采购应计入采购支出还是研发费用</skos:definition>
+        <skos:note>按部门分类 vs 按目的分类的争议</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-009/purpose_decision">
+        <rdfs:label>采购目的分类决策</rdfs:label>
+        <skos:definition>样品采购单独列示为 sample_procurement，不计入正式采购支出</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-009/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-009/sample_policy"/>
+        <skos:note>样品目的是研发验证，不是生产采购，口径应区分</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-009/rd_manager_role">
+        <rdfs:label>研发经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-009/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-009/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-009/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-009/sample_policy">
+        <rdfs:label>样品采购分类政策</rdfs:label>
+        <skos:definition>样品采购单独列示，不计入正式采购支出</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - SampleProcurement 和 RDProcurement 都是 PurchaseOrder 的子类
+        - 争议核心是 purpose-based classification（按目的分类）
+        - 决策引入 sample_procurement 指标，按目的而非部门分类
+        - 展示了 FIBO 如何支持多维分类（部门维度 vs 目的维度）
+    -->
+
+</rdf:RDF>

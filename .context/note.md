@@ -155,3 +155,22 @@
 ### 建议行动
 - 将"决策级溯源与可审计"列入 AOF roadmap 差异化能力（待用户确认是否需要更新 roadmap.md / todo.md）。
 - 可选：将本调研的核心结论沉淀到 CLAUDE.md（AOF 的定位边界与对标）。
+
+## 2026-08-26 ontology 迭代自举产品化（CSO 验证 → AOF 落地）
+**背景**：用户用 CSO 项目验证 AOF 能力，最终验证了「ontology 迭代自举」(seed owl → AOF 建图谱 → 提取实例 → 归纳新类 → 收敛) 有效。
+
+**产品化落点**（形态C：建通用引擎 + 让现有factory复用）：
+- 通用引擎 `tools/ontology_learning/`：`OntologyLearner` 类 + 收敛判据 + 实例→类映射
+- 现有 `tools/ontology_factory/build_testdata_ontology_factory.py` 加 `--convergence-threshold` 复用 `compute_concept_decay`
+
+**关键实现细节（踩坑）**：
+1. cognee 实体名在 `name` 字段（非 `label`），类型在 `type`；`label` 恒为 None
+2. 实例→类用 `is_a` 边：`atezolizumab--is_a-->drug`。实例节点 type=Entity，领域类节点 type=EntityType
+3. `cognify` 后需等待索引就绪，`load_graph_nodes_edges` 需重试
+4. 收敛判据：概念饱和度(saturation) + 类结构稳定(stability) + 概念增长减速(decay) + MaxIter 兜底
+
+**验证结果**：seed 1类 → 学会 endpoint/drug/statisticalmethod 4 类，饱和度 0.5→0.33→0.25→0，decay 触发停止。真实cognee上 seed 7→13→18 类。
+
+**Git**：AOF `codex/internal-edition` 已推送(7aec1ae)；OptiMed `ontology` 已推送(42ef465)。
+
+**复用价值**：任何领域只要「种子owl + 文本 + AOF/cognee」，即可自动迭代扩展 ontology。可复用于 taxonomy归纳/schema发现/领域建模。核心引擎的 self_test.py 用模拟 graph_builder 验证收敛，不依赖 cognee 真实运行。

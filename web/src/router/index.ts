@@ -47,6 +47,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/AgentTestView.vue'),
         meta: { title: 'Agent 测试', icon: 'ChatDotRound' },
       },
+      {
+        path: 'harness',
+        name: 'harness',
+        component: () => import('@/views/HarnessTrainerView.vue'),
+        meta: { title: 'Agent 驯化', icon: 'Trophy' },
+      },
     ],
   },
 ]

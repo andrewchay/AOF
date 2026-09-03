@@ -195,7 +195,7 @@ def test_document_parse_rejects_sensitive_path(monkeypatch):
     )
     assert result["ok"] is False
     assert "error" in result
-    assert "根目录" in result["error"]
+    assert "路径" in result["error"]
 
 
 def test_document_parse_missing_path():

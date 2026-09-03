@@ -1,0 +1,1808 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<rdf:RDF xmlns:ns1="http://www.w3.org/2000/01/rdf-schema#" xmlns:ns2="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+
+  
+  
+  
+  
+  
+
+  
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#active_treatment_arm">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>active treatment arm</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000105a</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#administration_schedule">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>administration schedule</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000131</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#adverse_event_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>adverse event specification</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000106a</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#analysis_population">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>analysis population</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000107</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#analyzed_by">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>analyzed by</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#assessed_at">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>assessed at</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#assessment_schedule">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>assessment schedule</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000109</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#based_on">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>based on</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#baseline_assessment">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>baseline assessment</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000125</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#clinical_study_document">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical study document</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000001</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#clinical_study_protocol">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical study protocol</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000002</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#cohort_definition">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>cohort definition</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000120</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#cohort_treatment_arm">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>cohort treatment arm</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000124</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#data_handling_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>data handling specification</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000121</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#dosage">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>dosage</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000130</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#dose_modification_rule">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>dose modification rule</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000119</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#ecg_assessment">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>ECG assessment</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000118</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#efficacy_analysis_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>efficacy analysis specification</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000123</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#efficacy_endpoint">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>efficacy endpoint</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000102a</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#efficacy_objective">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>efficacy objective</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101a</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#endpoint">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>endpoint</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000102</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#evaluates">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>evaluates</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#exclusion_criterion">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>exclusion criterion</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000104</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#exploratory_objective">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>exploratory objective</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101c</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_administration_schedule">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has administration schedule</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_analysis_population">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has analysis population</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_assessment_schedule">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has assessment schedule</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_baseline_assessment">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has baseline assessment</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_cohort">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has cohort</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_collection_timepoint">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has collection timepoint</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_data_handling">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has data handling</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_dosage">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has dosage</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_endpoint">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has endpoint</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_exclusion_criterion">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has exclusion criterion</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_inclusion_criterion">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has inclusion criterion</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_interim_analysis">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has interim analysis</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_objective">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has objective</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_population_definition">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has population definition</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_rationale">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has rationale</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_safety_analysis">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has safety analysis</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_safety_assessment">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has safety assessment</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_safety_parameter">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has safety parameter</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_sample_size">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has sample size</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_statistical_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has statistical design</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_statistical_method">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has statistical method</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_stopping_rule">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has stopping rule</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_study_information">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has study information</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_timepoint">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has timepoint</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#has_treatment_arm">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>has treatment arm</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#inclusion_criterion">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>inclusion criterion</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000103</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#intent_to_treat_population">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>intent-to-treat population</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000107a</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#interim_analysis_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>interim analysis specification</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000113</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#is_evaluated_by">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty" />
+      <ns1:label>is evaluated by</ns1:label>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#laboratory_assessment">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>laboratory assessment</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000115</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#per_protocol_population">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>per-protocol population</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000107b</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#pharmacokinetic_objective">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>pharmacokinetic objective</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101d</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#physical_examination">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>physical examination</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000117</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#placebo_arm">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>placebo arm</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000105b</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#population_definition">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>population definition</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000129</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_analysis_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>safety analysis specification</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000122</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_assessment">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>safety assessment</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000106</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_endpoint">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>safety endpoint</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000102b</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_objective">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>safety objective</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101b</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety_parameter">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>safety parameter</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000127</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#sample_size_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>sample size specification</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000114</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#serious_adverse_event_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>serious adverse event specification</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000106b</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#statistical_analysis_plan">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>statistical analysis plan</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000003</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#statistical_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>statistical design</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000128</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#statistical_method">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>statistical method</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000108</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#study_discontinuation_rule">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study discontinuation rule</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000112</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#study_information">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study information</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000111</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#study_objective">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study objective</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000101</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#study_rationale">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study rationale</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000110</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#timepoint">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>timepoint</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000126</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#treatment_arm">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>treatment arm</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000105</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#vital_sign_assessment">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>vital sign assessment</ns1:label>
+      <ns1:comment>Original URI: http://purl.obolibrary.org/obo/CSO_0000116</ns1:comment>
+    </rdf:Description>
+
+  
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#action_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>action specification</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000007</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#adverse_event">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>adverse event</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OAE_0000001</ns1:comment>
+    <ns1:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string">AE</ns1:label></rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#age">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Age</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C25150</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#age_between_18_and_64">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>age_between_18_and_64</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000026</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#age_between_birth_and_17_years">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>age_between_birth_and_17_years</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000034</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#age_group_inclusion_criterion">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>age group inclusion criterion</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0002555</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#age_older_than_64">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>age_older_than_64</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000038</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#allocation">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Allocation</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C52580</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#assay">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>assay</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000070</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#australian_new_zealand_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Australian New Zealand clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000003</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#australian_new_zealand_clinical_trials_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Australian New Zealand clinical trials registry identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000002</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#basic_research">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Basic Research</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15714</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#behavioral_intervention">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>behavioral intervention</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000376</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#blinded_clinical_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Blinded Clinical Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C70840</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#bodily_process">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>bodily process</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OGMS_0000060</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#brazilian_clinical_trial_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Brazilian clinical trial registry identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000030</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#brazilian_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Brazilian clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000053</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#case_control_study_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>case-control study design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0002624</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#central_contact_person_of_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>central contact person of study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000395</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#centrally_registered_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>centrally registered identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000578</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#chinese_clinical_trail_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Chinese clinical trail registry identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000022</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#chinese_clinical_trial_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Chinese clinical trial registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000049</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_finding">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical finding</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OGMS_0000014</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_history">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical history</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OGMS_0000015</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_investigator">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical investigator</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000294</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_study_sponsor">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Clinical Study Sponsor</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C70793</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000220</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_early_phase_1">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial early phase 1</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000202</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_enrollment">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial enrollment</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000099</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_final_report">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Clinical Trial Final Report</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C115575</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_outcome_measurement">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial outcome measurement</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000016</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_participant">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial participant</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000100</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_phase">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial phase</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000201</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_phase_1">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial phase 1</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000203</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_phase_12">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial phase 1/2</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000046</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_phase_2">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial phase 2</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000204</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_phase_23">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial phase 2/3</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000031</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_phase_3">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial phase 3</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000205</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_phase_4">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial phase 4</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000206</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_primary_completion_date">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial primary completion date</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000215</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_primary_purpose_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial primary purpose specification</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000200</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Clinical Trial Registry Identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C98714</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_sponsor_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial sponsor role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000110</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_start_date">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial start date</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000296</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trial_study_completion_date">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trial study completion date</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000216</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#clinical_trials_registry_organization">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>clinical trials registry organization</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000077</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#collaborator">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Collaborator</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C84336</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#combinational_intervention">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>combinational intervention</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000365</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#condition_or_disease_under_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Condition or Disease under Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C161319</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#contact_for_public_queries">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>contact for public queries</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000393</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#contact_information">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Contact Information</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C60776</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#contact_name">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>contact name</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000223</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#contact_of_scientific_queries">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>contact of scientific queries</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000389</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#contact_person">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>contact person</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000383</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#contact_person_information">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>contact person information</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000397</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#contact_person_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>contact person role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000391</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#country_name">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>country name</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0001627</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#cross_over_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>cross over design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0500003</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#cuban_public_registry_of_clinical_trials">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Cuban public registry of clinical trials</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000015</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#cuban_public_registry_of_clinical_trials_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Cuban public registry of clinical trials identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000055</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#curation_status_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>curation status specification</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000078</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#data_about_an_ontology_part">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>data about an ontology part</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000102</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#data_item">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>data item</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000027</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#date_of_registration">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>date of registration</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000302</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#device">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>device</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000968</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#device_feasibility_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Device Feasibility Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C139174</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#diagnosis">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>diagnosis</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OGMS_0000073</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#diagnosis_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Diagnosis Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C49653</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#directive_information_entity">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>directive information entity</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000033</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#disease">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>disease</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OGMS_0000031</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#document">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>document</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000310</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#double_blinded_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>double blinded design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000112</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#drug_administration">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>drug administration</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OAE_0000011</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#drug_clinical_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>drug clinical trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000109</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#early_phase_1_clinical_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Early Phase 1 clinical trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000207</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#eligibility_criterion">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>eligibility criterion</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0500026</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#email_address">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>email address</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000429</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#enrolled_patient">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>enrolled patient</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000102</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#eu_clinical_trials_register">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>EU clinical trials register</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000036</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#european_clinical_trial_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>European clinical trial registry identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000208</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#expanded_access_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Expanded Access Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C98722</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#facility_contact">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>facility contact</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000384</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#factorial_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>factorial design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0500014</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#factorial_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Factorial Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C82638</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#gene_therapy">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Gene Therapy</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15238</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#german_clinical_trials_register">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>German clinical trials register</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000024</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#german_clinical_trials_register_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>German clinical trials register identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000014</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#health_services_research">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Health Services Research</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15245</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#healthy_enrollee">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>healthy enrollee</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000101</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#healthy_volunteer_criterion">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>healthy volunteer criterion</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000033</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#human_subject">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>human subject</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000381</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#human_subject_enrollment">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>human subject enrollment</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0600004</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#human_subject_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>human subject study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000418</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#human_subjects_protection_review_board_status">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>human subjects protection review board status</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000040</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#indian_clinical_trial_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Indian clinical trial registry identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000052</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#indian_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Indian clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000011</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#information_content_entity">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>information content entity</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000030</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#informed_consent_process">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>informed consent process</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000810</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#international_standard_randomised_controlled_trial_register_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>International standard randomised controlled trial register identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000045</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#intervention_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>intervention design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000115</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#intervention_type">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Intervention Type</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C98747</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#interventional_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Interventional Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C98388</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#investigation">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>investigation</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000066</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#investigation_agent_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>investigation agent role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000202</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#investigation_collaborator_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>investigation collaborator role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000402</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#investigational_drug_administration">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>investigational drug administration</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000119</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#investigational_molecular_entity">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>investigational molecular entity</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000108</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#investigational_molecular_entity_administration">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>investigational molecular entity administration</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000107</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#investigational_supplement_administration">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>investigational supplement administration</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000120</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#investigator">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>investigator</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000293</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#investigator_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>investigator role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000390</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#iranian_registry_of_clinical_trials">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Iranian registry of clinical trials</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000009</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#iranian_registry_of_clinical_trials_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Iranian registry of clinical trials identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000013</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#japan_clinical_trial_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Japan clinical trial identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000209</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#japic_clinical_trial_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>JAPIC clinical trial identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000210</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#japic_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>JAPIC clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000019</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#jmacct_clinical_trial_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>JMACCT clinical trial identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000211</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#jmacct_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>JMACCT clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000025</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#jrct_clinical_trial_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>jRCT clinical trial identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000054</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#korean_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Korean clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000041</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#lay_title_of_clinical_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>lay title of clinical trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000218</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#lebanese_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Lebanese clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000023</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#lebanese_clinical_trials_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Lebanese clinical trials registry identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000056</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#masking_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>masking design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000005</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#maximum_age_value_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>maximum age value specification</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0002557</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#medical_condition">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>medical condition</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000282</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#medical_intervention">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>medical intervention</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OAE_0000002</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#medical_procedure">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>medical procedure</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OAE_0002807</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#minimum_age_value_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>minimum age value specification</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0002556</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#n_to_1_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>n-to-1 design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0500004</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#non_random_allocation">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>non-random allocation</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000006</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#number_of_participants">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>number of participants</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000028</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#objective_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>objective specification</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000005</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#oboncit_c90468">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>obo:NCIT_C90468</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C90468</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#observation_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>observation design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0300311</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#observational_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Observational Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C16084</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#official_title_of_clinical_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>official title of clinical trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000219</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#open_blinded_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>open blinded design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000114</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#organization">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>organization</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000245</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#other_outcome_measure_information">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>other outcome measure information</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000010</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#outcome_measure_result">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>outcome measure result</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000039</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#outcome_measurement_datum">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>outcome measurement datum</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000104</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#outcome_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>outcome specification</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000051</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#pan_african_clinical_trial_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Pan African clinical trial registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000017</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#pan_african_clinical_trial_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Pan African clinical trial registry identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000020</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#parallel_group_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>parallel group design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0500006</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#pathological_bodily_process">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>pathological bodily process</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OGMS_0000061</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#patient_registry_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Patient Registry Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C129000</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#personal_attribute">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Personal Attribute</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C19332</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#peruvian_clinical_trial_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Peruvian clinical trial registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000074</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#peruvian_clinical_trial_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Peruvian clinical trial registry identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000004</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#phase_iii_trial_2">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Phase I/II Trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15693</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#phase_i_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Phase I Trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15600</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#phase_iiiii_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Phase II/III Trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15694</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#phase_ii_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Phase II Trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15601</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#phase_iii_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Phase III Trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15602</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#phase_iv_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Phase IV Trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15603</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#phase_not_applicable">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>phase not applicable</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000043</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#pivotal_clinical_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>pivotal clinical trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000132</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#placebo_medical_intervention">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>placebo medical intervention</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000103</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#plan_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>plan specification</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000104</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#planned_process">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>planned process</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000011</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#planned_subject_number">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Planned Subject Number</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C49692</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#postal_address">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>postal address</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000422</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#preclinical_finding">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>preclinical finding</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OGMS_0000019</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#prevention_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Prevention Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C49657</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#primary_outcome_measure">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Primary Outcome Measure</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C98772</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#primary_outcome_measure_information">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>primary outcome measure information</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000035</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#primary_outcome_measurement">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>primary outcome measurement</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000117</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#primary_outcome_measurement_datum">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>primary outcome measurement datum</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000105</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#primary_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>primary registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000073</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#primary_sponsor_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>primary sponsor role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000398</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#principal_investigator_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>principal investigator role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000400</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#procedure_clinical_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>procedure clinical trIal</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000111</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#prospective_study_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>prospective study design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000047</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#protocol">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>protocol</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000272</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#random_allocation">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Random Allocation</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C142660</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#recruitment_status">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>recruitment status</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000304</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#repeated_measure_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>repeated measure design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0500002</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#report">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>report</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000088</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#responsible_party_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>responsible party role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000102</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#retrospective_study_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>retrospective study design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000044</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#screening_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Screening Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C71485</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#secondary_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>secondary identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000001</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#secondary_outcome_measure">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Secondary Outcome Measure</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C98781</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#secondary_outcome_measure_information">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>secondary outcome measure information</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000008</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#secondary_outcome_measurement">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>secondary outcome measurement</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000118</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#secondary_outcome_measurement_datum">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>secondary outcome measurement datum</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000106</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#secondary_sponsor_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>secondary sponsor role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000399</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#selection">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>selection</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0001928</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#selection_criterion">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>selection criterion</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0001755</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#sequential_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>sequential design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000115</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#sex_inclusion_criterion">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>sex inclusion criterion</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0002561</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#single_arm_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>single arm design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000116</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#single_blinded_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>single blinded design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000113</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#sponsor">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Sponsor</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C48355</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#sponsor_investigator_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>sponsor investigator role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000401</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#sponsor_role">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>sponsor role</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0000243</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#sri_lanka_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Sri Lanka clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000075</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#status">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>status</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000326</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_completion_date">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study completion date</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000297</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_condition">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Study Condition</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C93360</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_design">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study design</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0500000</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_primary_purpose">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Study Primary Purpose</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C147141</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_protocol">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Study Protocol</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C70817</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_result">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study result</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000032</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_start_date">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study start date</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000214</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_status">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study status</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000327</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_summary_result">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>study summary result</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000007</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#study_type">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Study Type</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C142175</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#supportive_care_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Supportive Care Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C71486</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#surgical_procedure">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Surgical Procedure</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C15329</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#telephone_number">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>telephone number</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OPMI_0000112</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#test_facility_country">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Test Facility Country</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C90467</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#test_facility_name">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Test Facility Name</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C90469</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#textual_entity">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>textual entity</ns1:label>
+      <ns1:comment>Original OBO ID: obo:IAO_0000300</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#thai_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Thai clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000050</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#thai_clinical_trials_registry_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Thai clinical trials registry identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000048</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#the_netherlands_national_trial_register">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>The Netherlands national trial register</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000012</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#the_netherlands_national_trial_register_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>The Netherlands national trial register identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000018</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#therapeutic_intervention">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>therapeutic intervention</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OAE_0000094</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#title_of_clinical_trial">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>title of clinical trial</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000217</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#treatment_study">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>Treatment Study</ns1:label>
+      <ns1:comment>Original OBO ID: obo:NCIT_C49656</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#umin_clinical_trials_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>UMIN clinical trials registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000037</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#umin_ctr_clinical_trial_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>UMIN-CTR clinical trial identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000212</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#us_clinicaltrialgov_registry">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>US ClinicalTrial.gov registry</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000076</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#usa_national_clinical_trial_identifier">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>USA National Clinical Trial identifier</ns1:label>
+      <ns1:comment>Original OBO ID: obo:CTO_0000213</ns1:comment>
+    </rdf:Description>
+
+  <rdf:Description rdf:about="http://purl.obolibrary.org/obo/cto.owl#value_specification">
+      <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" />
+      <ns1:label>value specification</ns1:label>
+      <ns1:comment>Original OBO ID: obo:OBI_0001933</ns1:comment>
+    </rdf:Description>
+
+<rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#non_progression_rate"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>non-progression rate</ns1:label><ns1:comment>The proportion of patients without disease progression at a specified timepoint</ns1:comment><ns1:label>NPR</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#overall_response_rate"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>overall response rate</ns1:label><ns1:comment>The proportion of patients with complete or partial response</ns1:comment><ns1:label>ORR</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#duration_of_response"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>duration of response</ns1:label><ns1:comment>Time from first documented response to disease progression or death</ns1:comment><ns1:label>DOR</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#progression_free_survival"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>progression-free survival</ns1:label><ns1:comment>Time from randomization to disease progression or death</ns1:comment><ns1:label>PFS</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#overall_survival"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>overall survival</ns1:label><ns1:comment>Time from randomization to death from any cause</ns1:comment><ns1:label>OS</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#complete_response"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>complete response</ns1:label><ns1:comment>Disappearance of all target lesions</ns1:comment><ns1:label>CR</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#partial_response"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>partial response</ns1:label><ns1:comment>At least 30% decrease in sum of target lesions</ns1:comment><ns1:label>PR</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#stable_disease"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>stable disease</ns1:label><ns1:comment>Neither sufficient shrinkage nor increase in disease</ns1:comment><ns1:label>SD</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#progressive_disease"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>progressive disease</ns1:label><ns1:comment>At least 20% increase in sum of target lesions</ns1:comment><ns1:label>PD</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#open_label"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>open-label</ns1:label><ns1:comment>Study design where all parties know the treatment</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#multicohort"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>multicohort</ns1:label><ns1:comment>Study with multiple cohorts or arms</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#single_arm"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>single-arm</ns1:label><ns1:comment>Study with a single treatment arm</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#randomized"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>randomized</ns1:label><ns1:comment>Study with random treatment allocation</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#confidence_interval"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>confidence interval</ns1:label><ns1:comment>Range of values likely to contain true effect</ns1:comment><ns1:label>CI</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#hazard_ratio"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>hazard ratio</ns1:label><ns1:comment>Ratio of hazard rates between two groups</ns1:comment><ns1:label>HR</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#intent_to_treat"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>intent-to-treat</ns1:label><ns1:comment>Analysis including all randomized patients</ns1:comment><ns1:label>ITT</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#per_protocol"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>per-protocol</ns1:label><ns1:comment>Analysis including only compliant patients</ns1:comment><ns1:label>PP</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#npr"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>NPR</ns1:label><ns1:comment>Abbreviation for: non-progression rate. Equivalent to non_progression_rate</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#non_progression_rate" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#orr"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>ORR</ns1:label><ns1:comment>Abbreviation for: overall response rate. Equivalent to overall_response_rate</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#overall_response_rate" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#dor"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>DOR</ns1:label><ns1:comment>Abbreviation for: duration of response. Equivalent to duration_of_response</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#duration_of_response" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#pfs"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>PFS</ns1:label><ns1:comment>Abbreviation for: progression-free survival. Equivalent to progression_free_survival</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#progression_free_survival" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#os"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>OS</ns1:label><ns1:comment>Abbreviation for: overall survival. Equivalent to overall_survival</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#overall_survival" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#cr"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>CR</ns1:label><ns1:comment>Abbreviation for: complete response. Equivalent to complete_response</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#complete_response" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#pr"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>PR</ns1:label><ns1:comment>Abbreviation for: partial response. Equivalent to partial_response</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#partial_response" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#sd"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>SD</ns1:label><ns1:comment>Abbreviation for: stable disease. Equivalent to stable_disease</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#stable_disease" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#pd"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>PD</ns1:label><ns1:comment>Abbreviation for: progressive disease. Equivalent to progressive_disease</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#progressive_disease" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#ae"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>AE</ns1:label><ns1:comment>Abbreviation for: adverse event. Equivalent to adverse_event</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#adverse_event" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#sae"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>SAE</ns1:label><ns1:comment>Abbreviation for: serious adverse event. Equivalent to serious_adverse_event</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#serious_adverse_event" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#ci"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>CI</ns1:label><ns1:comment>Abbreviation for: confidence interval. Equivalent to confidence_interval</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#confidence_interval" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#hr"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>HR</ns1:label><ns1:comment>Abbreviation for: hazard ratio. Equivalent to hazard_ratio</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#hazard_ratio" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#itt"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>ITT</ns1:label><ns1:comment>Abbreviation for: intent-to-treat. Equivalent to intent_to_treat</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#intent_to_treat" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#pp"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>PP</ns1:label><ns1:comment>Abbreviation for: per-protocol. Equivalent to per_protocol</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#per_protocol" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#fas"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>FAS</ns1:label><ns1:comment>Abbreviation for: full analysis set. Equivalent to full_analysis_set</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#full_analysis_set" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#safety"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>safety</ns1:label><ns1:comment>General safety concept, equivalent to safety_assessment in clinical context</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#safety_assessment" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#tolerability"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>tolerability</ns1:label><ns1:comment>Drug tolerability, synonymous with safety in clinical context</ns1:comment><ns2:equivalentClass rdf:resource="http://purl.obolibrary.org/obo/cso.owl#safety_assessment" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#simon_two_stage_design"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>Simon's optimal two-stage design</ns1:label><ns1:comment>A two-stage design for phase II clinical trials developed by Richard Simon</ns1:comment><ns1:subClassOf rdf:resource="http://purl.obolibrary.org/obo/cso.owl#statistical_method" /></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#phase_2"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>phase 2</ns1:label><ns1:comment>Phase 2 clinical trial</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#phase_1"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>phase 1</ns1:label><ns1:comment>phase 1 clinical trial</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#phase_3"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>phase 3</ns1:label><ns1:comment>phase 3 clinical trial</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#phase_4"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>phase 4</ns1:label><ns1:comment>phase 4 clinical trial</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#drug"><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class" /><ns1:label>drug</ns1:label></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#atezolizumab"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Atezolizumab</ns1:label><ns1:comment>PD-L1 inhibitor monoclonal antibody. Class: immune_checkpoint_inhibitor.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#pembrolizumab"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Pembrolizumab</ns1:label><ns1:comment>PD-1 inhibitor monoclonal antibody. Class: immune_checkpoint_inhibitor.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#nivolumab"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Nivolumab</ns1:label><ns1:comment>PD-1 inhibitor monoclonal antibody. Class: immune_checkpoint_inhibitor.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#durvalumab"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Durvalumab</ns1:label><ns1:comment>PD-L1 inhibitor monoclonal antibody. Class: immune_checkpoint_inhibitor.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#bevacizumab"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Bevacizumab</ns1:label><ns1:comment>VEGF inhibitor monoclonal antibody. Class: targeted_therapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#trastuzumab"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Trastuzumab</ns1:label><ns1:comment>HER2 inhibitor monoclonal antibody. Class: targeted_therapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#rituximab"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Rituximab</ns1:label><ns1:comment>CD20 inhibitor monoclonal antibody. Class: targeted_therapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#cetuximab"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Cetuximab</ns1:label><ns1:comment>EGFR inhibitor monoclonal antibody. Class: targeted_therapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#paclitaxel"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Paclitaxel</ns1:label><ns1:comment>Microtubule inhibitor chemotherapy. Class: chemotherapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#carboplatin"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Carboplatin</ns1:label><ns1:comment>Platinum-based chemotherapy. Class: chemotherapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#cisplatin"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Cisplatin</ns1:label><ns1:comment>Platinum-based chemotherapy. Class: chemotherapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#doxorubicin"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Doxorubicin</ns1:label><ns1:comment>Anthracycline chemotherapy. Class: chemotherapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#gemcitabine"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Gemcitabine</ns1:label><ns1:comment>Nucleoside analog chemotherapy. Class: chemotherapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#pemetrexed"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Pemetrexed</ns1:label><ns1:comment>Antifolate chemotherapy. Class: chemotherapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#osimertinib"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Osimertinib</ns1:label><ns1:comment>EGFR TKI targeted therapy. Class: targeted_therapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#imatinib"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#drug" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>Imatinib</ns1:label><ns1:comment>BCR-ABL TKI targeted therapy. Class: targeted_therapy.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#advanced_solid_tumors"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>advanced solid tumors</ns1:label><ns1:label>Solid tumors in advanced stage</ns1:label><ns1:comment>Category: solid_tumor.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#non_small_cell_lung_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>non-small cell lung cancer</ns1:label><ns1:label>NSCLC</ns1:label><ns1:comment>Category: lung_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#small_cell_lung_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>small cell lung cancer</ns1:label><ns1:label>SCLC</ns1:label><ns1:comment>Category: lung_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#metastatic_breast_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>metastatic breast cancer</ns1:label><ns1:label>Breast cancer with metastasis</ns1:label><ns1:comment>Category: breast_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#colorectal_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>colorectal cancer</ns1:label><ns1:label>CRC</ns1:label><ns1:comment>Category: gastrointestinal_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#gastric_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>gastric cancer</ns1:label><ns1:label>Stomach cancer</ns1:label><ns1:comment>Category: gastrointestinal_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#hepatocellular_carcinoma"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>hepatocellular carcinoma</ns1:label><ns1:label>HCC</ns1:label><ns1:comment>Category: liver_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#renal_cell_carcinoma"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>renal cell carcinoma</ns1:label><ns1:label>RCC</ns1:label><ns1:comment>Category: kidney_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#bladder_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>bladder cancer</ns1:label><ns1:label>Urothelial carcinoma</ns1:label><ns1:comment>Category: urothelial_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#melanoma"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>melanoma</ns1:label><ns1:label>Skin melanoma</ns1:label><ns1:comment>Category: skin_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#head_and_neck_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>head and neck cancer</ns1:label><ns1:label>HNSCC</ns1:label><ns1:comment>Category: head_neck_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#ovarian_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>ovarian cancer</ns1:label><ns1:label>Ovarian carcinoma</ns1:label><ns1:comment>Category: gynecological_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#prostate_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>prostate cancer</ns1:label><ns1:label>Prostate carcinoma</ns1:label><ns1:comment>Category: genitourinary_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#pancreatic_cancer"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>pancreatic cancer</ns1:label><ns1:label>Pancreatic adenocarcinoma</ns1:label><ns1:comment>Category: gastrointestinal_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#glioblastoma"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>glioblastoma</ns1:label><ns1:label>GBM</ns1:label><ns1:comment>Category: brain_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#lymphoma"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>lymphoma</ns1:label><ns1:label>Lymphoid malignancy</ns1:label><ns1:comment>Category: hematological_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#leukemia"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>leukemia</ns1:label><ns1:label>Blood cancer</ns1:label><ns1:comment>Category: hematological_cancer.</ns1:comment></rdf:Description><rdf:Description rdf:about="http://purl.obolibrary.org/obo/cso.owl#multiple_myeloma"><rdf:type rdf:resource="http://purl.obolibrary.org/obo/cso.owl#disease" /><rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual" /><ns1:label>multiple myeloma</ns1:label><ns1:label>Plasma cell malignancy</ns1:label><ns1:comment>Category: hematological_cancer.</ns1:comment></rdf:Description></rdf:RDF>

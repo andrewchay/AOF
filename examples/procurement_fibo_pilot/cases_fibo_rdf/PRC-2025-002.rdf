@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-002/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-002: 紧急采购审批阈值 ===== -->
+
+    <!-- 标准采购政策（合同） -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-002/standard_procurement_policy">
+        <rdfs:label>标准采购审批政策</rdfs:label>
+        <skos:definition>标准采购审批阈值：>50K 需总监审批，>200K 需VP审批</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 审批阈值：50K -->
+    <aof:ApprovalThreshold rdf:about="&aof-case;PRC-2025-002/threshold_50k">
+        <rdfs:label>50K 审批阈值</rdfs:label>
+        <aof:thresholdAmount rdf:datatype="&xsd;decimal">50000</aof:thresholdAmount>
+        <aof:currency>CNY</aof:currency>
+        <aof:requiredRole rdf:resource="&aof-case;PRC-2025-002/director_role"/>
+        <fibo-agr:isObligationOf rdf:resource="&aof-case;PRC-2025-002/procurement_department"/>
+    </aof:ApprovalThreshold>
+
+    <!-- 审批阈值：200K -->
+    <aof:ApprovalThreshold rdf:about="&aof-case;PRC-2025-002/threshold_200k">
+        <rdfs:label>200K 审批阈值</rdfs:label>
+        <aof:thresholdAmount rdf:datatype="&xsd;decimal">200000</aof:thresholdAmount>
+        <aof:currency>CNY</aof:currency>
+        <aof:requiredRole rdf:resource="&aof-case;PRC-2025-002/vp_role"/>
+        <fibo-agr:isObligationOf rdf:resource="&aof-case;PRC-2025-002/procurement_department"/>
+    </aof:ApprovalThreshold>
+
+    <!-- 角色定义 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-002/director_role">
+        <rdfs:label>总监审批角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-002/vp_role">
+        <rdfs:label>VP审批角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-002/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-002/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-002/internal_audit_role">
+        <rdfs:label>内审角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <!-- 部门/实体 -->
+    <fibo-ctr:ContractParty rdf:about="&aof-case;PRC-2025-002/procurement_department">
+        <rdfs:label>采购部</rdfs:label>
+    </fibo-ctr:ContractParty>
+
+    <!-- 紧急采购 SLA 承诺 -->
+    <fibo-agr:Commitment rdf:about="&aof-case;PRC-2025-002/emergency_sla_48h">
+        <rdfs:label>紧急采购48小时补批承诺</rdfs:label>
+        <skos:definition>紧急采购>50K 必须在 48h 内完成补批，否则触发例外升级</skos:definition>
+        <aof:maxCompletionTime rdf:datatype="&xsd;duration">PT48H</aof:maxCompletionTime>
+        <aof:appliesTo rdf:resource="&aof-case;PRC-2025-002/emergency_purchase_contract"/>
+        <fibo-agr:isObligationOf rdf:resource="&aof-case;PRC-2025-002/procurement_manager_role"/>
+    </fibo-agr:Commitment>
+
+    <!-- 紧急采购合同实例 -->
+    <aof:EmergencyPurchaseContract rdf:about="&aof-case;PRC-2025-002/emergency_purchase_contract">
+        <rdfs:label>2025-Q1 紧急采购合同</rdfs:label>
+        <skos:note>23 笔紧急采购，其中 15 笔超过 50K 走了事后补批</skos:note>
+        <aof:hasCommitment rdf:resource="&aof-case;PRC-2025-002/emergency_sla_48h"/>
+    </aof:EmergencyPurchaseContract>
+
+    <!-- 违约实例：事后补批 = 违约 -->
+    <fibo-ctr:BreachOfContract rdf:about="&aof-case;PRC-2025-002/retroactive_approval_breach">
+        <rdfs:label>事后补批违约</rdfs:label>
+        <skos:definition>15 笔紧急采购未在约定时间内完成审批，事后补充审批</skos:definition>
+        <fibo-ctr:involvesContract rdf:resource="&aof-case;PRC-2025-002/emergency_purchase_contract"/>
+    </fibo-ctr:BreachOfContract>
+
+    <!-- 指标争议 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-002/metric_dispute">
+        <rdfs:label>紧急采购审批率争议</rdfs:label>
+        <skos:definition>标准审批率 5%，实际 65%，差异 60 个百分点</skos:definition>
+        <aof:involvesContract rdf:resource="&aof-case;PRC-2025-002/emergency_purchase_contract"/>
+    </aof:MetricDispute>
+
+    <!-- 口径变更决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-002/caliber_decision">
+        <rdfs:label>CFO 口径变更决策</rdfs:label>
+        <skos:definition>保留紧急采购灵活性，但增加时间约束和追溯要求</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-002/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-002/emergency_sla_48h"/>
+    </aof:CaliberChangeDecision>
+
+    <!-- 指标定义 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-002/emergency_purchase_approval_rate">
+        <rdfs:label>紧急采购审批率</rdfs:label>
+        <skos:definition>COUNT(紧急采购 WITH 审批) / COUNT(紧急采购)</skos:definition>
+    </aof:MetricDefinition>
+
+</rdf:RDF>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-010/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-010: 年度框架协议的预算分摊方式 ===== -->
+    <!-- 核心语义: CommitmentSchedule —— 承诺的时间分布 vs 预算执行节奏 -->
+
+    <!-- 承诺计划 -->
+    <owl:Class rdf:about="&aof;CommitmentSchedule">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">承诺计划</rdfs:label>
+        <skos:definition xml:lang="zh">框架协议承诺金额的时间分布计划</skos:definition>
+    </owl:Class>
+
+    <!-- 年度框架协议实例 -->
+    <aof:FrameworkAgreement rdf:about="&aof-case;PRC-2025-010/framework_agreement_2025">
+        <rdfs:label>2025年度框架协议</rdfs:label>
+        <skos:definition>年度框架协议120万</skos:definition>
+        <skos:note>原签订当月一次性计入，导致当月预算执行率300%</skos:note>
+    </aof:FrameworkAgreement>
+
+    <!-- 承诺计划实例 -->
+    <aof:CommitmentSchedule rdf:about="&aof-case;PRC-2025-010/commitment_schedule">
+        <rdfs:label>2025年度承诺计划</rdfs:label>
+        <skos:definition>框架协议按12个月均摊确认</skos:definition>
+        <skos:note>预算执行率应反映实际消耗节奏，不是合同签订节奏</skos:note>
+    </aof:CommitmentSchedule>
+
+    <!-- 月度预算执行率指标 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-010/monthly_budget_execution_rate">
+        <rdfs:label>月度预算执行率</rdfs:label>
+        <skos:definition>实际消耗 / 月度预算</skos:definition>
+    </aof:MetricDefinition>
+
+    <!-- 指标争议：预算分摊 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-010/budget_allocation_dispute">
+        <rdfs:label>预算分摊方式争议</rdfs:label>
+        <skos:definition>框架协议应在签订当月一次性计入还是按月分摊</skos:definition>
+        <skos:note>承诺节奏 vs 消耗节奏的争议</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-010/allocation_decision">
+        <rdfs:label>预算分摊方式决策</rdfs:label>
+        <skos:definition>框架协议按12个月均摊确认，新增 commitment_schedule 指标</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-010/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-010/allocation_policy"/>
+        <skos:note>预算执行率应反映实际消耗节奏，不是合同签订节奏</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-010/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-010/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-010/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-010/allocation_policy">
+        <rdfs:label>框架协议预算分摊政策</rdfs:label>
+        <skos:definition>框架协议按12个月均摊确认</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - FrameworkAgreement 的 Commitment 是全年120万（continuant）
+        - CommitmentSchedule 是时间分布计划（generically dependent continuant）
+        - 预算执行率是对消耗 process 的度量（occurrent）
+        - 决策将承诺节奏与消耗节奏分离，避免预算执行率失真
+    -->
+
+</rdf:RDF>

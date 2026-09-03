@@ -1,0 +1,19 @@
+{
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "knowledge_repo": "/Users/chaihao/LLM/AOF/examples/procurement_fibo_pilot/data",
+  "dataset": "procurement_fibo_pilot",
+  "runtime": {
+    "run_in_background": false,
+    "incremental_loading": true,
+    "data_per_batch": 20,
+    "retries": 2,
+    "backoff_seconds": 1.0
+  },
+  "ontology": {
+    "file": "/Users/chaihao/LLM/AOF/examples/procurement_fibo_pilot/procurement_o2c_fibo.owl",
+    "matching_cutoff": 0.85
+  },
+  "cognee": {
+    "root": "/Users/chaihao/LLM/cognee"
+  }
+}

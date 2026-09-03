@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-001/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-001: 差旅费是否计入部门采购支出 ===== -->
+    <!-- 核心语义: MetricDefinition 的 scope 争议 —— 什么属于"采购支出"？ -->
+
+    <!-- 部门采购支出指标定义 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-001/dept_procurement_spend">
+        <rdfs:label>部门采购支出（原始定义）</rdfs:label>
+        <skos:definition>财务部原始定义：包含差旅费的部门采购支出</skos:definition>
+        <skos:note>争议点：差旅费审批流与采购审批流不同</skos:note>
+    </aof:MetricDefinition>
+
+    <!-- 差旅费 —— 被排除的费用类型 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-001/travel_expense">
+        <rdfs:label>差旅费</rdfs:label>
+        <skos:definition>员工出差产生的交通、住宿费用</skos:definition>
+        <skos:note>原被包含在 dept_procurement_spend 中，后被排除</skos:note>
+    </aof:MetricDefinition>
+
+    <!-- 新创建的指标：行政差旅费 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-001/admin_travel_spend">
+        <rdfs:label>行政差旅费</rdfs:label>
+        <skos:definition>单独列示的差旅费用，不计入采购支出</skos:definition>
+        <skos:note>2025-Q2 口径变更后新建指标</skos:note>
+    </aof:MetricDefinition>
+
+    <!-- 指标争议 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-001/metric_scope_dispute">
+        <rdfs:label>采购支出范围争议</rdfs:label>
+        <skos:definition>差旅费是否属于采购支出的范围争议</skos:definition>
+        <aof:involvesContract rdf:resource="&aof-case;PRC-2025-001/dept_procurement_spend_definition"/>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-001/scope_decision">
+        <rdfs:label>采购支出范围界定决策</rdfs:label>
+        <skos:definition>差旅费单独列示，不计入 dept_procurement_spend</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-001/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-001/admin_travel_spend_policy"/>
+        <skos:note>责任边界清晰化：差旅走行政审批流，采购走采购审批流</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-001/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-001/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-001/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策更新 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-001/admin_travel_spend_policy">
+        <rdfs:label>行政差旅费列示政策</rdfs:label>
+        <skos:definition>差旅费单独列示为 admin_travel_spend 的政策</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - 这不是合同争议，而是 MetricDefinition 的 scope 争议
+        - 差旅费本身不是 Contract，而是 expense classification 问题
+        - 决策产出是新的 MetricDefinition（admin_travel_spend），不是新 Contract
+    -->
+
+</rdf:RDF>

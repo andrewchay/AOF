@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-008/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-008: 外币采购的汇率折算时点 ===== -->
+    <!-- 核心语义: FXTranslation —— 汇率差异是 timing difference 还是独立 risk？ -->
+
+    <!-- 外币采购合同 -->
+    <owl:Class rdf:about="&aof;ForeignCurrencyContract">
+        <rdfs:subClassOf rdf:resource="&aof;PurchaseOrder"/>
+        <rdfs:label xml:lang="zh">外币采购合同</rdfs:label>
+        <skos:definition xml:lang="zh">以外币计价的采购合同</skos:definition>
+    </owl:Class>
+
+    <!-- 汇率差异指标 -->
+    <owl:Class rdf:about="&aof;FXVariance">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">汇率差异</rdfs:label>
+        <skos:definition xml:lang="zh">因汇率时点不同导致的金额差异</skos:definition>
+    </owl:Class>
+
+    <!-- 外币采购实例 -->
+    <aof:ForeignCurrencyContract rdf:about="&aof-case;PRC-2025-008/fx_contract_2025_05">
+        <rdfs:label>2025-05 美元采购合同</rdfs:label>
+        <skos:definition>10万美元采购，汇率差导致2万元差异</skos:definition>
+        <skos:note>合同签订日、付款日、收货日汇率不同</skos:note>
+    </aof:ForeignCurrencyContract>
+
+    <!-- 汇率差异实例 -->
+    <aof:FXVariance rdf:about="&aof-case;PRC-2025-008/fx_variance">
+        <rdfs:label>2025-05 汇率差异</rdfs:label>
+        <skos:definition>付款日汇率与合同签订日汇率的差异</skos:definition>
+        <skos:note>统一按付款日汇率折算，汇率波动单独跟踪</skos:note>
+    </aof:FXVariance>
+
+    <!-- 指标争议：汇率时点 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-008/fx_timing_dispute">
+        <rdfs:label>汇率折算时点争议</rdfs:label>
+        <skos:definition>外币采购应按哪个时点的汇率折算</skos:definition>
+        <skos:note>合同签订日 vs 付款日 vs 收货日</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-008/fx_decision">
+        <rdfs:label>汇率折算时点决策</rdfs:label>
+        <skos:definition>统一按付款日汇率折算，新增 fx_variance 指标跟踪汇率影响</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-008/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-008/fx_policy"/>
+        <skos:note>以现金流实际发生为准，汇率波动单独跟踪</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-008/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-008/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-008/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-008/fx_policy">
+        <rdfs:label>外币采购汇率政策</rdfs:label>
+        <skos:definition>统一按付款日汇率折算，汇率差异单独跟踪</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - 外币采购合同是 PurchaseOrder 的特殊子类
+        - 汇率差异是独立的 MetricDefinition，不是采购支出的一部分
+        - 决策将 fx risk 从 procurement spend 中分离
+        - 这展示了 FIBO 如何支持 financial risk 的语义隔离
+    -->
+
+</rdf:RDF>

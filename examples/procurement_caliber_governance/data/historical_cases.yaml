@@ -1,0 +1,370 @@
+# Procurement Caliber Governance — 历史争议案例
+# 场景: 采购支出控制 — 指标口径治理闭环
+# 每案例: id, title, domain, metric, dispute, context, resolution, outcome, roles_involved
+
+- case_id: PRC-2025-001
+  title: "差旅费是否计入部门采购支出"
+  domain: procurement
+  metric: dept_procurement_spend
+  dispute: |
+    财务部定义的 dept_procurement_spend 包含差旅费（travel_expense），
+    但采购部认为差旅费属于行政费用，不应计入采购支出。
+    两个部门在月度经营会上对同一指标给出不同数字。
+  context:
+    baseline_value: 1250000
+    finance_value: 1380000
+    delta: 130000
+    delta_pct: 10.4
+    data_sources: [erp_ap, expense_system, travel_platform]
+    period: "2025-Q2"
+  resolution:
+    decided_by: cfo
+    decision: "差旅费单独列示为 admin_travel_spend，不计入 dept_procurement_spend"
+    rationale: "差旅费审批流与采购审批流不同，合并统计导致责任边界模糊"
+    new_metric_created: admin_travel_spend
+  outcome: validated
+  roles_involved: [finance_analyst, procurement_manager, cfo]
+  tags: [metric-definition, scope-dispute, cross-department]
+
+- case_id: PRC-2025-002
+  title: "紧急采购是否适用标准审批阈值"
+  domain: procurement
+  metric: emergency_purchase_approval_rate
+  dispute: |
+    标准采购审批阈值：>50K 需总监审批，>200K 需VP审批。
+    紧急采购（emergency_purchase）在 2025-Q1 有 23 笔超过 50K，
+    其中 15 笔走了事后补批，采购部认为这是合理例外，
+    内审认为这绕过了审批控制。
+  context:
+    baseline_value: 0.05
+    actual_value: 0.65
+    delta: 0.60
+    delta_pct: 1200.0
+    data_sources: [procurement_system, approval_log]
+    period: "2025-Q1"
+  resolution:
+    decided_by: cfo
+    decision: "紧急采购>50K 必须在 48h 内完成补批，否则触发例外升级"
+    rationale: "保留紧急采购灵活性，但增加时间约束和追溯要求"
+    policy_updated: emergency_purchase_sla
+  outcome: validated
+  roles_involved: [procurement_manager, internal_audit, cfo]
+  tags: [approval-threshold, exception-handling, policy-gap]
+
+- case_id: PRC-2025-003
+  title: "供应商预付款是否计入当期采购支出"
+  domain: procurement
+  metric: monthly_procurement_spend
+  dispute: |
+    供应商预付款（prepayment）在付款当月计入采购支出，
+    但货物可能 3 个月后才到。财务部认为应按权责发生制分摊，
+    采购部认为预付款是现金流支出，应计入当月。
+    导致月度采购支出波动异常大。
+  context:
+    baseline_value: 800000
+    finance_value: 950000
+    delta: 150000
+    delta_pct: 18.75
+    data_sources: [erp_ap, contract_system]
+    period: "2025-03"
+  resolution:
+    decided_by: cfo
+    decision: "预付款单独列示为 prepayment_outflow，按月摊销计入 procurement_spend"
+    rationale: "区分现金流口径和权责口径，避免单月波动误导决策"
+    new_metric_created: prepayment_outflow
+  outcome: validated
+  roles_involved: [finance_analyst, procurement_manager, cfo]
+  tags: [accrual-vs-cash, timing-difference, metric-split]
+
+- case_id: PRC-2025-004
+  title: "框架协议采购是否按合同额还是实际下单额统计"
+  domain: procurement
+  metric: framework_contract_spend
+  dispute: |
+    框架协议（framework_agreement）年度合同额 500 万，
+    但实际下单仅 320 万。采购部按合同额统计（承诺口径），
+    财务部按实际下单统计（执行口径）。
+    影响供应商绩效评估和预算执行率。
+  context:
+    baseline_value: 3200000
+    finance_value: 5000000
+    delta: 1800000
+    delta_pct: 56.25
+    data_sources: [contract_system, procurement_system]
+    period: "2025-H1"
+  resolution:
+    decided_by: cfo
+    decision: "framework_contract_spend 按实际下单统计；新增 framework_commitment 指标按合同额统计"
+    rationale: "执行口径用于预算执行率，承诺口径用于供应商谈判，两者分开"
+    new_metric_created: framework_commitment
+  outcome: validated
+  roles_involved: [procurement_manager, finance_analyst, cfo]
+  tags: [commitment-vs-execution, framework-agreement, dual-metric]
+
+- case_id: PRC-2025-005
+  title: "跨部门共享服务采购的归属问题"
+  domain: procurement
+  metric: dept_procurement_spend
+  dispute: |
+    IT 部门统一采购的 SaaS 订阅（如 Office 365、Slack）覆盖全公司，
+    但费用全部计入 IT 部门采购支出。
+    其他部门认为这不公平，应按使用量分摊到各部门。
+    导致 IT 部门采购支出虚高，其他部门为零。
+  context:
+    baseline_value: 450000
+    finance_value: 450000
+    delta: 0
+    delta_pct: 0.0
+    data_sources: [procurement_system, it_asset_system]
+    period: "2025-Q2"
+  resolution:
+    decided_by: cfo
+    decision: "共享服务采购按部门 active_user_count 分摊，新增 shared_service_allocation 指标"
+    rationale: "成本归属反映实际受益，避免部门间不公平"
+    new_metric_created: shared_service_allocation
+  outcome: validated
+  roles_involved: [it_manager, finance_analyst, cfo]
+  tags: [cost-allocation, shared-service, cross-department]
+
+- case_id: PRC-2025-006
+  title: "采购退货是否冲减当月支出"
+  domain: procurement
+  metric: monthly_procurement_spend
+  dispute: |
+    2025-04 发生一笔 8 万元退货，采购部在当月冲减支出，
+    但财务部认为退货应在收到退款时确认，而不是在发起退货时。
+    导致 4 月支出在两个系统中差 8 万。
+  context:
+    baseline_value: 720000
+    finance_value: 800000
+    delta: 80000
+    delta_pct: 11.11
+    data_sources: [procurement_system, erp_ap]
+    period: "2025-04"
+  resolution:
+    decided_by: cfo
+    decision: "退货在收到退款时确认，新增 pending_return 中间状态指标"
+    rationale: "以现金流实际发生为准，避免预估冲减导致的误差"
+    new_metric_created: pending_return
+  outcome: validated
+  roles_involved: [procurement_manager, finance_analyst, cfo]
+  tags: [return-processing, timing-difference, cash-basis]
+
+- case_id: PRC-2025-007
+  title: "采购员个人垫付费用的报销归属"
+  domain: procurement
+  metric: dept_procurement_spend
+  dispute: |
+    采购员个人垫付的小额采购（<500 元）通过报销系统处理，
+    财务部将其计入行政费用，采购部认为应计入采购支出。
+    金额虽小但频率高，影响部门预算执行率。
+  context:
+    baseline_value: 15000
+    finance_value: 0
+    delta: 15000
+    delta_pct: 100.0
+    data_sources: [expense_system, procurement_system]
+    period: "2025-Q2"
+  resolution:
+    decided_by: cfo
+    decision: "个人垫付采购统一计入 dept_procurement_spend，不再走行政费用"
+    rationale: "业务实质优先：垫付是为了采购，不是行政开支"
+    policy_updated: petty_cash_procurement
+  outcome: validated
+  roles_involved: [procurement_manager, finance_analyst, cfo]
+  tags: [expense-classification, petty-cash, business-substance]
+
+- case_id: PRC-2025-008
+  title: "外币采购的汇率折算时点"
+  domain: procurement
+  metric: monthly_procurement_spend
+  dispute: |
+    外币采购在合同签订日、付款日、收货日汇率不同。
+    财务部按付款日汇率折算，采购部按合同签订日。
+    2025-05 一笔 10 万美元采购，汇率差导致 2 万元差异。
+  context:
+    baseline_value: 680000
+    finance_value: 700000
+    delta: 20000
+    delta_pct: 2.94
+    data_sources: [procurement_system, erp_ap, fx_rate_feed]
+    period: "2025-05"
+  resolution:
+    decided_by: cfo
+    decision: "统一按付款日汇率折算，新增 fx_variance 指标跟踪汇率影响"
+    rationale: "以现金流实际发生为准，汇率波动单独跟踪"
+    new_metric_created: fx_variance
+  outcome: validated
+  roles_involved: [finance_analyst, procurement_manager, cfo]
+  tags: [fx-translation, timing-difference, international]
+
+- case_id: PRC-2025-009
+  title: "样品采购是否计入正式采购支出"
+  domain: procurement
+  metric: dept_procurement_spend
+  dispute: |
+    研发部申请样品采购 3 万元，采购部计入研发部采购支出，
+    但财务部认为样品属于研发材料，应计入研发费用而非采购支出。
+    影响两个部门的预算执行率。
+  context:
+    baseline_value: 30000
+    finance_value: 0
+    delta: 30000
+    delta_pct: 100.0
+    data_sources: [procurement_system, expense_system]
+    period: "2025-04"
+  resolution:
+    decided_by: cfo
+    decision: "样品采购单独列示为 sample_procurement，不计入正式采购支出"
+    rationale: "样品目的是研发验证，不是生产采购，口径应区分"
+    new_metric_created: sample_procurement
+  outcome: validated
+  roles_involved: [rd_manager, procurement_manager, finance_analyst, cfo]
+  tags: [expense-classification, sample, rd-vs-procurement]
+
+- case_id: PRC-2025-010
+  title: "年度框架协议的预算分摊方式"
+  domain: procurement
+  metric: monthly_budget_execution_rate
+  dispute: |
+    年度框架协议 120 万，采购部在签订当月一次性计入，
+    导致当月预算执行率 300%，后续月份为 0%。
+    财务部要求按月分摊，但采购部认为合同已签，应一次性确认。
+  context:
+    baseline_value: 3.0
+    finance_value: 1.0
+    delta: 2.0
+    delta_pct: 200.0
+    data_sources: [contract_system, budget_system]
+    period: "2025-01"
+  resolution:
+    decided_by: cfo
+    decision: "框架协议按 12 个月均摊确认，新增 commitment_schedule 指标"
+    rationale: "预算执行率应反映实际消耗节奏，不是合同签订节奏"
+    new_metric_created: commitment_schedule
+  outcome: validated
+  roles_involved: [procurement_manager, finance_analyst, cfo]
+  tags: [budget-allocation, timing-difference, framework-agreement]
+
+- case_id: PRC-2025-011
+  title: "采购折扣的确认时点"
+  domain: procurement
+  metric: net_procurement_spend
+  dispute: |
+    供应商提供季度返利 5 万元，采购部在收到返利时冲减支出，
+    但财务部认为应按采购比例分摊到各月。
+    导致月度净支出波动异常。
+  context:
+    baseline_value: 450000
+    finance_value: 500000
+    delta: 50000
+    delta_pct: 11.11
+    data_sources: [procurement_system, erp_ap]
+    period: "2025-Q2"
+  resolution:
+    decided_by: cfo
+    decision: "返利按采购比例分摊到各月，新增 rebate_accrual 指标"
+    rationale: "返利本质是采购价格的调整，应按受益期间分摊"
+    new_metric_created: rebate_accrual
+  outcome: validated
+  roles_involved: [procurement_manager, finance_analyst, cfo]
+  tags: [rebate, accrual, price-adjustment]
+
+- case_id: PRC-2025-012
+  title: "内部转移定价是否计入采购支出"
+  domain: procurement
+  metric: dept_procurement_spend
+  dispute: |
+    生产部从集团内部采购原材料，内部转移价 60 万，
+    采购部计入采购支出，但财务部认为这是内部交易，
+    不应计入外部采购支出。
+    影响供应商集中度分析和采购谈判。
+  context:
+    baseline_value: 600000
+    finance_value: 0
+    delta: 600000
+    delta_pct: 100.0
+    data_sources: [erp_ap, internal_transfer_system]
+    period: "2025-Q2"
+  resolution:
+    decided_by: cfo
+    decision: "内部转移单独列示为 internal_transfer_spend，不计入外部采购支出"
+    rationale: "外部采购支出用于供应商管理和谈判，内部交易应分开"
+    new_metric_created: internal_transfer_spend
+  outcome: validated
+  roles_involved: [procurement_manager, finance_analyst, cfo]
+  tags: [internal-transfer, related-party, metric-scope]
+
+- case_id: PRC-2025-013
+  title: "采购押金的会计处理"
+  domain: procurement
+  metric: monthly_procurement_spend
+  dispute: |
+    供应商押金 10 万元，采购部计入当月采购支出，
+    但财务部认为押金是资产（其他应收款），不是费用。
+    导致当月支出虚高 10 万。
+  context:
+    baseline_value: 550000
+    finance_value: 450000
+    delta: 100000
+    delta_pct: 22.22
+    data_sources: [procurement_system, erp_ap]
+    period: "2025-03"
+  resolution:
+    decided_by: cfo
+    decision: "押金单独列示为 deposit_outflow，不计入采购支出"
+    rationale: "押金是资产不是费用，口径必须区分"
+    new_metric_created: deposit_outflow
+  outcome: validated
+  roles_involved: [procurement_manager, finance_analyst, cfo]
+  tags: [deposit, asset-vs-expense, accounting-treatment]
+
+- case_id: PRC-2025-014
+  title: "紧急采购的供应商选择是否合规"
+  domain: procurement
+  metric: single_source_ratio
+  dispute: |
+    2025-Q1 紧急采购中，单一来源采购占比 45%，
+    内审认为这绕过了竞争性谈判要求，
+    采购部认为紧急情况下来不及招标。
+    影响采购合规率和供应商多样性。
+  context:
+    baseline_value: 0.15
+    actual_value: 0.45
+    delta: 0.30
+    delta_pct: 200.0
+    data_sources: [procurement_system, approval_log]
+    period: "2025-Q1"
+  resolution:
+    decided_by: cfo
+    decision: "紧急采购单一来源需在 48h 内提交书面说明，连续 3 次触发供应商审查"
+    rationale: "保留紧急灵活性，但增加透明度和追溯要求"
+    policy_updated: emergency_single_source_justification
+  outcome: validated
+  roles_involved: [procurement_manager, internal_audit, cfo]
+  tags: [compliance, single-source, emergency-procurement]
+
+- case_id: PRC-2025-015
+  title: "采购支出的预算口径 vs 核算口径"
+  domain: procurement
+  metric: budget_vs_actual_variance
+  dispute: |
+    预算系统按"承诺口径"（合同签订）统计采购支出，
+    核算系统按"执行口径"（实际付款）统计。
+    2025-06 预算执行率 120%，但核算支出仅 80%，
+    管理层无法判断是超支还是时间差。
+  context:
+    baseline_value: 0.80
+    finance_value: 1.20
+    delta: 0.40
+    delta_pct: 50.0
+    data_sources: [budget_system, erp_ap, contract_system]
+    period: "2025-06"
+  resolution:
+    decided_by: cfo
+    decision: "新增 commitment_vs_execution 双口径指标，预算按承诺口径，核算按执行口径"
+    rationale: "两种口径都有业务意义，但必须显式区分，避免混淆"
+    new_metric_created: commitment_vs_execution
+  outcome: validated
+  roles_involved: [finance_analyst, procurement_manager, cfo]
+  tags: [budget-vs-actual, dual-metric, commitment-vs-execution]

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-015/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-015: 采购支出的预算口径 vs 核算口径 ===== -->
+    <!-- 核心语义: DualMetric —— 承诺口径 vs 执行口径的显式区分 -->
+
+    <!-- 双口径指标 -->
+    <owl:Class rdf:about="&aof;DualMetric">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">双口径指标</rdfs:label>
+        <skos:definition xml:lang="zh">同时包含承诺口径和执行口径的指标对</skos:definition>
+    </owl:Class>
+
+    <!-- 承诺口径指标 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-015/commitment_metric">
+        <rdfs:label>承诺口径采购支出</rdfs:label>
+        <skos:definition>以合同签订金额为准的采购支出（预算系统）</skos:definition>
+        <skos:note>BFO continuant: 承诺持续存在，不随时间消失</skos:note>
+    </aof:MetricDefinition>
+
+    <!-- 执行口径指标 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-015/execution_metric">
+        <rdfs:label>执行口径采购支出</rdfs:label>
+        <skos:definition>以实际付款金额为准的采购支出（核算系统）</skos:definition>
+        <skos:note>BFO occurrent: 度量已发生过程的量化结果</skos:note>
+    </aof:MetricDefinition>
+
+    <!-- 双口径差异指标 -->
+    <aof:DualMetric rdf:about="&aof-case;PRC-2025-015/commitment_vs_execution">
+        <rdfs:label>承诺口径 vs 执行口径差异</rdfs:label>
+        <skos:definition>预算系统承诺口径与核算系统执行口径的显式对比</skos:definition>
+        <skos:note>2025-06 新建指标，解决管理层判断困难</skos:note>
+    </aof:DualMetric>
+
+    <!-- 预算执行率争议 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-015/dual_metric_dispute">
+        <rdfs:label>双口径混淆争议</rdfs:label>
+        <skos:definition>预算执行率120%但核算支出仅80%，无法判断超支还是时间差</skos:definition>
+        <skos:note>两种口径都有业务意义，但必须显式区分</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-015/dual_metric_decision">
+        <rdfs:label>双口径显式区分决策</rdfs:label>
+        <skos:definition>新增 commitment_vs_execution 双口径指标，预算按承诺口径，核算按执行口径</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-015/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-015/dual_metric_policy"/>
+        <skos:note>两种口径都有业务意义，但必须显式区分，避免混淆</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-015/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-015/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-015/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-015/dual_metric_policy">
+        <rdfs:label>双口径指标政策</rdfs:label>
+        <skos:definition>承诺口径和执行口径必须显式区分，避免混淆</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - 这是 PRC-2025-004（框架协议承诺 vs 执行）的通用化
+        - commitment_metric 是 continuant（承诺持续存在）
+        - execution_metric 是对 occurrent 的度量
+        - DualMetric 显式将两者并列，避免混淆
+        - 这展示了 BFO continuant/occurrent 区分在财务指标设计中的核心作用
+    -->
+
+</rdf:RDF>

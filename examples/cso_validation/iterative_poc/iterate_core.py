@@ -5,7 +5,6 @@ CSO ontology 迭代自举 - 核心逻辑(复用)
 本文件独立于 cognee, 可单测。
 """
 from __future__ import annotations
-from typing import Any
 
 # 需要从图谱提取的实体类型中过滤掉的cognee内部类型
 # cognee 图谱中的节点类型(过滤掉派生的内部类型)
