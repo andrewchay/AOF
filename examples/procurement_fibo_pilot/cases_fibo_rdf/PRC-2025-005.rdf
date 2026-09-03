@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-005/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-005: 跨部门共享服务采购的归属问题 ===== -->
+    <!-- 核心语义: CostAllocation —— 共享服务的成本如何在多个 ContractParty 之间分配？ -->
+
+    <!-- 共享服务采购 —— 一种特殊的服务合同 -->
+    <owl:Class rdf:about="&aof;SharedServiceAgreement">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">共享服务协议</rdfs:label>
+        <skos:definition xml:lang="zh">覆盖多个部门/法人的统一服务采购协议</skos:definition>
+    </owl:Class>
+
+    <!-- 成本分摊指标 -->
+    <owl:Class rdf:about="&aof;CostAllocationMetric">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">成本分摊指标</rdfs:label>
+        <skos:definition xml:lang="zh">按使用量/受益比例分摊共享服务成本的指标</skos:definition>
+    </owl:Class>
+
+    <!-- SaaS 共享服务协议实例 -->
+    <aof:SharedServiceAgreement rdf:about="&aof-case;PRC-2025-005/saas_agreement">
+        <rdfs:label>IT SaaS 共享服务协议</rdfs:label>
+        <skos:definition>Office 365、Slack 等覆盖全公司的 SaaS 订阅</skos:definition>
+        <skos:note>原全部计入 IT 部门，导致 IT 支出虚高，其他部门为零</skos:note>
+    </aof:SharedServiceAgreement>
+
+    <!-- 多个受益部门 -->
+    <fibo-ctr:ContractParty rdf:about="&aof-case;PRC-2025-005/it_department">
+        <rdfs:label>IT部门</rdfs:label>
+        <skos:note>原承担全部 SaaS 费用，实际仅为采购执行方</skos:note>
+    </fibo-ctr:ContractParty>
+
+    <fibo-ctr:ContractParty rdf:about="&aof-case;PRC-2025-005/hr_department">
+        <rdfs:label>HR部门</rdfs:label>
+        <skos:note>SaaS 实际使用方之一</skos:note>
+    </fibo-ctr:ContractParty>
+
+    <fibo-ctr:ContractParty rdf:about="&aof-case;PRC-2025-005/sales_department">
+        <rdfs:label>销售部门</rdfs:label>
+        <skos:note>SaaS 实际使用方之一</skos:note>
+    </fibo-ctr:ContractParty>
+
+    <!-- 成本分摊指标 -->
+    <aof:CostAllocationMetric rdf:about="&aof-case;PRC-2025-005/shared_service_allocation">
+        <rdfs:label>共享服务分摊金额</rdfs:label>
+        <skos:definition>按部门 active_user_count 分摊共享服务采购成本</skos:definition>
+        <skos:note>2025-Q2 口径变更后新建指标</skos:note>
+    </aof:CostAllocationMetric>
+
+    <!-- 原指标争议 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-005/cost_allocation_dispute">
+        <rdfs:label>共享服务成本归属争议</rdfs:label>
+        <skos:definition>SaaS 费用应计入采购执行方还是按实际使用分摊</skos:definition>
+        <aof:involvesContract rdf:resource="&aof-case;PRC-2025-005/saas_agreement"/>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-005/allocation_decision">
+        <rdfs:label>共享服务成本分摊决策</rdfs:label>
+        <skos:definition>共享服务采购按部门 active_user_count 分摊</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-005/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-005/allocation_policy"/>
+        <skos:note>成本归属反映实际受益，避免部门间不公平</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-005/it_manager_role">
+        <rdfs:label>IT经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-005/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-005/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-005/allocation_policy">
+        <rdfs:label>共享服务成本分摊政策</rdfs:label>
+        <skos:definition>共享服务采购按部门 active_user_count 分摊</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - SharedServiceAgreement 是 Contract 的子类，但涉及多个 ContractParty
+        - 争议核心是 cost allocation 的 fairness，不是合同违约
+        - 决策引入了新 MetricDefinition（shared_service_allocation）
+        - 多个部门作为 ContractParty 参与，但只有一个执行采购角色
+    -->
+
+</rdf:RDF>

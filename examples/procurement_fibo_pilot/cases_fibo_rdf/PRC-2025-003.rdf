@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-003/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-003: 供应商预付款是否计入当期采购支出 ===== -->
+    <!-- 核心语义: 现金流口径 vs 权责发生制 —— Prepayment 是资产还是费用？ -->
+
+    <!-- 预付款 —— 金融工具/资产，不是费用 -->
+    <owl:Class rdf:about="&aof;Prepayment">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000031"/>
+        <!-- generically dependent continuant: 预付款是可转让的权利模式 -->
+        <rdfs:label xml:lang="zh">预付款</rdfs:label>
+        <skos:definition xml:lang="zh">提前支付但尚未收到货物/服务的款项，属于资产而非费用</skos:definition>
+    </owl:Class>
+
+    <!-- 预付款实例 -->
+    <aof:Prepayment rdf:about="&aof-case;PRC-2025-003/prepayment_2025_03">
+        <rdfs:label>2025-03 供应商预付款</rdfs:label>
+        <skos:definition>货物3个月后才到期的预付款</skos:definition>
+        <skos:note>财务部认为应按权责发生制分摊，采购部认为应计入当月</skos:note>
+    </aof:Prepayment>
+
+    <!-- 月度采购支出指标（执行口径） -->
+    <aof:ProcurementSpendMetric rdf:about="&aof-case;PRC-2025-003/monthly_procurement_spend">
+        <rdfs:label>月度采购支出（执行口径）</rdfs:label>
+        <skos:definition>以实际付款完成为准的采购支出</skos:definition>
+    </aof:ProcurementSpendMetric>
+
+    <!-- 预付款流出指标（现金流口径） -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-003/prepayment_outflow">
+        <rdfs:label>供应商预付款流出</rdfs:label>
+        <skos:definition>预付款实际支付的现金流口径指标</skos:definition>
+        <skos:note>2025-03 口径变更后新建指标</skos:note>
+    </aof:MetricDefinition>
+
+    <!-- 采购承诺：交货义务 -->
+    <aof:DeliveryCommitment rdf:about="&aof-case;PRC-2025-003/delivery_commitment">
+        <rdfs:label>供应商交货承诺</rdfs:label>
+        <skos:definition>供应商承诺在3个月内交付货物</skos:definition>
+        <fibo-agr:isObligationOf rdf:resource="&aof-case;PRC-2025-003/supplier_role"/>
+    </aof:DeliveryCommitment>
+
+    <!-- 付款义务 -->
+    <aof:PaymentCommitment rdf:about="&aof-case;PRC-2025-003/payment_commitment">
+        <rdfs:label>买方付款义务</rdfs:label>
+        <skos:definition>买方提前支付货款的义务</skos:definition>
+        <fibo-agr:isObligationOf rdf:resource="&aof-case;PRC-2025-003/buyer_role"/>
+    </aof:PaymentCommitment>
+
+    <!-- 指标争议：时间性差异 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-003/timing_dispute">
+        <rdfs:label>预付款时间确认争议</rdfs:label>
+        <skos:definition>预付款应在支付当月确认还是按权责发生制分摊</skos:definition>
+        <aof:involvesContract rdf:resource="&aof-case;PRC-2025-003/purchase_contract"/>
+    </aof:MetricDispute>
+
+    <!-- 采购合同 -->
+    <aof:PurchaseOrder rdf:about="&aof-case;PRC-2025-003/purchase_contract">
+        <rdfs:label>2025-03 采购合同（含预付款条款）</rdfs:label>
+        <aof:hasCommitment rdf:resource="&aof-case;PRC-2025-003/delivery_commitment"/>
+        <aof:hasCommitment rdf:resource="&aof-case;PRC-2025-003/payment_commitment"/>
+    </aof:PurchaseOrder>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-003/accrual_decision">
+        <rdfs:label>预付款权责发生制决策</rdfs:label>
+        <skos:definition>预付款单独列示，按月摊销计入 procurement_spend</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-003/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-003/prepayment_policy"/>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:BuyerRole rdf:about="&aof-case;PRC-2025-003/buyer_role">
+        <rdfs:label>买方角色</rdfs:label>
+    </aof:BuyerRole>
+
+    <aof:SupplierRole rdf:about="&aof-case;PRC-2025-003/supplier_role">
+        <rdfs:label>供应商角色</rdfs:label>
+    </aof:SupplierRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-003/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-003/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-003/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-003/prepayment_policy">
+        <rdfs:label>预付款会计处理政策</rdfs:label>
+        <skos:definition>预付款单独列示为 prepayment_outflow，按月摊销计入 procurement_spend</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - 预付款是 asset（generically dependent continuant），不是 expense
+        - 付款义务和交货义务是 Contract 的 Commitment
+        - 争议本质是 accrual vs cash 的会计口径差异
+        - 决策产出是新的 MetricDefinition（prepayment_outflow）+ 摊销规则
+    -->
+
+</rdf:RDF>

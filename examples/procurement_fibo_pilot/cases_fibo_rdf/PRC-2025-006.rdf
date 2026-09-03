@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-006/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-006: 采购退货是否冲减当月支出 ===== -->
+    <!-- 核心语义: ReturnProcess 的时间确认 —— 退货是 process，何时确认？ -->
+
+    <!-- 退货过程 -->
+    <owl:Class rdf:about="&aof;ReturnProcess">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">退货流程</rdfs:label>
+        <skos:definition xml:lang="zh">从发起退货到收到退款的完整流程</skos:definition>
+    </owl:Class>
+
+    <!-- 退货过程实例 -->
+    <aof:ReturnProcess rdf:about="&aof-case;PRC-2025-006/return_process_2025_04">
+        <rdfs:label>2025-04 退货流程</rdfs:label>
+        <skos:definition>8万元退货的完整处理流程</skos:definition>
+        <skos:note>采购部在当月冲减，财务部认为应在收到退款时确认</skos:note>
+    </aof:ReturnProcess>
+
+    <!-- 过程边界：发起退货 -->
+    <owl:Class rdf:about="&aof;ReturnInitiation">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000035"/>
+        <!-- BFO_0000035 = process boundary -->
+        <rdfs:label xml:lang="zh">退货发起</rdfs:label>
+    </owl:Class>
+
+    <!-- 过程边界：收到退款 -->
+    <owl:Class rdf:about="&aof;RefundReceipt">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000035"/>
+        <rdfs:label xml:lang="zh">退款收到</rdfs:label>
+    </owl:Class>
+
+    <!-- 待退货中间状态指标 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-006/pending_return">
+        <rdfs:label>待退货金额</rdfs:label>
+        <skos:definition>退货在收到退款前 pending 状态的中间指标</skos:definition>
+        <skos:note>2025-04 口径变更后新建指标</skos:note>
+    </aof:MetricDefinition>
+
+    <!-- 月度采购支出指标 -->
+    <aof:ProcurementSpendMetric rdf:about="&aof-case;PRC-2025-006/monthly_procurement_spend">
+        <rdfs:label>月度采购支出</rdfs:label>
+        <skos:definition>以现金流实际发生为准的采购支出</skos:definition>
+    </aof:ProcurementSpendMetric>
+
+    <!-- 指标争议：时间确认点 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-006/timing_dispute">
+        <rdfs:label>退货确认时点争议</rdfs:label>
+        <skos:definition>退货应在发起时冲减还是收到退款时确认</skos:definition>
+        <skos:note>本质：process 的哪个 boundary 作为确认时点？</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-006/refund_timing_decision">
+        <rdfs:label>退货退款时点决策</rdfs:label>
+        <skos:definition>退货在收到退款时确认，新增 pending_return 中间状态</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-006/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-006/return_policy"/>
+        <skos:note>以现金流实际发生为准，避免预估冲减导致的误差</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-006/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-006/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-006/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-006/return_policy">
+        <rdfs:label>退货处理政策</rdfs:label>
+        <skos:definition>退货在收到退款时确认，pending 状态单独跟踪</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - 退货是一个 process（occurrent），不是 continuant
+        - 争议核心是 process 的哪个 boundary 作为确认时点
+        - 采购部用 ReturnInitiation（发起），财务部用 RefundReceipt（完成）
+        - 决策引入 pending_return 作为中间状态，解决时间差问题
+        - 这展示了 BFO process boundary 概念在会计确认中的实用价值
+    -->
+
+</rdf:RDF>

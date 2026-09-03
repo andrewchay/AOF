@@ -36,3 +36,6 @@ workspace-files/
 _rag_smoke_test.py
 examples/dialogue_trajectory_poc/data/
 .claude/
+
+# Example run logs (large, regenerable); result JSONs stay tracked
+examples/**/runs/*.log

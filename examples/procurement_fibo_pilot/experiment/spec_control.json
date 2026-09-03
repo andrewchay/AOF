@@ -1,0 +1,19 @@
+{
+  "project_root": "/Users/chaihao/LLM/AOF",
+  "knowledge_repo": "/Users/chaihao/LLM/AOF/data",
+  "dataset": "procurement_fibo_control",
+  "runtime": {
+    "run_in_background": false,
+    "incremental_loading": true,
+    "data_per_batch": 20,
+    "retries": 0,
+    "backoff_seconds": 1.0
+  },
+  "ontology": {
+    "file": "",
+    "matching_cutoff": 0.8
+  },
+  "cognee": {
+    "root": "/Users/chaihao/LLM/cognee"
+  }
+}

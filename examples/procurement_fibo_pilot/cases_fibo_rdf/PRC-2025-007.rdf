@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-007/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-007: 采购员个人垫付费用的报销归属 ===== -->
+    <!-- 核心语义: BusinessSubstance —— 费用分类应反映业务实质，不是流程形式 -->
+
+    <!-- 个人垫付采购 —— 小额采购的特殊形式 -->
+    <owl:Class rdf:about="&aof;PettyCashProcurement">
+        <rdfs:subClassOf rdf:resource="&aof;PurchaseOrder"/>
+        <rdfs:label xml:lang="zh">小额垫付采购</rdfs:label>
+        <skos:definition xml:lang="zh">采购员个人垫付的小额采购（通常&lt;500元）</skos:definition>
+    </owl:Class>
+
+    <!-- 个人垫付实例 -->
+    <aof:PettyCashProcurement rdf:about="&aof-case;PRC-2025-007/petty_cash_procurement">
+        <rdfs:label>2025-Q2 个人垫付采购</rdfs:label>
+        <skos:definition>采购员个人垫付的小额采购，金额虽小但频率高</skos:definition>
+        <skos:note>原走报销系统（行政费用），后改为计入采购支出</skos:note>
+    </aof:PettyCashProcurement>
+
+    <!-- 费用分类争议 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-007/expense_classification_dispute">
+        <rdfs:label>费用分类归属争议</rdfs:label>
+        <skos:definition>个人垫付采购应计入行政费用还是采购支出</skos:definition>
+        <skos:note>业务实质 vs 流程形式的争议</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策：业务实质优先 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-007/substance_over_form_decision">
+        <rdfs:label>业务实质优先决策</rdfs:label>
+        <skos:definition>个人垫付采购统一计入 dept_procurement_spend，不再走行政费用</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-007/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-007/petty_cash_policy"/>
+        <skos:note>业务实质优先：垫付是为了采购，不是行政开支</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-007/petty_cash_policy">
+        <rdfs:label>小额垫付采购政策</rdfs:label>
+        <skos:definition>个人垫付采购统一计入 dept_procurement_spend</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-007/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-007/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-007/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 
+        FIBO 语义要点：
+        - 这不是合同争议，而是 expense classification 的原则问题
+        - 决策依据是 business substance over form（实质重于形式）
+        - PettyCashProcurement 是 PurchaseOrder 的子类，确认其业务实质
+        - 展示了 FIBO 本体如何支持会计原则（substance over form）的语义表达
+    -->
+
+</rdf:RDF>

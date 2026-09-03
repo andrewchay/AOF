@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-014/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-014: 紧急采购的供应商选择是否合规 ===== -->
+    <!-- 核心语义: ComplianceViolation —— 单一来源采购的合规性审查 -->
+
+    <!-- 合规违规 -->
+    <owl:Class rdf:about="&aof;ComplianceViolation">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000015"/>
+        <!-- BFO_0000015 = process -->
+        <rdfs:label xml:lang="zh">合规违规</rdfs:label>
+        <skos:definition xml:lang="zh">违反采购合规要求的行为或过程</skos:definition>
+    </owl:Class>
+
+    <!-- 单一来源采购 -->
+    <owl:Class rdf:about="&aof;SingleSourceProcurement">
+        <rdfs:subClassOf rdf:resource="&aof;EmergencyPurchaseContract"/>
+        <rdfs:label xml:lang="zh">单一来源采购</rdfs:label>
+        <skos:definition xml:lang="zh">未经过竞争性谈判的单一供应商采购</skos:definition>
+    </owl:Class>
+
+    <!-- 合规审查 -->
+    <owl:Class rdf:about="&aof;ComplianceReview">
+        <rdfs:subClassOf rdf:resource="&aof;ApprovalPhase"/>
+        <rdfs:label xml:lang="zh">合规审查</rdfs:label>
+        <skos:definition xml:lang="zh">对采购合规性的审查过程</skos:definition>
+    </owl:Class>
+
+    <!-- 单一来源采购实例 -->
+    <aof:SingleSourceProcurement rdf:about="&aof-case;PRC-2025-014/single_source_2025_q1">
+        <rdfs:label>2025-Q1 单一来源紧急采购</rdfs:label>
+        <skos:definition>紧急采购中单一来源占比45%</skos:definition>
+        <skos:note>内审认为绕过了竞争性谈判要求</skos:note>
+    </aof:SingleSourceProcurement>
+
+    <!-- 合规违规实例 -->
+    <aof:ComplianceViolation rdf:about="&aof-case;PRC-2025-014/compliance_violation">
+        <rdfs:label>竞争性谈判违规</rdfs:label>
+        <skos:definition>未按要求进行竞争性谈判的单一来源采购</skos:definition>
+    </aof:ComplianceViolation>
+
+    <!-- 单一来源占比指标 -->
+    <aof:MetricDefinition rdf:about="&aof-case;PRC-2025-014/single_source_ratio">
+        <rdfs:label>单一来源采购占比</rdfs:label>
+        <skos:definition>单一来源采购 / 总采购</skos:definition>
+    </aof:MetricDefinition>
+
+    <!-- 指标争议：合规性 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-014/compliance_dispute">
+        <rdfs:label>紧急采购合规性争议</rdfs:label>
+        <skos:definition>紧急采购是否应适用竞争性谈判要求</skos:definition>
+        <skos:note>灵活性 vs 合规性的平衡</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-014/compliance_decision">
+        <rdfs:label>紧急采购合规决策</rdfs:label>
+        <skos:definition>紧急采购单一来源需在48h内提交书面说明，连续3次触发供应商审查</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-014/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-014/compliance_policy"/>
+        <skos:note>保留紧急灵活性，但增加透明度和追溯要求</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-014/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-014/internal_audit_role">
+        <rdfs:label>内审角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-014/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-014/compliance_policy">
+        <rdfs:label>紧急采购合规政策</rdfs:label>
+        <skos:definition>紧急采购单一来源需在48h内提交书面说明</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - SingleSourceProcurement 是 EmergencyPurchaseContract 的子类
+        - ComplianceViolation 是 process（occurrent），不是状态
+        - 决策引入透明度约束（48h书面说明），不是禁止单一来源
+        - 这展示了 FIBO 如何支持合规与灵活性的平衡建模
+    -->
+
+</rdf:RDF>

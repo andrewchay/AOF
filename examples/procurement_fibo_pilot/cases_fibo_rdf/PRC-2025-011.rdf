@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY aof-case "http://aof.example.org/cases/">
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+]>
+<rdf:RDF xml:base="http://aof.example.org/cases/PRC-2025-011/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 案例 PRC-2025-011: 采购折扣的确认时点 ===== -->
+    <!-- 核心语义: RebateAccrual —— 返利是 price adjustment，不是独立的 cash inflow -->
+
+    <!-- 返利应计 -->
+    <owl:Class rdf:about="&aof;RebateAccrual">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">返利应计</rdfs:label>
+        <skos:definition xml:lang="zh">按采购比例分摊到各月的返利金额</skos:definition>
+    </owl:Class>
+
+    <!-- 净采购支出指标 -->
+    <aof:ProcurementSpendMetric rdf:about="&aof-case;PRC-2025-011/net_procurement_spend">
+        <rdfs:label>净采购支出</rdfs:label>
+        <skos:definition>实际付款 - 返利应计</skos:definition>
+    </aof:ProcurementSpendMetric>
+
+    <!-- 返利实例 -->
+    <aof:RebateAccrual rdf:about="&aof-case;PRC-2025-011/rebate_accrual">
+        <rdfs:label>2025-Q2 返利应计</rdfs:label>
+        <skos:definition>供应商季度返利5万元，按采购比例分摊到各月</skos:definition>
+        <skos:note>返利本质是采购价格的调整，应按受益期间分摊</skos:note>
+    </aof:RebateAccrual>
+
+    <!-- 指标争议：返利确认时点 -->
+    <aof:MetricDispute rdf:about="&aof-case;PRC-2025-011/rebate_timing_dispute">
+        <rdfs:label>返利确认时点争议</rdfs:label>
+        <skos:definition>返利应在收到时冲减还是按采购比例分摊</skos:definition>
+        <skos:note>price adjustment 的受益期间匹配问题</skos:note>
+    </aof:MetricDispute>
+
+    <!-- 决策 -->
+    <aof:CaliberChangeDecision rdf:about="&aof-case;PRC-2025-011/rebate_decision">
+        <rdfs:label>返利分摊决策</rdfs:label>
+        <skos:definition>返利按采购比例分摊到各月，新增 rebate_accrual 指标</skos:definition>
+        <aof:decidedByRole rdf:resource="&aof-case;PRC-2025-011/cfo_role"/>
+        <aof:newPolicy rdf:resource="&aof-case;PRC-2025-011/rebate_policy"/>
+        <skos:note>返利本质是采购价格的调整，应按受益期间分摊</skos:note>
+    </aof:CaliberChangeDecision>
+
+    <!-- 角色 -->
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-011/procurement_manager_role">
+        <rdfs:label>采购经理角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:ApproverRole rdf:about="&aof-case;PRC-2025-011/finance_analyst_role">
+        <rdfs:label>财务分析师角色</rdfs:label>
+    </aof:ApproverRole>
+
+    <aof:DecisionMakerRole rdf:about="&aof-case;PRC-2025-011/cfo_role">
+        <rdfs:label>CFO决策角色</rdfs:label>
+    </aof:DecisionMakerRole>
+
+    <!-- 政策 -->
+    <aof:EmergencyProcurementPolicy rdf:about="&aof-case;PRC-2025-011/rebate_policy">
+        <rdfs:label>返利会计处理政策</rdfs:label>
+        <skos:definition>返利按采购比例分摊到各月</skos:definition>
+    </aof:EmergencyProcurementPolicy>
+
+    <!-- 
+        FIBO 语义要点：
+        - RebateAccrual 是 MetricDefinition，不是独立的 cash inflow
+        - 返利本质是 purchase price 的 adjustment
+        - 决策体现 matching principle（受益期间匹配）
+        - 展示了 FIBO 如何支持会计原则的语义表达
+    -->
+
+</rdf:RDF>

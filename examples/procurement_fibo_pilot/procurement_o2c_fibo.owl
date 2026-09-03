@@ -1,0 +1,551 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY fibo-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+    <!ENTITY fibo-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
+    <!ENTITY bfo "http://purl.obolibrary.org/obo/">
+    <!ENTITY aof "http://aof.example.org/ontology/">
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
+]>
+<rdf:RDF xml:base="http://aof.example.org/ontology/procurement/"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+
+    <!-- ===== 本体声明 ===== -->
+    <owl:Ontology rdf:about="http://aof.example.org/ontology/procurement/">
+        <rdfs:label>AOF Procurement Ontology (FIBO-aligned)</rdfs:label>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/"/>
+        <skos:note>本本体基于 FIBO 和 BFO，为 AOF 采购控制平面提供语义骨架</skos:note>
+    </owl:Ontology>
+
+    <!-- ===== 核心类：采购域实体 ===== -->
+
+    <!-- 采购订单 -->
+    <owl:Class rdf:about="&aof;PurchaseOrder">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">采购订单</rdfs:label>
+        <rdfs:label xml:lang="en">Purchase Order</rdfs:label>
+        <skos:definition xml:lang="zh">买方向卖方发出的采购商品或服务的正式合同文件</skos:definition>
+    </owl:Class>
+
+    <!-- 框架协议 -->
+    <owl:Class rdf:about="&aof;FrameworkAgreement">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">框架协议</rdfs:label>
+        <rdfs:label xml:lang="en">Framework Agreement</rdfs:label>
+        <skos:definition xml:lang="zh">约定一定期间内采购总量和条件的框架性合同</skos:definition>
+    </owl:Class>
+
+    <!-- 紧急采购合同 -->
+    <owl:Class rdf:about="&aof;EmergencyPurchaseContract">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">紧急采购合同</rdfs:label>
+        <rdfs:label xml:lang="en">Emergency Purchase Contract</rdfs:label>
+        <skos:definition xml:lang="zh">因紧急情况绕过标准审批流程的采购合同</skos:definition>
+    </owl:Class>
+
+    <!-- 采购承诺 -->
+    <owl:Class rdf:about="&aof;ProcurementCommitment">
+        <rdfs:subClassOf rdf:resource="&fibo-agr;Commitment"/>
+        <rdfs:label xml:lang="zh">采购承诺</rdfs:label>
+        <rdfs:label xml:lang="en">Procurement Commitment</rdfs:label>
+        <skos:definition xml:lang="zh">采购合同中约定的义务</skos:definition>
+    </owl:Class>
+
+    <!-- 付款承诺 -->
+    <owl:Class rdf:about="&aof;PaymentCommitment">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementCommitment"/>
+        <rdfs:label xml:lang="zh">付款承诺</rdfs:label>
+        <rdfs:label xml:lang="en">Payment Commitment</rdfs:label>
+    </owl:Class>
+
+    <!-- 交货承诺 -->
+    <owl:Class rdf:about="&aof;DeliveryCommitment">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementCommitment"/>
+        <rdfs:label xml:lang="zh">交货承诺</rdfs:label>
+        <rdfs:label xml:lang="en">Delivery Commitment</rdfs:label>
+    </owl:Class>
+
+    <!-- ===== 角色类 ===== -->
+
+    <!-- 买方角色 -->
+    <owl:Class rdf:about="&aof;BuyerRole">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;ContractParty"/>
+        <rdfs:label xml:lang="zh">买方角色</rdfs:label>
+        <rdfs:label xml:lang="en">Buyer Role</rdfs:label>
+    </owl:Class>
+
+    <!-- 供应商角色 -->
+    <owl:Class rdf:about="&aof;SupplierRole">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;ContractParty"/>
+        <rdfs:label xml:lang="zh">供应商角色</rdfs:label>
+        <rdfs:label xml:lang="en">Supplier Role</rdfs:label>
+    </owl:Class>
+
+    <!-- 审批人角色 -->
+    <owl:Class rdf:about="&aof;ApproverRole">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;ContractParty"/>
+        <rdfs:label xml:lang="zh">审批人角色</rdfs:label>
+        <rdfs:label xml:lang="en">Approver Role</rdfs:label>
+        <skos:definition xml:lang="zh">有权批准采购合同或变更的角色</skos:definition>
+    </owl:Class>
+
+    <!-- 决策者角色 -->
+    <owl:Class rdf:about="&aof;DecisionMakerRole">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;ContractParty"/>
+        <rdfs:label xml:lang="zh">决策者角色</rdfs:label>
+        <rdfs:label xml:lang="en">Decision Maker Role</rdfs:label>
+    </owl:Class>
+
+    <!-- 付款义务人 -->
+    <owl:Class rdf:about="&aof;PaymentObligor">
+        <rdfs:subClassOf rdf:resource="&fibo-agr;Obligor"/>
+        <rdfs:label xml:lang="zh">付款义务人</rdfs:label>
+        <rdfs:label xml:lang="en">Payment Obligor</rdfs:label>
+    </owl:Class>
+
+    <!-- 收款权利人 -->
+    <owl:Class rdf:about="&aof;PaymentObligee">
+        <rdfs:subClassOf rdf:resource="&fibo-agr;Obligee"/>
+        <rdfs:label xml:lang="zh">收款权利人</rdfs:label>
+        <rdfs:label xml:lang="en">Payment Obligee</rdfs:label>
+    </owl:Class>
+
+    <!-- ===== 过程类（occurrent） ===== -->
+
+    <!-- 采购流程 -->
+    <owl:Class rdf:about="&aof;ProcurementProcess">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;ContractExecution"/>
+        <rdfs:label xml:lang="zh">采购流程</rdfs:label>
+        <rdfs:label xml:lang="en">Procurement Process</rdfs:label>
+        <skos:definition xml:lang="zh">从请购到付款的完整采购执行过程</skos:definition>
+    </owl:Class>
+
+    <!-- 请购阶段 -->
+    <owl:Class rdf:about="&aof;RequisitionPhase">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">请购阶段</rdfs:label>
+    </owl:Class>
+
+    <!-- 审批阶段 -->
+    <owl:Class rdf:about="&aof;ApprovalPhase">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">审批阶段</rdfs:label>
+    </owl:Class>
+
+    <!-- 采购阶段 -->
+    <owl:Class rdf:about="&aof;PurchasePhase">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">采购阶段</rdfs:label>
+    </owl:Class>
+
+    <!-- 付款阶段 -->
+    <owl:Class rdf:about="&aof;PaymentPhase">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">付款阶段</rdfs:label>
+    </owl:Class>
+
+    <!-- 收货阶段 -->
+    <owl:Class rdf:about="&aof;ReceiptPhase">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">收货阶段</rdfs:label>
+    </owl:Class>
+
+    <!-- 紧急采购 -->
+    <owl:Class rdf:about="&aof;EmergencyProcurement">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">紧急采购</rdfs:label>
+        <rdfs:label xml:lang="en">Emergency Procurement</rdfs:label>
+        <skos:definition xml:lang="zh">因紧急情况绕过标准审批流程的采购过程</skos:definition>
+    </owl:Class>
+
+    <!-- 违约处理 -->
+    <owl:Class rdf:about="&aof;BreachOfContractHandling">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;BreachOfContract"/>
+        <rdfs:label xml:lang="zh">违约处理</rdfs:label>
+    </owl:Class>
+
+    <!-- 指标争议 -->
+    <owl:Class rdf:about="&aof;MetricDispute">
+        <rdfs:subClassOf rdf:resource="&aof;BreachOfContractHandling"/>
+        <rdfs:label xml:lang="zh">指标争议</rdfs:label>
+        <skos:definition xml:lang="zh">对指标口径定义的分歧</skos:definition>
+    </owl:Class>
+
+    <!-- 口径变更决策 -->
+    <owl:Class rdf:about="&aof;CaliberChangeDecision">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;ContractExecution"/>
+        <rdfs:label xml:lang="zh">口径变更决策</rdfs:label>
+    </owl:Class>
+
+    <!-- ===== 信息实体类（generically dependent continuant） ===== -->
+
+    <!-- 指标定义 -->
+    <owl:Class rdf:about="&aof;MetricDefinition">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000031"/>
+        <!-- BFO_0000031 = generically dependent continuant -->
+        <rdfs:label xml:lang="zh">指标定义</rdfs:label>
+        <skos:definition xml:lang="zh">可量化业务概念的定义模式</skos:definition>
+    </owl:Class>
+
+    <!-- 采购支出指标 -->
+    <owl:Class rdf:about="&aof;ProcurementSpendMetric">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">采购支出指标</rdfs:label>
+    </owl:Class>
+
+    <!-- 审批阈值 -->
+    <owl:Class rdf:about="&aof;ApprovalThreshold">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000016"/>
+        <!-- BFO_0000016 = disposition -->
+        <rdfs:label xml:lang="zh">审批阈值</rdfs:label>
+        <skos:definition xml:lang="zh">触发特定审批流程的金额条件</skos:definition>
+    </owl:Class>
+
+    <!-- 紧急采购政策 -->
+    <owl:Class rdf:about="&aof;EmergencyProcurementPolicy">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">紧急采购政策</rdfs:label>
+        <skos:definition xml:lang="zh">规定紧急采购条件和约束的内部政策</skos:definition>
+    </owl:Class>
+
+    <!-- 审批记录 -->
+    <owl:Class rdf:about="&aof;ApprovalRecord">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000031"/>
+        <rdfs:label xml:lang="zh">审批记录</rdfs:label>
+        <skos:definition xml:lang="zh">审批动作的书面记录</skos:definition>
+    </owl:Class>
+
+    <!-- ===== 案例域扩展类（对齐试点 README「新增本体类」表） ===== -->
+
+    <!-- 供应商预付款：资产（generically dependent continuant），不是当期费用 -->
+    <owl:Class rdf:about="&aof;Prepayment">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000031"/>
+        <rdfs:label xml:lang="zh">供应商预付款</rdfs:label>
+        <skos:definition xml:lang="zh">预付款是可转让的权利模式（资产），不计入当期采购支出</skos:definition>
+    </owl:Class>
+
+    <!-- 跨部门共享服务协议 -->
+    <owl:Class rdf:about="&aof;SharedServiceAgreement">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">共享服务协议</rdfs:label>
+    </owl:Class>
+
+    <!-- 成本分摊指标 -->
+    <owl:Class rdf:about="&aof;CostAllocationMetric">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">成本分摊指标</rdfs:label>
+    </owl:Class>
+
+    <!-- 采购退货流程 -->
+    <owl:Class rdf:about="&aof;ReturnProcess">
+        <rdfs:subClassOf rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">采购退货流程</rdfs:label>
+    </owl:Class>
+
+    <!-- 个人垫付采购：实质重于形式 -->
+    <owl:Class rdf:about="&aof;PettyCashProcurement">
+        <rdfs:subClassOf rdf:resource="&aof;PurchaseOrder"/>
+        <rdfs:label xml:lang="zh">个人垫付采购</rdfs:label>
+    </owl:Class>
+
+    <!-- 外币采购合同 -->
+    <owl:Class rdf:about="&aof;ForeignCurrencyContract">
+        <rdfs:subClassOf rdf:resource="&aof;PurchaseOrder"/>
+        <rdfs:label xml:lang="zh">外币采购合同</rdfs:label>
+    </owl:Class>
+
+    <!-- 汇率差异：独立指标，风险隔离 -->
+    <owl:Class rdf:about="&aof;FXVariance">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">汇率差异</rdfs:label>
+    </owl:Class>
+
+    <!-- 样品采购 -->
+    <owl:Class rdf:about="&aof;SampleProcurement">
+        <rdfs:subClassOf rdf:resource="&aof;PurchaseOrder"/>
+        <rdfs:label xml:lang="zh">样品采购</rdfs:label>
+    </owl:Class>
+
+    <!-- 研发采购 -->
+    <owl:Class rdf:about="&aof;RDProcurement">
+        <rdfs:subClassOf rdf:resource="&aof;PurchaseOrder"/>
+        <rdfs:label xml:lang="zh">研发采购</rdfs:label>
+    </owl:Class>
+
+    <!-- 承诺分摊计划：承诺节奏 vs 消耗节奏 -->
+    <owl:Class rdf:about="&aof;CommitmentSchedule">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">承诺分摊计划</rdfs:label>
+    </owl:Class>
+
+    <!-- 返利应计：受益期间匹配 -->
+    <owl:Class rdf:about="&aof;RebateAccrual">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">返利应计</rdfs:label>
+    </owl:Class>
+
+    <!-- 内部转移协议：关联交易隔离 -->
+    <owl:Class rdf:about="&aof;InternalTransferAgreement">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">内部转移协议</rdfs:label>
+    </owl:Class>
+
+    <!-- 采购押金：资产 -->
+    <owl:Class rdf:about="&aof;Deposit">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000031"/>
+        <rdfs:label xml:lang="zh">采购押金</rdfs:label>
+    </owl:Class>
+
+    <!-- 合规违规：过程（occurrent） -->
+    <owl:Class rdf:about="&aof;ComplianceViolation">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000015"/>
+        <!-- BFO_0000015 = process -->
+        <rdfs:label xml:lang="zh">合规违规</rdfs:label>
+    </owl:Class>
+
+    <!-- 单一来源采购 -->
+    <owl:Class rdf:about="&aof;SingleSourceProcurement">
+        <rdfs:subClassOf rdf:resource="&aof;EmergencyPurchaseContract"/>
+        <rdfs:label xml:lang="zh">单一来源采购</rdfs:label>
+    </owl:Class>
+
+    <!-- 双口径指标：预算口径（continuant）vs 核算口径（occurrent） -->
+    <owl:Class rdf:about="&aof;DualMetric">
+        <rdfs:subClassOf rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:label xml:lang="zh">双口径指标</rdfs:label>
+    </owl:Class>
+
+    <!-- 财务分析师角色（对齐 caliber_governance RBAC） -->
+    <owl:Class rdf:about="&aof;FinanceAnalystRole">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;ContractParty"/>
+        <rdfs:label xml:lang="zh">财务分析师角色</rdfs:label>
+    </owl:Class>
+
+    <!-- 内审角色 -->
+    <owl:Class rdf:about="&aof;InternalAuditRole">
+        <rdfs:subClassOf rdf:resource="&fibo-ctr;ContractParty"/>
+        <rdfs:label xml:lang="zh">内审角色</rdfs:label>
+    </owl:Class>
+
+    <!-- 行政差旅费：单独列示，不计入部门采购支出（PRC-2025-001 裁定） -->
+    <owl:Class rdf:about="&aof;TravelExpense">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/BFO_0000031"/>
+        <rdfs:label xml:lang="zh">行政差旅费</rdfs:label>
+    </owl:Class>
+
+    <!-- ===== 中文键 individuals（跨语言匹配桥） ===== -->
+    <!-- cognee RDFLibOntologyResolver 按 URI 本地名建 lookup，且 LLM 抽出的实体名
+         只与 individuals 类目匹配；本节用中文本地命名 individual，使中文实体名
+         可精确命中，并经 is_a 链把 FIBO/BFO 英文类名带入图谱。 -->
+
+    <owl:NamedIndividual rdf:about="&aof;差旅费">
+        <rdf:type rdf:resource="&aof;TravelExpense"/>
+        <rdfs:label xml:lang="zh">差旅费</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;紧急采购">
+        <rdf:type rdf:resource="&aof;EmergencyProcurement"/>
+        <rdfs:label xml:lang="zh">紧急采购</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;紧急采购合同">
+        <rdf:type rdf:resource="&aof;EmergencyPurchaseContract"/>
+        <rdfs:label xml:lang="zh">紧急采购合同</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;框架协议">
+        <rdf:type rdf:resource="&aof;FrameworkAgreement"/>
+        <rdfs:label xml:lang="zh">框架协议</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;审批阈值">
+        <rdf:type rdf:resource="&aof;ApprovalThreshold"/>
+        <rdfs:label xml:lang="zh">审批阈值</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;采购订单">
+        <rdf:type rdf:resource="&aof;PurchaseOrder"/>
+        <rdfs:label xml:lang="zh">采购订单</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;采购退货">
+        <rdf:type rdf:resource="&aof;ReturnProcess"/>
+        <rdfs:label xml:lang="zh">采购退货</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;供应商预付款">
+        <rdf:type rdf:resource="&aof;Prepayment"/>
+        <rdfs:label xml:lang="zh">供应商预付款</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;采购押金">
+        <rdf:type rdf:resource="&aof;Deposit"/>
+        <rdfs:label xml:lang="zh">采购押金</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;样品采购">
+        <rdf:type rdf:resource="&aof;SampleProcurement"/>
+        <rdfs:label xml:lang="zh">样品采购</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;单一来源采购">
+        <rdf:type rdf:resource="&aof;SingleSourceProcurement"/>
+        <rdfs:label xml:lang="zh">单一来源采购</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;共享服务采购">
+        <rdf:type rdf:resource="&aof;SharedServiceAgreement"/>
+        <rdfs:label xml:lang="zh">共享服务采购</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;采购支出">
+        <rdf:type rdf:resource="&aof;ProcurementSpendMetric"/>
+        <rdfs:label xml:lang="zh">采购支出</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;采购折扣">
+        <rdf:type rdf:resource="&aof;RebateAccrual"/>
+        <rdfs:label xml:lang="zh">采购折扣</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;个人垫付">
+        <rdf:type rdf:resource="&aof;PettyCashProcurement"/>
+        <rdfs:label xml:lang="zh">个人垫付</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;内部转移定价">
+        <rdf:type rdf:resource="&aof;InternalTransferAgreement"/>
+        <rdfs:label xml:lang="zh">内部转移定价</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;外币采购汇率">
+        <rdf:type rdf:resource="&aof;ForeignCurrencyContract"/>
+        <rdfs:label xml:lang="zh">外币采购汇率</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;框架协议预算分摊">
+        <rdf:type rdf:resource="&aof;CommitmentSchedule"/>
+        <rdfs:label xml:lang="zh">框架协议预算分摊</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;承诺口径">
+        <rdf:type rdf:resource="&aof;ProcurementCommitment"/>
+        <rdfs:label xml:lang="zh">承诺口径</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;执行口径">
+        <rdf:type rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">执行口径</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;预算口径">
+        <rdf:type rdf:resource="&aof;DualMetric"/>
+        <rdfs:label xml:lang="zh">预算口径</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;采购经理">
+        <rdf:type rdf:resource="&aof;ApproverRole"/>
+        <rdfs:label xml:lang="zh">采购经理</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;CFO">
+        <rdf:type rdf:resource="&aof;DecisionMakerRole"/>
+        <rdfs:label xml:lang="zh">CFO</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;财务分析师">
+        <rdf:type rdf:resource="&aof;FinanceAnalystRole"/>
+        <rdfs:label xml:lang="zh">财务分析师</rdfs:label>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="&aof;内审">
+        <rdf:type rdf:resource="&aof;InternalAuditRole"/>
+        <rdfs:label xml:lang="zh">内审</rdfs:label>
+    </owl:NamedIndividual>
+
+    <!-- ===== 数据属性 ===== -->
+
+    <owl:DatatypeProperty rdf:about="&aof;thresholdAmount">
+        <rdfs:domain rdf:resource="&aof;ApprovalThreshold"/>
+        <rdfs:range rdf:resource="&xsd;decimal"/>
+        <rdfs:label xml:lang="zh">阈值金额</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="&aof;currency">
+        <rdfs:label xml:lang="zh">货币</rdfs:label>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="&aof;commitmentAmount">
+        <rdfs:domain rdf:resource="&aof;ProcurementCommitment"/>
+        <rdfs:range rdf:resource="&xsd;decimal"/>
+        <rdfs:label xml:lang="zh">承诺金额</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="&aof;executionAmount">
+        <rdfs:domain rdf:resource="&aof;MetricCalculation"/>
+        <rdfs:range rdf:resource="&xsd;decimal"/>
+        <rdfs:label xml:lang="zh">执行金额</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="&aof;maxCompletionTime">
+        <rdfs:domain rdf:resource="&fibo-agr;Commitment"/>
+        <rdfs:range rdf:resource="&xsd;duration"/>
+        <rdfs:label xml:lang="zh">最大完成时间</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <!-- ===== 对象属性 ===== -->
+
+    <owl:ObjectProperty rdf:about="&aof;hasCommitment">
+        <rdfs:domain rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:range rdf:resource="&fibo-agr;Commitment"/>
+        <rdfs:label xml:lang="zh">包含承诺</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="&aof;hasApprovalThreshold">
+        <rdfs:domain rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:range rdf:resource="&aof;ApprovalThreshold"/>
+        <rdfs:label xml:lang="zh">有审批阈值</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="&aof;requiredRole">
+        <rdfs:domain rdf:resource="&aof;ApprovalThreshold"/>
+        <rdfs:range rdf:resource="&fibo-ctr;ContractParty"/>
+        <rdfs:label xml:lang="zh">所需角色</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="&aof;calculatedFrom">
+        <rdfs:domain rdf:resource="&aof;MetricDefinition"/>
+        <rdfs:range rdf:resource="&aof;ProcurementProcess"/>
+        <rdfs:label xml:lang="zh">计算来源</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="&aof;appliesTo">
+        <rdfs:domain rdf:resource="&fibo-agr;Commitment"/>
+        <rdfs:range rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">适用于</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="&aof;involvesContract">
+        <rdfs:domain rdf:resource="&aof;MetricDispute"/>
+        <rdfs:range rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">涉及合同</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="&aof;newPolicy">
+        <rdfs:domain rdf:resource="&aof;CaliberChangeDecision"/>
+        <rdfs:range rdf:resource="&fibo-ctr;Contract"/>
+        <rdfs:label xml:lang="zh">新政策</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="&aof;decidedByRole">
+        <rdfs:domain rdf:resource="&aof;CaliberChangeDecision"/>
+        <rdfs:range rdf:resource="&fibo-ctr;ContractParty"/>
+        <rdfs:label xml:lang="zh">由角色决定</rdfs:label>
+    </owl:ObjectProperty>
+
+</rdf:RDF>
