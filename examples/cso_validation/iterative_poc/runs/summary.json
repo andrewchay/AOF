@@ -1,0 +1,50 @@
+{
+  "seed_classes": [
+    "AnalysisPopulation",
+    "Disease",
+    "Drug",
+    "Endpoint",
+    "StatisticalMethod",
+    "StudyObjective",
+    "Timepoint"
+  ],
+  "final_classes": [
+    "AnalysisPopulation",
+    "Disease",
+    "Drug",
+    "Endpoint",
+    "StatisticalMethod",
+    "StudyObjective",
+    "Timepoint",
+    "clinical trial",
+    "clinicaltrial",
+    "disease",
+    "drug",
+    "endpoint",
+    "method",
+    "population",
+    "statisticalmethod",
+    "study design",
+    "studydesign",
+    "studyphase"
+  ],
+  "convergence": [
+    {
+      "round": 1,
+      "classes": 13,
+      "saturation": 0.462,
+      "stability": 1.0,
+      "stop": false,
+      "reason": "继续迭代 (iter=1, sat=0.46, stab=1.00)"
+    },
+    {
+      "round": 2,
+      "classes": 18,
+      "saturation": 0.278,
+      "stability": 0.278,
+      "stop": true,
+      "reason": "达到最大迭代次数 max_iter=2"
+    }
+  ],
+  "review_mode": "auto-accept"
+}

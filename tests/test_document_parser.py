@@ -1,0 +1,256 @@
+"""document_parser 单元测试。
+
+覆盖：路由逻辑、Blake2b 缓存、parse_document 各路径（direct/fallback/docling）、
+ingest_helper（maybe_parse_local_file）、subprocess_runner 的 worker JSON 解析。
+不触发真实隔离子进程（用 mock），保证快速、环境无关。
+"""
+
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+from bridge.document_parser import ParsedDoc, parse_document
+from bridge.document_parser.cache import ParseCache, blake2b_file
+from bridge.document_parser.config import ParserConfig
+from bridge.document_parser.core import ParseResult
+from bridge.document_parser.ingest_helper import maybe_parse_local_file
+
+
+class TestRoute(unittest.TestCase):
+    def _cfg(self) -> ParserConfig:
+        return ParserConfig()
+
+    def test_pdf_routes_docling(self):
+        self.assertEqual(self._cfg().route(Path("a.pdf")), "docling")
+
+    def test_office_routes_docling(self):
+        for ext in (".docx", ".pptx", ".xlsx"):
+            self.assertEqual(self._cfg().route(Path(f"a{ext}")), "docling", ext)
+
+    def test_markdown_routes_direct(self):
+        for ext in (".md", ".markdown", ".txt"):
+            self.assertEqual(self._cfg().route(Path(f"a{ext}")), "direct", ext)
+
+    def test_image_routes_unsupported(self):
+        self.assertEqual(self._cfg().route(Path("a.png")), "unsupported")
+
+    def test_unknown_routes_fallback(self):
+        self.assertEqual(self._cfg().route(Path("a.bin")), "fallback")
+
+    def test_all_office_exts_route_docling(self):
+        # 阶段 2：Office 全格式覆盖（OOXML + 旧二进制）都路由到 docling
+        for ext in (".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"):
+            self.assertEqual(self._cfg().route(Path(f"a{ext}")), "docling", ext)
+
+    @patch(
+        "bridge.document_parser.core.docling_engine.parse",
+        side_effect=RuntimeError("engine down"),
+    )
+    def test_parse_all_office_exts_no_crash(self, _mock):
+        # 阶段 2：对每个 Office 扩展名，parse_document 不崩溃（mock 引擎失败 → 优雅降级 fallback）
+        with tempfile.TemporaryDirectory() as d:
+            cfg = ParserConfig(enabled=True, cache_enabled=False)
+            for ext in (".docx", ".pptx", ".xlsx", ".doc", ".ppt", ".xls"):
+                f = Path(d) / f"a{ext}"
+                f.write_bytes(b"not real content")
+                r = parse_document(f, config=cfg, cache=None)
+                # 引擎失败 → 优雅降级 fallback，use_raw_path=True，绝不崩溃
+                self.assertEqual(r.doc.engine, "fallback", ext)
+                self.assertTrue(r.use_raw_path, ext)
+
+
+class TestParseCache(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.cache = ParseCache(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_miss_then_hit(self):
+        key = "abc123"
+        self.assertIsNone(self.cache.get(key))
+        self.cache.set(key, {"content": "hello", "engine": "docling"})
+        self.assertEqual(self.cache.get(key)["content"], "hello")
+
+    def test_build_key_stable(self):
+        f = Path(self._tmp.name) / "f.pdf"
+        f.write_text("data", encoding="utf-8")
+        fp = blake2b_file(f)
+        k1 = self.cache.build_key(
+            file_path=f, fingerprint=fp, engine="docling", lang="zh"
+        )
+        k2 = self.cache.build_key(
+            file_path=f, fingerprint=fp, engine="docling", lang="zh"
+        )
+        self.assertEqual(k1, k2)
+        # 引擎不同 → 键不同
+        k3 = self.cache.build_key(
+            file_path=f, fingerprint=fp, engine="mineru", lang="zh"
+        )
+        self.assertNotEqual(k1, k3)
+
+    def test_clear(self):
+        self.cache.set("a", {"content": "1"})
+        self.cache.set("b", {"content": "2"})
+        self.assertEqual(self.cache.clear(), 2)
+        self.assertIsNone(self.cache.get("a"))
+
+
+class TestParseDocument(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.cfg = ParserConfig(enabled=True, cache_enabled=False)
+
+    def test_direct_markdown(self):
+        f = Path(self._tmp.name) / "note.md"
+        f.write_text("# Title\n\nbody", encoding="utf-8")
+        r = parse_document(f, config=self.cfg, cache=None)
+        self.assertFalse(r.use_raw_path)
+        self.assertEqual(r.doc.engine, "direct")
+        self.assertIn("# Title", r.doc.content)
+
+    def test_missing_file_falls_back(self):
+        r = parse_document(
+            Path(self._tmp.name) / "nope.pdf", config=self.cfg, cache=None
+        )
+        self.assertTrue(r.use_raw_path)
+        self.assertEqual(r.doc.engine, "fallback")
+
+    def test_disabled_parser_falls_back(self):
+        f = Path(self._tmp.name) / "a.pdf"
+        f.write_bytes(b"%PDF-1.4...")
+        cfg = ParserConfig(enabled=False)
+        r = parse_document(f, config=cfg, cache=None)
+        self.assertTrue(r.use_raw_path)
+        self.assertEqual(r.doc.engine, "fallback")
+
+    def test_unsupported_type_falls_back(self):
+        f = Path(self._tmp.name) / "img.png"
+        f.write_bytes(b"\x89PNG")
+        r = parse_document(f, config=self.cfg, cache=None)
+        self.assertTrue(r.use_raw_path)
+        self.assertEqual(r.doc.engine, "fallback")
+
+    @patch("bridge.document_parser.core.docling_engine.parse")
+    def test_docling_success(self, mock_parse):
+        f = Path(self._tmp.name) / "report.pdf"
+        f.write_bytes(b"%PDF-1.4")
+        mock_parse.return_value = ParsedDoc(
+            content="# 报告\n\n正文",
+            source_path=str(f),
+            engine="docling",
+            tables_count=1,
+        )
+        r = parse_document(f, config=self.cfg, cache=None)
+        self.assertFalse(r.use_raw_path)
+        self.assertEqual(r.doc.engine, "docling")
+        self.assertEqual(r.doc.tables_count, 1)
+
+    @patch(
+        "bridge.document_parser.core.docling_engine.parse",
+        side_effect=RuntimeError("boom"),
+    )
+    def test_docling_failure_falls_back(self, _mock):
+        f = Path(self._tmp.name) / "report.pdf"
+        f.write_bytes(b"%PDF-1.4")
+        r = parse_document(f, config=self.cfg, cache=None)
+        self.assertTrue(r.use_raw_path)
+        self.assertEqual(r.doc.engine, "fallback")
+
+    @patch("bridge.document_parser.core.docling_engine.parse")
+    def test_docling_cache_hit_skips_engine(self, mock_parse):
+        f = Path(self._tmp.name) / "report.pdf"
+        f.write_bytes(b"%PDF-1.4 stable content")
+        cfg = ParserConfig(enabled=True, cache_enabled=True, cache_dir=self._tmp.name)
+        m = MagicMock()
+        m.build_key.return_value = "cachekey"
+        m.get.return_value = {
+            "content": "# 报告",
+            "source_path": str(f),
+            "engine": "docling",
+            "tables_count": 9,
+        }
+        r = parse_document(f, config=cfg, cache=m)
+        self.assertFalse(r.use_raw_path)
+        self.assertTrue(r.cached)
+        self.assertEqual(r.doc.tables_count, 9)
+        mock_parse.assert_not_called()
+
+
+class TestIngestHelper(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.cfg = ParserConfig(enabled=False)  # 关闭解析 → fallback
+
+    def test_non_path_data_passthrough(self):
+        data, ctx = maybe_parse_local_file("plain text not a path")
+        self.assertEqual(data, "plain text not a path")
+        self.assertEqual(ctx["parser_engine"], "none")
+
+    def test_local_md_parses_direct(self):
+        f = Path(self._tmp.name) / "x.md"
+        f.write_text("## h", encoding="utf-8")
+        data, ctx = maybe_parse_local_file(str(f), config=None)
+        self.assertIn("## h", data)
+        self.assertEqual(ctx["parser_engine"], "direct")
+
+
+class TestParseResultShape(unittest.TestCase):
+    def test_parse_result_fields(self):
+        r = ParseResult(
+            ParsedDoc(content="", source_path="f", engine="fallback"), use_raw_path=True
+        )
+        self.assertTrue(r.use_raw_path)
+        self.assertEqual(r.doc.engine, "fallback")
+
+
+class TestMinerUEngine(unittest.TestCase):
+    """MinerU 高精度引擎路由与解析（阶段 2 预留，本阶段接入）。"""
+
+    def test_config_default_engine_is_docling(self):
+        cfg = ParserConfig()
+        self.assertEqual(cfg.engine, "docling")
+
+    def test_mineu_engine_routes_pdf_to_mineru(self):
+        cfg = ParserConfig(engine="mineru")
+        self.assertEqual(cfg.route(Path("a.pdf")), "mineru")
+        self.assertEqual(cfg.route(Path("a.docx")), "mineru")
+        self.assertEqual(cfg.route(Path("a.md")), "direct")  # md 始终直读
+
+    @patch("bridge.document_parser.core.mineru_engine.parse")
+    def test_parse_document_uses_mineru_when_configured(self, mock_mineru):
+        mock_mineru.return_value = ParsedDoc(
+            content="# 报告", source_path="a.pdf", engine="mineru", tables_count=3
+        )
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "a.pdf"
+            f.write_bytes(b"%PDF")
+            cfg = ParserConfig(engine="mineru", enabled=True, cache_enabled=False)
+            r = parse_document(f, config=cfg, cache=None)
+        self.assertFalse(r.use_raw_path)
+        self.assertEqual(r.doc.engine, "mineru")
+        self.assertEqual(r.doc.tables_count, 3)
+        mock_mineru.assert_called_once()
+
+    @patch("bridge.document_parser.core.docling_engine.parse")
+    def test_parse_document_docling_when_default(self, mock_docling):
+        mock_docling.return_value = ParsedDoc(
+            content="# 报告", source_path="a.pdf", engine="docling", tables_count=2
+        )
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "a.pdf"
+            f.write_bytes(b"%PDF")
+            cfg = ParserConfig(enabled=True, cache_enabled=False)
+            r = parse_document(f, config=cfg, cache=None)
+        self.assertEqual(r.doc.engine, "docling")
+        mock_docling.assert_called_once()
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

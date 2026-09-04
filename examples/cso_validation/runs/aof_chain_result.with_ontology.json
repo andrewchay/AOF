@@ -1,0 +1,33 @@
+{
+  "mode": "WITH_ONTOLOGY",
+  "dataset": "cso_via_aof_chain",
+  "ontology_file": "/Users/chaihao/LLM/AOF/examples/cso_validation/data/cso_oncology.owl",
+  "nodes": 22,
+  "edges": 38,
+  "cso_entities": [
+    "clinicaltrial",
+    "atezolizumab",
+    "drug",
+    "advancedsolidtumors",
+    "phase ii",
+    "studyphase",
+    "non-progression rate (npr) at 18 weeks",
+    "endpoint",
+    "overall response rate (orr)",
+    "duration of response (dor)",
+    "progression-free survival (pfs)",
+    "overall survival (os)",
+    "safety and tolerability",
+    "simon optimal two-stage design",
+    "statisticalmethod",
+    "safetypopulation",
+    "population",
+    "disease",
+    "analysispopulation"
+  ],
+  "generic_entities": [
+    "nct02458638",
+    "medicalcondition",
+    "text_e42103e5a3a1bcaca8e9274b05afa4e7"
+  ]
+}

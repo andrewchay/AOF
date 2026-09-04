@@ -1,0 +1,30 @@
+{
+  "mode": "NO_ONTOLOGY",
+  "dataset": "cso_via_aof_chain_noonto",
+  "ontology_file": null,
+  "nodes": 19,
+  "edges": 36,
+  "cso_entities": [
+    "clinicaltrial",
+    "atezolizumab",
+    "drug",
+    "advanced solid tumors",
+    "disease",
+    "non-progression rate (npr)",
+    "endpoint",
+    "overall response rate (orr)",
+    "duration of response (dor)",
+    "progression-free survival (pfs)",
+    "overall survival (os)",
+    "simon optimal two-stage design",
+    "statisticalmethod",
+    "safety population",
+    "population",
+    "phase ii",
+    "studyphase"
+  ],
+  "generic_entities": [
+    "text_e42103e5a3a1bcaca8e9274b05afa4e7",
+    "nct02458638"
+  ]
+}

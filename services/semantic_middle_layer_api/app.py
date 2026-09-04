@@ -11,6 +11,7 @@ This version includes:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import subprocess
@@ -18,13 +19,19 @@ import time
 import uuid
 from contextlib import nullcontext
 from collections import defaultdict, deque
+from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Query
+from fastapi.responses import PlainTextResponse, FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from bridge.semantic_core.observability import trusted_runtime_telemetry
+
+# Logging
+logger = logging.getLogger('aof_api')
 
 # Configuration
 AOF_ROOT = Path(os.environ.get('AOF_ROOT', str(Path(__file__).resolve().parents[2]))).resolve()
@@ -99,6 +106,22 @@ except Exception:
     OTEL_ENABLED = False
     OTEL_TRACER = None
 
+TRUSTED_RUNTIME_TELEMETRY = trusted_runtime_telemetry()
+
+
+def _trusted_trace_sink(correlation: Mapping[str, str]) -> None:
+    if not OTEL_ENABLED:
+        return
+    try:
+        current = trace.get_current_span()
+        for key, value in correlation.items():
+            current.set_attribute(f'aof.{key}', value)
+    except Exception:
+        return
+
+
+TRUSTED_RUNTIME_TELEMETRY.set_trace_sink(_trusted_trace_sink)
+
 
 def _record_request_metric(path: str, status_code: int, latency_ms: float) -> None:
     global OBS_TOTAL_REQUESTS, OBS_TOTAL_ERRORS
@@ -131,6 +154,33 @@ async def metrics_middleware(request: Request, call_next):
     started = time.perf_counter()
     request_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
     path = request.url.path
+
+    runtime_mode = os.environ.get('AOF_RUNTIME_MODE', 'development').strip().lower()
+    if runtime_mode not in {'development', 'test'}:
+        diagnostic_paths = {
+            '/healthz',
+            '/metrics',
+            '/v1/ops/readiness',
+            '/v1/ops/slo',
+            '/v1/ops/slo/targets',
+            '/v1/ops/trusted-runtime',
+        }
+        if path not in diagnostic_paths:
+            from bridge.semantic_core.production import ProductionReadiness
+
+            readiness = ProductionReadiness.evaluate(os.environ)
+            if not readiness.ready:
+                elapsed_ms = (time.perf_counter() - started) * 1000
+                _record_request_metric(path, 503, elapsed_ms)
+                response = JSONResponse(
+                    status_code=503,
+                    content={
+                        'code': 'production_not_ready',
+                        'readiness': readiness.to_dict(),
+                    },
+                )
+                response.headers['X-Request-ID'] = request_id
+                return response
 
     span_name = f'{request.method} {path}'
     span_ctx = OTEL_TRACER.start_as_current_span(span_name) if OTEL_ENABLED and OTEL_TRACER else nullcontext()
@@ -189,6 +239,14 @@ class IngestDocsReq(BaseModel):
     docs_uri: str
 
 
+class ParseDocReq(BaseModel):
+    """文档解析请求（阶段 3，document_parser 对外能力）。"""
+
+    path: str
+    async_: bool = Field(default=False, alias="async")
+    lang: str = "zh"
+
+
 class IngestMetadataReq(BaseModel):
     topic: str
     metadata: dict[str, Any]
@@ -244,6 +302,19 @@ def _ensure_store() -> None:
         STATE_FILE.write_text('{}', encoding='utf-8')
     if not RUN_INDEX.exists():
         RUN_INDEX.write_text('{}', encoding='utf-8')
+
+
+_parse_queue_singleton = None
+
+
+def _get_parse_queue():
+    """模块级 DocumentParseQueue 单例（异步解析端点复用，避免每次请求新建）。"""
+    global _parse_queue_singleton
+    if _parse_queue_singleton is None:
+        from bridge.document_parser import DocumentParseQueue, ParserConfig
+
+        _parse_queue_singleton = DocumentParseQueue(parser_config=ParserConfig())
+    return _parse_queue_singleton
 
 
 def _slugify(text: str) -> str:
@@ -424,6 +495,47 @@ def ingest_docs(req: IngestDocsReq) -> dict[str, Any]:
     return {'status': 'accepted', 'topic': _slugify(req.topic), 'state': st}
 
 
+@app.post('/v1/documents/parse')
+async def document_parse(req: ParseDocReq) -> dict[str, Any]:
+    """解析单个文件为干净 Markdown + 元数据（document_parser 阶段 3 对外能力）。
+
+    同步模式：返回 ParsedDoc（content + metadata）。
+    异步模式（async=true）：提交到 DocumentParseQueue，返回 task_id 供轮询。
+    """
+    path = Path(req.path).expanduser().resolve()
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=400, detail=f'path not a file: {req.path}')
+
+    # 路径限域（防任意文件读取）：只允许解析白名单根目录内的文件
+    from bridge.document_parser.security import PathNotAllowedError, validate_parse_path
+
+    try:
+        path = validate_parse_path(path)
+    except PathNotAllowedError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    from bridge.document_parser import ParserConfig, parse_document
+
+    if req.async_:
+        queue = _get_parse_queue()
+        task_id = await queue.submit_parse(str(path), name=f"api-parse:{path.name}")
+        return {'status': 'accepted', 'task_id': task_id, 'path': str(path)}
+
+    config = ParserConfig(lang=req.lang)
+    result = parse_document(path, config=config)
+    doc = result.doc
+    return {
+        'status': 'ok',
+        'path': str(path),
+        'engine': doc.engine,
+        'use_raw_path': result.use_raw_path,
+        'cached': result.cached,
+        'format': 'markdown',
+        'tables_count': doc.tables_count,
+        'pages': doc.pages,
+        'content': doc.content,
+    }
+
+
 @app.post('/v1/ingest/metadata')
 def ingest_metadata(req: IngestMetadataReq) -> dict[str, Any]:
     """Ingest metadata for a topic."""
@@ -597,33 +709,16 @@ def _calculate_relevance(query: str, key: str, data: Any) -> float:
 
 @app.post('/v1/semantic/compile')
 def semantic_compile(req: CompileReq) -> dict[str, Any]:
-    """
-    Enhanced SQL compilation with LLM assistance.
-    
-    - Uses mapping library for context
-    - Generates SQL based on intent and available mappings
-    - Returns generated SQL with explanation
-    """
-    mf = _load_latest_manifest(req.topic)
-    library = _load_mapping_library(req.topic)
-    
-    # Build context from mapping library
-    context = _build_sql_context(library, req.intent)
-    
-    # Generate SQL using LLM
-    sql = _generate_sql(req.intent, context, req.target)
-    
-    return {
-        'topic': _slugify(req.topic),
-        'target': req.target,
-        'intent': req.intent,
-        'generated_sql': sql,
-        'context': context,
-        'artifacts': {
-            'ontology_file': mf['artifacts'].get('ontology_file', ''),
-            'mapping_dir': mf['artifacts'].get('mapping_dir', ''),
-        }
-    }
+    """Reject the pre-Release SQL generator at the public API boundary."""
+    raise HTTPException(
+        status_code=410,
+        detail={
+            'code': 'legacy_semantic_compile_retired',
+            'message': 'Ungoverned semantic compilation is retired',
+            'replacement': '/v1/semantic/query',
+            'capability': 'semantic_sql',
+        },
+    )
 
 
 def _build_sql_context(library: dict, intent: str) -> dict[str, Any]:
@@ -1276,6 +1371,7 @@ class VisualizeReq(BaseModel):
     """可视化请求。"""
     topic: str
     open_browser: bool = False
+    style: str = "cognee"  # cognee | template
 
 
 @app.post('/v1/visualize/generate')
@@ -1298,19 +1394,26 @@ def generate_visualization(req: VisualizeReq) -> dict[str, Any]:
         import asyncio
         visualizer = GraphVisualizer()
         
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(visualizer.visualize_for_topic(
+        if req.style == "template":
+            result = visualizer.create_template_visualization(
                 topic=req.topic,
                 open_browser=req.open_browser,
-            ))
-        finally:
-            loop.close()
+            )
+        else:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(visualizer.visualize_for_topic(
+                    topic=req.topic,
+                    open_browser=req.open_browser,
+                ))
+            finally:
+                loop.close()
         
         return {
             'status': 'success',
             'topic': _slugify(req.topic),
+            'style': req.style,
             'html_path': str(result.html_path),
             'file_size_bytes': result.file_size_bytes,
             'file_size_human': _format_bytes(result.file_size_bytes),
@@ -1358,6 +1461,24 @@ def list_visualizations(topic: Optional[str] = None) -> dict[str, Any]:
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Failed to list visualizations: {e}')
+
+
+@app.get('/v1/visualize/template')
+def get_visualization_template() -> FileResponse:
+    """
+    获取 AOF 通用图谱展示模板页面。
+
+    可直接通过 URL 参数传入数据源：
+    - nodes=/path/to/nodes.json
+    - edges=/path/to/edges.json
+    - apiBase=http://localhost:8787
+    - dataset=default
+    - autoload=1
+    """
+    template_path = AOF_ROOT / 'visualization' / 'kg_vis_aof_template.html'
+    if not template_path.exists():
+        raise HTTPException(status_code=404, detail='Visualization template not found')
+    return FileResponse(path=template_path, media_type='text/html')
 
 
 @app.get('/v1/visualize/open/{filename}')
@@ -1829,6 +1950,423 @@ def export_regression(topic: str) -> dict[str, Any]:
         'regression_jsonl': mf['artifacts'].get('regression_jsonl', ''),
         'regression_summary_md': mf['artifacts'].get('regression_summary_md', ''),
         'skills_update_md': mf['artifacts'].get('skills_update_md', ''),
+    }
+
+
+# ==================== Training Data Generation Endpoints ====================
+
+class TrainingDataGenerateReq(BaseModel):
+    """训练数据生成请求。"""
+    dataset_name: str
+    generators: list[str] = Field(default=['sft', 'rag_eval'])
+    max_samples: int = Field(default=1000, ge=10, le=10000)
+    quality_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    enable_deduplication: bool = True
+    enable_train_val_test_split: bool = False
+    system_prompt_template: Optional[str] = None
+    raw_sources: Optional[list[str]] = Field(
+        default=None,
+        description='真实对话消息 / Agent trajectory 源文件路径（配合 generators=["raw"] 使用）',
+    )
+
+
+class TrainingDataJobResp(BaseModel):
+    """训练数据生成任务响应。"""
+    job_id: str
+    status: str
+    progress: float
+    estimated_samples: int
+    output_files: list[str]
+    metrics: dict[str, Any]
+
+
+_TRAINING_DATA_JOBS: dict[str, dict[str, Any]] = {}
+
+
+@app.post('/v1/training-data/generate')
+async def generate_training_data(req: TrainingDataGenerateReq) -> dict[str, Any]:
+    """
+    生成 AI/Agent 训练数据集。
+
+    基于知识图谱和文档生成结构化训练数据，支持 SFT、RAG 评估、Agent 工具调用三种类型；
+    也支持「raw」生成器——把真实企业对话消息 / Agent 运行轨迹直接转换为 SFT 训练样本
+    （无需图谱，忠实保留真实多轮对话与工具调用推理链）。
+
+    Args:
+        dataset_name: 数据集名称
+        generators: 生成器类型列表 ["sft", "rag_eval", "agent_tool", "raw"]
+        max_samples: 每种生成器的最大样本数
+        quality_threshold: 质量阈值（0-1）
+        enable_deduplication: 是否启用去重
+        enable_train_val_test_split: 是否拆分为训练/验证/测试集
+        system_prompt_template: 自定义 system prompt 模板
+        raw_sources: 真实对话消息 / Agent trajectory 源文件路径（generators 含 "raw" 时必填）
+
+    Returns:
+        任务信息，包含 job_id 用于后续查询
+    """
+    import sys
+    import uuid
+    sys.path.insert(0, str(AOF_ROOT))
+
+    from bridge.training_data import TrainingDataPipeline, QualityConfig, GeneratorConfig
+    from bridge.training_data.generators import SFTGenerator, RAGEvalGenerator, AgentToolGenerator
+    from bridge.training_data.raw_trajectory import RawTrajectoryGenerator
+
+    job_id = str(uuid.uuid4())
+
+    # 解析生成器
+    gen_mapping = {
+        'sft': SFTGenerator,
+        'rag_eval': RAGEvalGenerator,
+        'agent_tool': AgentToolGenerator,
+        'raw': RawTrajectoryGenerator,
+    }
+    generators = []
+    for name in req.generators:
+        cls = gen_mapping.get(name)
+        if cls:
+            gen = cls()
+            # raw 生成器：注入真实对话/轨迹源文件路径
+            if name == 'raw' and req.raw_sources:
+                gen = gen.with_sources(req.raw_sources)
+            generators.append(gen)
+
+    if not generators:
+        raise HTTPException(status_code=400, detail='No valid generators specified')
+
+    # 配置
+    gen_config = GeneratorConfig(
+        max_samples=req.max_samples,
+        system_prompt_template=req.system_prompt_template or '',
+        raw_sources=req.raw_sources,
+    )
+    quality_config = QualityConfig(
+        enable_deduplication=req.enable_deduplication,
+    )
+
+    # 输出目录
+    output_dir = API_DATA / 'training_data' / job_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 初始化任务状态
+    _TRAINING_DATA_JOBS[job_id] = {
+        'job_id': job_id,
+        'status': 'running',
+        'progress': 0.0,
+        'dataset_name': req.dataset_name,
+        'generators': req.generators,
+        'output_dir': str(output_dir),
+        'output_files': [],
+        'metrics': {},
+        'created_at': datetime.now().isoformat(),
+    }
+
+    # 在后台执行（同步执行但返回 job_id）
+    try:
+        pipeline = TrainingDataPipeline()
+        result = await pipeline.run(
+            dataset_name=req.dataset_name,
+            generators=generators,
+            output_path=output_dir,
+            quality_config=quality_config,
+            generator_config=gen_config,
+            enable_split=req.enable_train_val_test_split,
+        )
+
+        _TRAINING_DATA_JOBS[job_id].update({
+            'status': 'success',
+            'progress': 100.0,
+            'output_files': result.output_files,
+            'metrics': {
+                'total_samples': result.total_samples,
+                'samples_by_type': result.samples_by_type,
+                'duration_seconds': result.duration_seconds,
+                'quality_metrics': result.quality_metrics,
+            },
+        })
+
+        return {
+            'status': 'success',
+            'job_id': job_id,
+            'message': 'Training data generation completed',
+            'result': {
+                'total_samples': result.total_samples,
+                'samples_by_type': result.samples_by_type,
+                'output_files': result.output_files,
+                'duration_seconds': result.duration_seconds,
+            },
+        }
+
+    except Exception as e:
+        _TRAINING_DATA_JOBS[job_id]['status'] = 'failure'
+        _TRAINING_DATA_JOBS[job_id]['error'] = str(e)
+        logger.error(f'Training data generation failed: {e}', exc_info=True)
+        raise HTTPException(status_code=500, detail=f'Training data generation failed: {e}')
+
+
+@app.get('/v1/training-data/jobs/{job_id}')
+def get_training_data_job(job_id: str) -> dict[str, Any]:
+    """
+    查询训练数据生成任务状态。
+
+    Args:
+        job_id: 任务 ID
+
+    Returns:
+        任务状态和进度信息
+    """
+    job = _TRAINING_DATA_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f'Job {job_id} not found')
+    return {
+        'status': 'success',
+        'job': job,
+    }
+
+
+@app.get('/v1/training-data/jobs/{job_id}/download')
+def download_training_data(job_id: str, file: str = 'training_data') -> Any:
+    """
+    下载生成的训练数据文件。
+
+    Args:
+        job_id: 任务 ID
+        file: 文件名（默认 training_data.jsonl，或 train/validation/test）
+
+    Returns:
+        文件下载响应
+    """
+    job = _TRAINING_DATA_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f'Job {job_id} not found')
+
+    output_dir = Path(job['output_dir'])
+
+    # 查找文件
+    candidates = [
+        output_dir / f"{file}.jsonl",
+        output_dir / file,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return FileResponse(
+                path=str(candidate),
+                filename=candidate.name,
+                media_type='application/jsonl+json',
+            )
+
+    # 列出可用文件
+    available = [f.name for f in output_dir.glob('*.jsonl')] if output_dir.exists() else []
+    raise HTTPException(
+        status_code=404,
+        detail=f'File not found. Available: {available}',
+    )
+
+
+@app.get('/v1/training-data/templates')
+def get_training_data_templates() -> dict[str, Any]:
+    """
+    获取各生成器的 prompt 模板。
+
+    Returns:
+        SFT、RAG Eval、Agent Tool 的默认模板
+    """
+    return {
+        'status': 'success',
+        'templates': {
+            'sft': {
+                'system_prompt': '你是一个企业知识助手，基于知识图谱回答用户问题。',
+                'description': 'SFT 微调数据生成器，基于实体、关系、文档生成 instruction-response 对',
+            },
+            'rag_eval': {
+                'system_prompt': '',
+                'description': 'RAG 评估数据生成器，基于图谱生成 question-answer-context 三元组',
+            },
+            'agent_tool': {
+                'system_prompt': '',
+                'description': 'Agent 工具调用数据生成器，基于策略本体生成 function calling 样本',
+            },
+        },
+    }
+
+
+# ==================== Harness Trainer Endpoints ====================
+
+_HARNESS_SESSION_MANAGER: Optional[Any] = None
+
+
+def _get_harness_manager() -> Any:
+    global _HARNESS_SESSION_MANAGER
+    if _HARNESS_SESSION_MANAGER is None:
+        from bridge.harness_trainer import HarnessSessionManager
+        _HARNESS_SESSION_MANAGER = HarnessSessionManager()
+    return _HARNESS_SESSION_MANAGER
+
+
+class HarnessCreateSessionReq(BaseModel):
+    """创建驯化会话请求."""
+    problem_statement: str
+    pattern_type: str = ''
+    domain: str = ''
+    scenario: str = ''
+    satisfaction_threshold: float = 4.0
+
+
+class HarnessAddIterationReq(BaseModel):
+    """添加迭代请求."""
+    agent_response: str
+    asset_version: str = ''
+    expert_score: dict[str, float] = Field(default_factory=dict)
+    expert_feedback: str = ''
+    tool_calls: list[dict[str, Any]] = Field(default_factory=list)
+
+
+@app.post('/v1/harness/sessions')
+async def harness_create_session(req: HarnessCreateSessionReq) -> dict[str, Any]:
+    """创建 Agent 驯化会话."""
+    manager = _get_harness_manager()
+    
+    session = manager.create_session(
+        problem_statement=req.problem_statement,
+        pattern_type=req.pattern_type,
+        domain=req.domain,
+        scenario=req.scenario,
+        satisfaction_threshold=req.satisfaction_threshold,
+    )
+    
+    return {
+        'status': 'success',
+        'session': {
+            'id': session.id,
+            'problem_statement': session.problem_statement,
+            'pattern_type': session.pattern_type,
+            'status': session.status.value,
+            'current_score': session.current_score,
+            'iteration_count': 0,
+        },
+    }
+
+
+@app.get('/v1/harness/sessions/{session_id}')
+async def harness_get_session(session_id: str) -> dict[str, Any]:
+    """获取驯化会话详情."""
+    manager = _get_harness_manager()
+    session = manager.get_session(session_id)
+    
+    if not session:
+        raise HTTPException(status_code=404, detail=f'Session not found: {session_id}')
+    
+    return {'status': 'success', 'session': session.to_dict()}
+
+
+@app.post('/v1/harness/sessions/{session_id}/iterations')
+async def harness_add_iteration(session_id: str, req: HarnessAddIterationReq) -> dict[str, Any]:
+    """向驯化会话添加迭代."""
+    manager = _get_harness_manager()
+    session = manager.get_session(session_id)
+    
+    if not session:
+        raise HTTPException(status_code=404, detail=f'Session not found: {session_id}')
+    
+    from bridge.harness_trainer import ExpertScore, IterationEngine
+    
+    score = ExpertScore.for_scenario(session.scenario)
+    for key in ['structure', 'accuracy', 'completeness', 'style', 'reasoning']:
+        if key in req.expert_score:
+            setattr(score, key, req.expert_score[key])
+    
+    engine = IterationEngine(enable_explicit_tracking=True)
+    iteration = engine.run_iteration(
+        problem=session.problem_statement,
+        agent_response=req.agent_response,
+        asset_version=req.asset_version,
+        expert_score=score,
+        expert_feedback=req.expert_feedback,
+        tool_calls=req.tool_calls,
+    )
+    
+    session = manager.add_iteration(session_id, iteration)
+    
+    return {
+        'status': 'success',
+        'iteration': {
+            'number': iteration.number,
+            'is_satisfactory': iteration.is_satisfactory,
+            'score': iteration.expert_score.overall,
+        },
+        'session_status': session.status.value,
+    }
+
+
+@app.get('/v1/harness/sessions/{session_id}/attribution')
+async def harness_get_attribution(session_id: str) -> dict[str, Any]:
+    """获取驯化会话的归因报告."""
+    manager = _get_harness_manager()
+    session = manager.get_session(session_id)
+    
+    if not session:
+        raise HTTPException(status_code=404, detail=f'Session not found: {session_id}')
+    
+    if len(session.iterations) < 2:
+        return {'status': 'error', 'message': '至少需要 2 轮迭代才能生成归因报告'}
+    
+    from bridge.harness_trainer import AttributionEngine
+    report = AttributionEngine().analyze(session)
+    
+    return {'status': 'success', 'report': report.to_dict()}
+
+
+@app.post('/v1/harness/sessions/{session_id}/export')
+async def harness_export(session_id: str) -> dict[str, Any]:
+    """导出驯化会话的训练数据."""
+    manager = _get_harness_manager()
+    session = manager.get_session(session_id)
+    
+    if not session:
+        raise HTTPException(status_code=404, detail=f'Session not found: {session_id}')
+    
+    from bridge.harness_trainer import TrainingDataExtractor
+    samples = TrainingDataExtractor().extract_from_session(session)
+    
+    return {
+        'status': 'success',
+        'sample_count': len(samples),
+        'samples': [s.to_dict() for s in samples],
+    }
+
+
+@app.get('/v1/harness/sessions')
+async def harness_list_sessions(
+    pattern_type: Optional[str] = None,
+    status: Optional[str] = None,
+) -> dict[str, Any]:
+    """列驯化会话."""
+    manager = _get_harness_manager()
+    from bridge.harness_trainer import SessionStatus
+    
+    status_enum = None
+    if status:
+        try:
+            status_enum = SessionStatus(status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f'Invalid status: {status}')
+    
+    sessions = manager.list_sessions(pattern_type=pattern_type, status=status_enum)
+    
+    return {
+        'status': 'success',
+        'sessions': [
+            {
+                'id': s.id,
+                'problem_statement': s.problem_statement,
+                'pattern_type': s.pattern_type,
+                'status': s.status.value,
+                'current_score': s.current_score,
+                'iteration_count': len(s.iterations),
+            }
+            for s in sessions
+        ],
     }
 
 
@@ -2689,6 +3227,18 @@ class CacheRefreshReq(BaseModel):
     force: bool = True
 
 
+@app.get('/v1/ops/readiness')
+def get_production_readiness() -> JSONResponse:
+    """Report whether production trust and observability prerequisites are safe."""
+    from bridge.semantic_core.production import ProductionReadiness
+
+    report = ProductionReadiness.evaluate(os.environ)
+    return JSONResponse(
+        status_code=200 if report.ready else 503,
+        content=report.to_dict(),
+    )
+
+
 @app.get('/v1/ops/slo')
 def get_slo_snapshot() -> dict[str, Any]:
     """
@@ -2761,6 +3311,18 @@ def get_slo_targets() -> dict[str, Any]:
         'path': str(SLO_TARGETS_FILE),
         'targets': _load_slo_targets(),
     }
+
+
+@app.get('/v1/ops/trusted-runtime')
+def get_trusted_runtime_snapshot() -> dict[str, Any]:
+    """Return evidence-correlated trusted operation SLO and active alerts."""
+    configured = _load_slo_targets()
+    targets = (
+        configured.get('trusted_runtime_slo', {})
+        if isinstance(configured, dict)
+        else {}
+    )
+    return TRUSTED_RUNTIME_TELEMETRY.snapshot(targets)
 
 
 @app.post('/v1/ops/slo/reload')
@@ -2851,6 +3413,16 @@ def metrics() -> PlainTextResponse:
         lines.append(f'aof_path_latency_ms_avg{{path="{path_safe}"}} {lat_avg:.3f}')
         lines.append(f'aof_path_latency_ms_max{{path="{path_safe}"}} {lat_max:.3f}')
 
+    configured = _load_slo_targets()
+    trusted_targets = (
+        configured.get('trusted_runtime_slo', {})
+        if isinstance(configured, dict)
+        else {}
+    )
+    lines.extend(
+        TRUSTED_RUNTIME_TELEMETRY.prometheus(trusted_targets).strip().splitlines()
+    )
+
     return PlainTextResponse('\n'.join(lines) + '\n')
 
 
@@ -2863,6 +3435,2245 @@ def healthz() -> dict[str, Any]:
         'version': '0.2.0',
         'llm_configured': 'yes' if LLM_API_KEY else 'no'
     }
+
+
+# ==================== Graph API Endpoints (v1) ====================
+# 专用知识图谱可视化API，支持高性能查询和实时交互
+
+class GraphQueryReq(BaseModel):
+    """图查询请求。"""
+    query: str
+    parameters: Optional[dict[str, Any]] = None
+    dataset: str = 'default'
+
+
+class GraphSearchReq(BaseModel):
+    """图搜索请求。"""
+    query: str
+    limit: int = Field(default=20, ge=1, le=100)
+    fuzzy: bool = True
+    dataset: str = 'default'
+
+
+class GraphNeighborReq(BaseModel):
+    """邻居查询请求。"""
+    depth: int = Field(default=1, ge=1, le=3)
+    limit: int = Field(default=50, ge=1, le=200)
+    direction: str = Field(default='both', pattern='^(in|out|both)$')
+
+
+def _get_graph_backend(dataset_name: str = 'default'):
+    """获取图存储后端实例。"""
+    import sys
+    sys.path.insert(0, str(AOF_ROOT))
+    from bridge.storage import StorageFactory, StorageConfig
+    
+    config = StorageConfig(
+        backend_type=os.environ.get('STORAGE_BACKEND', 'cognee'),
+        default_dataset=dataset_name
+    )
+    backend = StorageFactory.create(config)
+    # 尝试连接
+    if hasattr(backend, 'connect'):
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.create_task(backend.connect())
+            else:
+                loop.run_until_complete(backend.connect())
+        except Exception:
+            pass
+    return backend
+
+
+@app.get('/v1/graph/health')
+async def graph_health_check() -> dict[str, Any]:
+    """
+    Graph API 健康检查。
+    
+    Returns:
+        Graph API 状态和配置信息
+    """
+    try:
+        backend = _get_graph_backend()
+        connected = await backend.health_check() if hasattr(backend, 'health_check') else True
+        
+        return {
+            'status': 'healthy' if connected else 'degraded',
+            'api_version': '1.0.0',
+            'backend_type': backend.__class__.__name__,
+            'features': [
+                'nodes_query',
+                'edges_query', 
+                'neighbors_query',
+                'search',
+                'statistics',
+                'cypher_query'
+            ]
+        }
+    except Exception as e:
+        return {
+            'status': 'unavailable',
+            'error': str(e)
+        }
+
+
+@app.get('/v1/graph/nodes')
+async def get_graph_nodes(
+    dataset: str = 'default',
+    limit: int = Query(default=1000, ge=1, le=10000),
+    offset: int = Query(default=0, ge=0),
+    categories: Optional[str] = None,
+    include_properties: bool = Query(default=True)
+) -> dict[str, Any]:
+    """
+    获取知识图谱节点列表。
+    
+    Args:
+        dataset: 数据集名称
+        limit: 返回节点数量上限
+        offset: 分页偏移量
+        categories: 分类过滤（逗号分隔）
+        include_properties: 是否包含节点属性
+        
+    Returns:
+        节点列表和分页信息
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        # 获取所有节点（后端需要实现分页）
+        # 这里使用 execute_cypher 作为通用查询方式
+        category_filter = ''
+        if categories:
+            cat_list = categories.split(',')
+            cat_conditions = ' OR '.join([f'n:`{c}`' for c in cat_list])
+            category_filter = f'WHERE {cat_conditions}'
+        
+        cypher = f'''
+            MATCH (n)
+            {category_filter}
+            RETURN n
+            SKIP {offset}
+            LIMIT {limit}
+        '''
+        
+        nodes = await backend.execute_cypher(cypher)
+        
+        # 格式化节点数据
+        formatted_nodes = []
+        for record in nodes:
+            node = record.get('n', record)
+            formatted_nodes.append({
+                'id': str(node.get('id', node.get('node_id', ''))),
+                'labels': node.get('labels', node.get('type', ['Node'])),
+                'properties': node if include_properties else {}
+            })
+        
+        # 获取总数
+        count_result = await backend.execute_cypher('MATCH (n) RETURN count(n) as total')
+        total = count_result[0].get('total', 0) if count_result else 0
+        
+        return {
+            'status': 'success',
+            'dataset': dataset,
+            'nodes': formatted_nodes,
+            'pagination': {
+                'total': total,
+                'limit': limit,
+                'offset': offset,
+                'has_more': offset + len(formatted_nodes) < total
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to fetch nodes: {e}')
+
+
+@app.get('/v1/graph/edges')
+async def get_graph_edges(
+    dataset: str = 'default',
+    limit: int = Query(default=2000, ge=1, le=50000),
+    offset: int = Query(default=0, ge=0),
+    source_id: Optional[str] = None,
+    target_id: Optional[str] = None,
+    relation_type: Optional[str] = None
+) -> dict[str, Any]:
+    """
+    获取知识图谱边/关系列表。
+    
+    Args:
+        dataset: 数据集名称
+        limit: 返回边数量上限
+        offset: 分页偏移量
+        source_id: 源节点ID过滤
+        target_id: 目标节点ID过滤
+        relation_type: 关系类型过滤
+        
+    Returns:
+        边列表和分页信息
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        # 构建查询条件
+        conditions = []
+        if source_id:
+            conditions.append(f'startNode(r).id = "{source_id}"')
+        if target_id:
+            conditions.append(f'endNode(r).id = "{target_id}"')
+        if relation_type:
+            conditions.append(f'type(r) = "{relation_type}"')
+        
+        where_clause = f'WHERE {" AND ".join(conditions)}' if conditions else ''
+        
+        cypher = f'''
+            MATCH (a)-[r]->(b)
+            {where_clause}
+            RETURN a.id as source_id, b.id as target_id, 
+                   type(r) as relation_type, r as properties
+            SKIP {offset}
+            LIMIT {limit}
+        '''
+        
+        edges = await backend.execute_cypher(cypher)
+        
+        formatted_edges = []
+        for record in edges:
+            formatted_edges.append({
+                'source_id': str(record.get('source_id', '')),
+                'target_id': str(record.get('target_id', '')),
+                'relation_type': record.get('relation_type', 'RELATED'),
+                'properties': record.get('properties', {})
+            })
+        
+        return {
+            'status': 'success',
+            'dataset': dataset,
+            'edges': formatted_edges,
+            'pagination': {
+                'limit': limit,
+                'offset': offset,
+                'count': len(formatted_edges)
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to fetch edges: {e}')
+
+
+@app.get('/v1/graph/nodes/{node_id}')
+async def get_node_by_id(
+    node_id: str,
+    dataset: str = 'default',
+    include_neighbors: bool = Query(default=False)
+) -> dict[str, Any]:
+    """
+    根据ID获取单个节点详情。
+    
+    Args:
+        node_id: 节点ID
+        dataset: 数据集名称
+        include_neighbors: 是否包含邻居信息
+        
+    Returns:
+        节点详情
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        node = await backend.get_node(node_id)
+        if not node:
+            raise HTTPException(status_code=404, detail=f'Node {node_id} not found')
+        
+        result = {
+            'id': str(node.id),
+            'labels': node.labels,
+            'properties': node.properties
+        }
+        
+        if include_neighbors:
+            neighbors = await backend.get_neighbors(node_id, limit=20)
+            result['neighbors'] = [
+                {'id': str(n.id), 'labels': n.labels, 'name': n.properties.get('name', '')}
+                for n in neighbors
+            ]
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to fetch node: {e}')
+
+
+@app.get('/v1/graph/nodes/{node_id}/neighbors')
+async def get_node_neighbors(
+    node_id: str,
+    dataset: str = 'default',
+    depth: int = Query(default=1, ge=1, le=3),
+    limit: int = Query(default=50, ge=1, le=200),
+    direction: str = Query(default='both', pattern='^(in|out|both)$')
+) -> dict[str, Any]:
+    """
+    获取节点的邻居子图。
+    
+    Args:
+        node_id: 中心节点ID
+        dataset: 数据集名称
+        depth: 搜索深度（1-3）
+        limit: 最大返回节点数
+        direction: 方向 (in/out/both)
+        
+    Returns:
+        邻居节点和连接边
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        # 检查节点是否存在
+        node = await backend.get_node(node_id)
+        if not node:
+            raise HTTPException(status_code=404, detail=f'Node {node_id} not found')
+        
+        # 获取邻居
+        neighbors = await backend.get_neighbors(
+            node_id=node_id,
+            direction=direction,
+            limit=limit
+        )
+        
+        # 获取相关边
+        edges = await backend.get_edges(source_id=node_id)
+        edges += await backend.get_edges(target_id=node_id)
+        
+        # 去重
+        seen_edges = set()
+        unique_edges = []
+        for e in edges:
+            edge_key = (e.source_id, e.target_id, e.relation_type)
+            if edge_key not in seen_edges:
+                seen_edges.add(edge_key)
+                unique_edges.append(e)
+        
+        return {
+            'status': 'success',
+            'center_node': {
+                'id': str(node.id),
+                'labels': node.labels,
+                'properties': node.properties
+            },
+            'nodes': [
+                {
+                    'id': str(n.id),
+                    'labels': n.labels,
+                    'properties': n.properties
+                }
+                for n in neighbors
+            ],
+            'edges': [
+                {
+                    'source_id': str(e.source_id),
+                    'target_id': str(e.target_id),
+                    'relation_type': e.relation_type,
+                    'properties': e.properties
+                }
+                for e in unique_edges[:limit]
+            ]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to fetch neighbors: {e}')
+
+
+@app.post('/v1/graph/search')
+async def search_graph_nodes(req: GraphSearchReq) -> dict[str, Any]:
+    """
+    搜索知识图谱节点。
+    
+    Args:
+        query: 搜索关键词
+        limit: 返回结果数量上限
+        fuzzy: 是否模糊匹配
+        dataset: 数据集名称
+        
+    Returns:
+        匹配的节点列表
+    """
+    try:
+        backend = _get_graph_backend(req.dataset)
+        
+        # 使用属性搜索
+        if req.fuzzy:
+            cypher = f'''
+                MATCH (n)
+                WHERE n.name CONTAINS "{req.query}" 
+                   OR n.title CONTAINS "{req.query}"
+                   OR n.description CONTAINS "{req.query}"
+                RETURN n
+                LIMIT {req.limit}
+            '''
+        else:
+            cypher = f'''
+                MATCH (n)
+                WHERE n.name = "{req.query}" 
+                   OR n.title = "{req.query}"
+                RETURN n
+                LIMIT {req.limit}
+            '''
+        
+        results = await backend.execute_cypher(cypher)
+        
+        nodes = []
+        for record in results:
+            node = record.get('n', record)
+            nodes.append({
+                'id': str(node.get('id', '')),
+                'name': node.get('name', node.get('title', '')),
+                'labels': node.get('labels', []),
+                'properties': node
+            })
+        
+        return {
+            'status': 'success',
+            'query': req.query,
+            'count': len(nodes),
+            'nodes': nodes
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Search failed: {e}')
+
+
+@app.post('/v1/graph/query')
+async def execute_graph_query(req: GraphQueryReq) -> dict[str, Any]:
+    """
+    执行自定义 Cypher/nGQL 查询。
+    
+    Args:
+        query: Cypher 或 nGQL 查询语句
+        parameters: 查询参数
+        dataset: 数据集名称
+        
+    Returns:
+        查询结果
+    """
+    try:
+        backend = _get_graph_backend(req.dataset)
+        
+        results = await backend.execute_cypher(req.query, req.parameters or {})
+        
+        return {
+            'status': 'success',
+            'query': req.query,
+            'count': len(results),
+            'results': results
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Query execution failed: {e}')
+
+
+@app.get('/v1/graph/statistics')
+async def get_graph_viz_statistics(dataset: str = 'default') -> dict[str, Any]:
+    """
+    获取知识图谱统计信息（可视化专用）。
+    
+    Args:
+        dataset: 数据集名称
+        
+    Returns:
+        图谱统计信息
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        stats = await backend.get_statistics()
+        
+        # 获取分类统计
+        cat_cypher = '''
+            MATCH (n)
+            UNWIND labels(n) as label
+            RETURN label, count(*) as count
+            ORDER BY count DESC
+        '''
+        cat_results = await backend.execute_cypher(cat_cypher)
+        
+        categories = {}
+        for r in cat_results:
+            label = r.get('label', 'Unknown')
+            count = r.get('count', 0)
+            categories[label] = count
+        
+        return {
+            'status': 'success',
+            'dataset': dataset,
+            'node_count': stats.node_count,
+            'edge_count': stats.edge_count,
+            'categories': categories,
+            'density': stats.node_count / (stats.edge_count + 1) if stats.edge_count > 0 else 0
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to get statistics: {e}')
+
+
+@app.get('/v1/graph/categories')
+async def get_graph_categories(dataset: str = 'default') -> dict[str, Any]:
+    """
+    获取所有节点分类/标签列表。
+    
+    Args:
+        dataset: 数据集名称
+        
+    Returns:
+        分类列表
+    """
+    try:
+        backend = _get_graph_backend(dataset)
+        
+        cypher = '''
+            MATCH (n)
+            UNWIND labels(n) as label
+            RETURN label, count(*) as count
+            ORDER BY count DESC
+        '''
+        
+        results = await backend.execute_cypher(cypher)
+        
+        categories = []
+        for r in results:
+            categories.append({
+                'name': r.get('label', 'Unknown'),
+                'count': r.get('count', 0)
+            })
+        
+        return {
+            'status': 'success',
+            'dataset': dataset,
+            'count': len(categories),
+            'categories': categories
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Failed to get categories: {e}')
+
+
+# ==================== OKF / LLM Wiki Knowledge Bundle Endpoints ====================
+
+def _okf_root() -> Path:
+    """OKF 知识包根目录：优先 AOF_OKF_DIR，其次 spec.okf.dir，默认 <AOF_ROOT>/okf_bundle."""
+    import os as _os
+    env_dir = _os.environ.get('AOF_OKF_DIR')
+    if env_dir:
+        p = Path(env_dir)
+        return p if p.is_absolute() else (AOF_ROOT / p)
+    return AOF_ROOT / 'okf_bundle'
+
+
+def _okf_service():
+    """惰性导入共享 okf_service 模块."""
+    import sys as _sys
+    if str(AOF_ROOT) not in _sys.path:
+        _sys.path.insert(0, str(AOF_ROOT))
+    from exporters import okf_service
+    return okf_service
+
+
+def _resolve_bundle_dir(name: str | None, bundle_root: Path) -> tuple[Path, str, str | None]:
+    """把 bundle 名解析为目录：name 缺省用根下第一个含 index.md 的包."""
+    import sys as _sys
+    if str(AOF_ROOT) not in _sys.path:
+        _sys.path.insert(0, str(AOF_ROOT))
+    from exporters.okf_service import list_bundles as _list
+    listing = _list(bundle_root)
+    error = None
+    if name:
+        candidate = bundle_root / name
+        if not (candidate / 'index.md').is_file():
+            error = f'知识包不存在: {name}'
+            return candidate, name, error
+        return candidate, name, None
+    # 未指定 name：取第一个知识包
+    if listing['bundles']:
+        first = listing['bundles'][0]
+        return Path(first['path']), first['name'], None
+    return bundle_root, '', '知识包目录为空，无可用知识包'
+
+
+@app.get('/v1/okf/bundles')
+async def okf_list_bundles() -> dict[str, Any]:
+    """列出 OKF 知识包根目录下的所有知识包."""
+    svc = _okf_service()
+    root = _okf_root()
+    return svc.list_bundles(root)
+
+
+@app.get('/v1/okf/bundles/{bundle_name}/index')
+async def okf_bundle_index(bundle_name: str) -> dict[str, Any]:
+    """读取指定知识包的 index.md 渐进式披露目录."""
+    svc = _okf_service()
+    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    if error:
+        return {'bundle_dir': str(bindir), 'exists': False, 'error': error}
+    return svc.read_index(bindir)
+
+
+@app.get('/v1/okf/bundles/{bundle_name}/concept')
+async def okf_get_concept(bundle_name: str, path: str) -> dict[str, Any]:
+    """读取指定知识包内单个 Concept 完整内容."""
+    svc = _okf_service()
+    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    if error:
+        return {'error': error, 'exists': False}
+    return svc.get_concept(bindir, path)
+
+
+@app.get('/v1/okf/bundles/{bundle_name}/search')
+async def okf_search_concepts(
+    bundle_name: str,
+    query: str | None = None,
+    type: str | None = None,  # noqa: A002 - FastAPI 参数名
+    title: str | None = None,
+    tag: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+) -> dict[str, Any]:
+    """按 type/title/tag/正文搜索知识包内 Concept."""
+    svc = _okf_service()
+    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    if error:
+        return {'bundle_dir': str(bindir), 'error': error, 'count': 0, 'results': []}
+    return svc.search_concepts(bindir, query=query, node_type=type, title=title, tag=tag, limit=limit)
+
+
+@app.post('/v1/okf/bundles/{bundle_name}/lint')
+async def okf_lint_bundle(bundle_name: str) -> dict[str, Any]:
+    """对指定知识包运行结构体检（断链/重复/口径冲突）."""
+    svc = _okf_service()
+    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    if error:
+        return {'error': error, 'concepts_scanned': 0, 'issues': []}
+    return svc.lint_bundle(bindir)
+
+
+@app.post('/v1/okf/export')
+async def okf_export_dataset(
+    dataset_name: str | None = None,
+    dataset_id: str | None = None,
+    output_dir: str | None = None,
+    bundle_title: str | None = None,
+) -> dict[str, Any]:
+    """把数据集导出为 OKF 知识包（供 Web UI 创建动作调用）."""
+    import sys as _sys
+    if str(AOF_ROOT) not in _sys.path:
+        _sys.path.insert(0, str(AOF_ROOT))
+    from exporters.okf_exporter import OKFExporter
+
+    exp = OKFExporter(cognee_root=None)
+    out = Path(output_dir) if output_dir else None
+    result = await exp.export(
+        output_dir=str(out) if out else '/tmp/aof_okf_export',
+        dataset_id=dataset_id,
+        dataset_name=dataset_name,
+        bundle_title=bundle_title,
+    )
+    return result.to_dict()
+
+
+# ==================== RAG Retrieval Endpoints ====================
+
+class RagRetrieveReq(BaseModel):
+    """RAG 统一检索请求（多路召回 + 命中溯源）."""
+    query: str = Field(..., min_length=1, description='检索查询')
+    dataset_id: str | None = Field(default=None, description='数据集 ID（可选）')
+    dataset_name: str | None = Field(default=None, description='数据集名称（可选，默认取 spec.dataset）')
+    limit: int = Field(default=10, ge=1, le=50, description='返回结果数')
+    expansion: bool = Field(default=False, description='是否开启查询扩展')
+    include_graph: bool = Field(default=True, description='是否包含图谱路径召回（第三路）')
+
+
+# ==================== Decision provenance (PROV-O-inspired) ====================
+
+class DecisionEvidenceReq(BaseModel):
+    id: str = Field(min_length=1, description='不可变证据实体 ID，例如 document:abc#chunk-3')
+    type: str = 'evidence'
+    uri: Optional[str] = None
+    content_hash: Optional[str] = None
+    description: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DecisionRecordReq(BaseModel):
+    agent_id: str = Field(min_length=1)
+    decision_type: str = Field(min_length=1)
+    conclusion: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    evidence: list[DecisionEvidenceReq] = Field(default_factory=list)
+    parent_decision_ids: list[str] = Field(default_factory=list)
+    output_entities: list[dict[str, Any]] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    policies: list[str] = Field(default_factory=list)
+    status: str = 'completed'
+    tenant_id: Optional[str] = None
+    session_id: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    decision_id: Optional[str] = None
+
+
+class DecisionPrecedentReq(BaseModel):
+    decision_type: str = Field(min_length=1)
+    tags: list[str] = Field(default_factory=list)
+    tenant_id: Optional[str] = None
+    limit: int = Field(default=20, ge=1, le=100)
+
+
+class DecisionImpactReq(BaseModel):
+    decision_id: str = Field(min_length=1)
+    max_depth: int = Field(default=8, ge=1, le=50)
+
+
+def _decision_store():
+    from bridge.decision_provenance import DecisionProvenanceStore
+    return DecisionProvenanceStore(AOF_ROOT / 'data' / 'audit' / 'decision_provenance.jsonl')
+
+
+def _decision_error(exc: Exception) -> HTTPException:
+    message = str(exc)
+    return HTTPException(status_code=404 if message.startswith('decision not found:') else 422, detail=message)
+
+
+@app.post('/v1/decisions', status_code=201)
+async def record_decision(req: DecisionRecordReq) -> dict[str, Any]:
+    """Record an Agent Decision Activity and its evidence/causal predecessors."""
+    try:
+        return _decision_store().record(**req.model_dump())
+    except Exception as exc:
+        raise _decision_error(exc) from exc
+
+
+@app.get('/v1/decisions/{decision_id}')
+async def get_decision(decision_id: str) -> dict[str, Any]:
+    entry = _decision_store().get(decision_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
+    return entry
+
+
+@app.get('/v1/decisions/{decision_id}/causal-chain')
+async def decision_causal_chain(decision_id: str, direction: str = Query('ancestors'), max_depth: int = Query(8, ge=1, le=50)) -> dict[str, Any]:
+    try:
+        return _decision_store().causal_chain(decision_id, direction=direction, max_depth=max_depth)
+    except Exception as exc:
+        raise _decision_error(exc) from exc
+
+
+@app.post('/v1/decisions/precedents/search')
+async def search_decision_precedents(req: DecisionPrecedentReq) -> dict[str, Any]:
+    return {'results': _decision_store().find_precedents(**req.model_dump())}
+
+
+@app.post('/v1/decisions/impact')
+async def decision_impact(req: DecisionImpactReq) -> dict[str, Any]:
+    try:
+        return _decision_store().impact(**req.model_dump())
+    except Exception as exc:
+        raise _decision_error(exc) from exc
+
+
+@app.get('/v1/decisions/{decision_id}/audit-trail')
+async def decision_audit_trail(decision_id: str) -> dict[str, Any]:
+    try:
+        return _decision_store().audit_trail(decision_id)
+    except Exception as exc:
+        raise _decision_error(exc) from exc
+
+
+# ==================== Semantic IR proposal & Knowledge Release governance ====================
+
+class SemanticProposalCreateReq(BaseModel):
+    proposal_id: str = Field(min_length=1)
+    release_id: str = Field(min_length=1)
+    resources: list[dict[str, Any]] = Field(min_length=1)
+    actor: Optional[str] = None  # deprecated; ignored in favor of signed principal
+    rationale: str = Field(min_length=1)
+    parent_release: Optional[str] = None
+    scope: dict[str, Any] = Field(default_factory=dict)
+
+
+class SemanticActorReq(BaseModel):
+    actor: Optional[str] = None  # deprecated; ignored in favor of signed principal
+
+
+class SemanticReviewReq(SemanticActorReq):
+    rationale: str = Field(min_length=1)
+
+
+class SemanticWaiverReq(SemanticReviewReq):
+    finding_id: str = Field(min_length=1)
+    policy: str = Field(min_length=1)
+
+
+class SemanticCompileReq(SemanticActorReq):
+    targets: list[str] = Field(min_length=1)
+
+
+class SemanticCompilerContextReq(BaseModel):
+    release: dict[str, Any]
+    resources: list[dict[str, Any]] = Field(min_length=1)
+    policy: dict[str, Any]
+    targets: list[str] = Field(default_factory=list)
+    waivers: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class SemanticCompilerRunReq(SemanticCompilerContextReq):
+    run_id: str = Field(min_length=1)
+    expected_plan_digest: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+class SemanticCompilerReplayReq(SemanticCompilerContextReq):
+    source_run_id: str = Field(min_length=1)
+    run_id: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+class SemanticCompilerChannelReq(BaseModel):
+    run_id: str = Field(min_length=1)
+    channel: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    approval_decision_id: Optional[str] = None
+
+
+class SemanticCompilerRollbackReq(BaseModel):
+    channel: str = Field(min_length=1)
+    to_run_id: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+class SemanticQueryReq(BaseModel):
+    query_run_id: Optional[str] = None
+    channel: str = Field(min_length=1)
+    capability: str = Field(min_length=1)
+    query: str = Field(min_length=1)
+    purpose: str = Field(min_length=1)
+    policy_resource_id: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    waivers: list[dict[str, Any]] = Field(default_factory=list)
+    session_id: Optional[str] = None
+
+
+class SemanticQueryReplayReq(BaseModel):
+    source_query_run_id: str = Field(min_length=1)
+    expected_source_digest: str = Field(min_length=1)
+    query_run_id: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    session_id: Optional[str] = None
+
+
+class SemanticActionReq(BaseModel):
+    channel: str = Field(min_length=1)
+    action_type_id: str = Field(min_length=1)
+    object_ids: list[str] = Field(min_length=1)
+    inputs: dict[str, Any]
+    purpose: str = Field(min_length=1)
+    idempotency_key: str = Field(min_length=1)
+    policy_resource_id: str = Field(min_length=1)
+
+
+class SemanticActionSubmitReq(SemanticActionReq):
+    expected_plan_digest: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+class SemanticActionApprovalReq(BaseModel):
+    rationale: str = Field(min_length=1)
+
+
+class KnowledgeSourceReq(BaseModel):
+    source_id: str = Field(min_length=1)
+    source_type: str = Field(min_length=1)
+    config: dict[str, Any]
+
+
+class KnowledgeIngestReq(BaseModel):
+    attempt_id: str = Field(min_length=1)
+
+
+class ContinuousCompileStageReq(BaseModel):
+    release_id: str = Field(min_length=1)
+    resources: list[dict[str, Any]] = Field(min_length=1)
+    parent_release: Optional[str] = None
+
+
+class RuntimeReasoningReq(BaseModel):
+    ruleset_id: str = Field(min_length=1)
+    program: str = Field(min_length=1)
+    change: dict[str, Any]
+
+
+class RuntimeWorkflowStartReq(BaseModel):
+    plan: dict[str, Any]
+    rationale: str = Field(min_length=1)
+
+
+class RuntimeWorkflowApprovalReq(BaseModel):
+    rationale: str = Field(min_length=1)
+
+
+class RuntimeSimulationReq(BaseModel):
+    request: dict[str, Any]
+
+
+def _semantic_governance():
+    from bridge.semantic_core.compilers import default_compiler_registry
+    from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
+    from bridge.semantic_core.releases import SqliteReleaseRepository
+    from bridge.semantic_core.keys import LocalSigningKeyProvider, ProviderReleaseAttestor
+    from bridge.semantic_core.validators import (
+        ontology_release_validator,
+        semantic_query_regression_validator,
+    )
+
+    governance_root = AOF_ROOT / 'data' / 'semantic_governance'
+    signing_secret = os.environ.get('AOF_RELEASE_SIGNING_SECRET', '').encode('utf-8')
+    release_key_id = os.environ.get(
+        'AOF_RELEASE_SIGNING_KEY_ID', 'release-key-default'
+    )
+    attestor = ProviderReleaseAttestor(
+        LocalSigningKeyProvider(
+            {release_key_id: signing_secret}, current_key_id=release_key_id
+        )
+    ) if signing_secret else None
+    return SemanticGovernanceService(
+        governance_root,
+        decision_store=_decision_store(),
+        compiler_registry=default_compiler_registry(),
+        validators=[ontology_release_validator, semantic_query_regression_validator],
+        release_repository=SqliteReleaseRepository(governance_root / 'releases.sqlite3'),
+        access_policy=SemanticGovernancePolicy(),
+        release_attestor=attestor,
+    )
+
+
+def _semantic_compiler_control():
+    from bridge.semantic_core.compilers import (
+        CompilationRunRepository,
+        CompilerControlPlane,
+        SqliteCompilationRunRepository,
+        default_compiler_registry,
+    )
+    from bridge.semantic_core.identity import SignedPrincipalVerifier
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    return CompilerControlPlane(
+        AOF_ROOT / 'data' / 'semantic_compiler',
+        verifier=SignedPrincipalVerifier(
+            key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+            secret=secret,
+        ),
+        registry=default_compiler_registry(),
+        decision_store=_decision_store(),
+        repository_factory=(
+            SqliteCompilationRunRepository
+            if os.environ.get('AOF_RUNTIME_MODE', 'development').lower() == 'production'
+            else CompilationRunRepository
+        ),
+    )
+
+
+def _semantic_query_control():
+    from bridge.semantic_core import (
+        QueryControlPlane,
+        QueryExecutionLimits,
+        QueryExecutor,
+        SignedPrincipalVerifier,
+        SqliteSemanticSqlExecutor,
+    )
+    from bridge.semantic_core.keys import (
+        LocalSigningKeyProvider,
+        ProviderQueryEvidenceAttestor,
+    )
+    from bridge.semantic_core.compilers import (
+        CompilationRunRepository,
+        SqliteCompilationRunRepository,
+    )
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    state_root = Path(
+        os.environ.get(
+            'AOF_COMPILER_STATE_DIR', str(AOF_ROOT / 'data' / 'semantic_compiler')
+        )
+    )
+    sqlite_database = os.environ.get('AOF_QUERY_SQLITE_DATABASE', '').strip()
+    raw_attachments = os.environ.get('AOF_QUERY_SQLITE_ATTACHMENTS', '{}')
+    try:
+        sqlite_attachments = json.loads(raw_attachments)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=503, detail='AOF_QUERY_SQLITE_ATTACHMENTS must be JSON'
+        ) from exc
+    if not isinstance(sqlite_attachments, dict):
+        raise HTTPException(
+            status_code=503, detail='AOF_QUERY_SQLITE_ATTACHMENTS must be an object'
+        )
+
+    def executor_factory(resolver):
+        executor = QueryExecutor(resolver)
+        if sqlite_database:
+            executor.registry.replace(
+                'semantic_sql',
+                SqliteSemanticSqlExecutor(
+                    resolver,
+                    database=sqlite_database,
+                    attachments=sqlite_attachments,
+                    limits=QueryExecutionLimits.from_environment(os.environ),
+                ),
+            )
+        return executor
+
+    return QueryControlPlane(
+        state_root,
+        verifier=SignedPrincipalVerifier(
+            key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+            secret=secret,
+        ),
+        decision_store=_decision_store(),
+        evidence_attestor=ProviderQueryEvidenceAttestor(
+            LocalSigningKeyProvider(
+                {
+                    os.environ.get(
+                        'AOF_QUERY_EVIDENCE_SIGNING_KEY_ID',
+                        'query-evidence-key-default',
+                    ): os.environ.get(
+                        'AOF_QUERY_EVIDENCE_SIGNING_SECRET', secret.decode('utf-8')
+                    ).encode('utf-8')
+                },
+                current_key_id=os.environ.get(
+                    'AOF_QUERY_EVIDENCE_SIGNING_KEY_ID',
+                    'query-evidence-key-default',
+                ),
+            )
+        ),
+        executor_factory=executor_factory,
+        compilation_repository_factory=(
+            SqliteCompilationRunRepository
+            if os.environ.get('AOF_RUNTIME_MODE', 'development').lower() == 'production'
+            else CompilationRunRepository
+        ),
+    )
+
+
+def _semantic_action_control(headers: Mapping[str, str]):
+    from bridge.semantic_core import (
+        ActionConnectorRegistry,
+        ActionControlPlane,
+        SignedPrincipalVerifier,
+        SqliteActionRunRepository,
+    )
+    from bridge.semantic_core.compilers import (
+        CompilationRunRepository,
+        SqliteCompilationRunRepository,
+    )
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    verifier = SignedPrincipalVerifier(
+        key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+        secret=secret,
+    )
+    principal = verifier.verify(headers)
+    state_root = Path(
+        os.environ.get(
+            'AOF_COMPILER_STATE_DIR', str(AOF_ROOT / 'data' / 'semantic_compiler')
+        )
+    )
+    repository_type = (
+        SqliteCompilationRunRepository
+        if os.environ.get('AOF_RUNTIME_MODE', 'development').lower() == 'production'
+        else CompilationRunRepository
+    )
+    return ActionControlPlane(
+        repository_type(state_root / principal.tenant_id),
+        verifier=verifier,
+        action_runs=SqliteActionRunRepository(
+            Path(
+                os.environ.get(
+                    'AOF_ACTION_RUN_DATABASE',
+                    str(AOF_ROOT / 'data' / 'semantic_actions' / 'action-runs.sqlite3'),
+                )
+            )
+        ),
+        connectors=_semantic_action_connectors(ActionConnectorRegistry),
+        decision_store=_decision_store(),
+    )
+
+
+def _semantic_action_connectors(registry_type):
+    """Return the process-wide provider registry; an empty registry fails closed."""
+    registry = getattr(app.state, 'semantic_action_connectors', None)
+    if registry is None:
+        registry = registry_type()
+        app.state.semantic_action_connectors = registry
+    return registry
+
+
+def _continuous_ingestion_control():
+    from bridge.semantic_core import (
+        ContinuousIngestionControlPlane,
+        JsonlFileSourceConnector,
+        SignedPrincipalVerifier,
+        SourceConnectorRegistry,
+        SqliteTableSourceConnector,
+        SqliteContinuousIngestionRepository,
+    )
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    connectors = getattr(app.state, 'knowledge_source_connectors', None)
+    if connectors is None:
+        connectors = SourceConnectorRegistry()
+        configured_roots = os.environ.get(
+            'AOF_INGESTION_FILE_ROOTS', str(AOF_ROOT / 'data')
+        )
+        allowed_roots = tuple(
+            Path(item).resolve() for item in configured_roots.split(os.pathsep) if item
+        )
+        connectors.register('jsonl', JsonlFileSourceConnector(allowed_roots=allowed_roots))
+        connectors.register('sqlite', SqliteTableSourceConnector(allowed_roots=allowed_roots))
+        app.state.knowledge_source_connectors = connectors
+    database = Path(os.environ.get(
+        'AOF_CONTINUOUS_INGESTION_DATABASE',
+        str(AOF_ROOT / 'data' / 'continuous_ingestion' / 'state.sqlite3'),
+    ))
+    return ContinuousIngestionControlPlane(
+        SqliteContinuousIngestionRepository(database),
+        connectors,
+        SignedPrincipalVerifier(
+            key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+            secret=secret,
+        ),
+        decisions=_decision_store(),
+    )
+
+
+def _continuous_knowledge_compiler(tenant_id: str):
+    from bridge.semantic_core import (
+        ContinuousKnowledgeCompiler,
+        SqliteContinuousIngestionRepository,
+    )
+    from bridge.semantic_core.compilers import (
+        CompilationRunRepository,
+        CompilationRunService,
+        SqliteCompilationRunRepository,
+        default_compiler_registry,
+    )
+
+    database = Path(os.environ.get(
+        'AOF_CONTINUOUS_INGESTION_DATABASE',
+        str(AOF_ROOT / 'data' / 'continuous_ingestion' / 'state.sqlite3'),
+    ))
+    root = Path(os.environ.get(
+        'AOF_COMPILER_STATE_DIR', str(AOF_ROOT / 'data' / 'semantic_compiler')
+    ))
+    repository_type = (
+        SqliteCompilationRunRepository
+        if os.environ.get('AOF_RUNTIME_MODE', 'development').lower() == 'production'
+        else CompilationRunRepository
+    )
+    registry = default_compiler_registry()
+    decisions = _decision_store()
+    return ContinuousKnowledgeCompiler(
+        SqliteContinuousIngestionRepository(database),
+        _semantic_governance(),
+        CompilationRunService(
+            repository_type(root / tenant_id),
+            registry=registry,
+            decision_store=decisions,
+        ),
+        decisions,
+    )
+
+
+def _enterprise_runtime_control():
+    from bridge.semantic_core import (
+        ActionConnectorRegistry,
+        ActionRunService,
+        BitemporalObjectStore,
+        EnterpriseRuntimeControlPlane,
+        SignedPrincipalVerifier,
+        SqliteActionRunRepository,
+        SqliteBitemporalSimulationService,
+        SqliteIncrementalReasoningRuntime,
+        SqliteWorkflowRunRepository,
+        WorkflowRunService,
+    )
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    root = Path(os.environ.get(
+        'AOF_ENTERPRISE_RUNTIME_STATE_DIR',
+        str(AOF_ROOT / 'data' / 'enterprise_runtime'),
+    ))
+    decisions = _decision_store()
+    connectors = _semantic_action_connectors(ActionConnectorRegistry)
+    actions = ActionRunService(
+        SqliteActionRunRepository(
+            Path(os.environ.get(
+                'AOF_ACTION_RUN_DATABASE',
+                str(AOF_ROOT / 'data' / 'semantic_actions' / 'action-runs.sqlite3'),
+            ))
+        ),
+        connectors=connectors,
+        decision_store=decisions,
+    )
+    return EnterpriseRuntimeControlPlane(
+        verifier=SignedPrincipalVerifier(
+            key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+            secret=secret,
+        ),
+        reasoning=SqliteIncrementalReasoningRuntime(
+            Path(os.environ.get(
+                'AOF_REASONING_RUNTIME_DATABASE', str(root / 'reasoning.sqlite3')
+            )),
+            decision_store=decisions,
+        ),
+        workflows=WorkflowRunService(
+            SqliteWorkflowRunRepository(
+                Path(os.environ.get(
+                    'AOF_WORKFLOW_RUN_DATABASE', str(root / 'workflows.sqlite3')
+                ))
+            ),
+            actions=actions,
+            decision_store=decisions,
+        ),
+        simulations=SqliteBitemporalSimulationService(
+            Path(os.environ.get(
+                'AOF_SIMULATION_RUN_DATABASE', str(root / 'simulations.sqlite3')
+            )),
+            objects=BitemporalObjectStore(
+                Path(os.environ.get(
+                    'AOF_BITEMPORAL_OBJECT_DATABASE', str(root / 'objects.sqlite3')
+                ))
+            ),
+            decision_store=decisions,
+        ),
+    )
+
+
+def _enterprise_runtime_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core.identity import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif any(token in message for token in ('already bound', 'changed concurrently', 'cannot change')):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _semantic_governance_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if 'not found:' in message:
+        status_code = 404
+    elif any(token in message for token in ('cannot ', 'already exists:', 'already waived:', 'blocked by', 'cannot be overwritten:', 'separation of duties')):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _semantic_compiler_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core.identity import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif any(token in message for token in ('already exists:', 'cannot be overwritten:', 'already points', 'already been used', 'separation')):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _semantic_query_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message or 'not in the trusted release:' in message:
+        status_code = 404
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _semantic_action_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif any(
+        token in message
+        for token in ('does not match', 'separation of duties', 'already ', 'cannot ')
+    ):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _continuous_ingestion_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif 'already ' in message or 'concurrently' in message:
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+def _semantic_principal(request: Request, action: str):
+    from bridge.semantic_core.identity import PrincipalVerificationError, SignedPrincipalVerifier
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='semantic identity verifier is not configured')
+    verifier = SignedPrincipalVerifier(
+        key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+        secret=secret,
+    )
+    try:
+        principal = verifier.verify(request.headers)
+        return principal, principal.actor_for(action)
+    except PrincipalVerificationError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+@app.post('/v1/semantic/proposals', status_code=201)
+async def create_semantic_proposal(req: SemanticProposalCreateReq, request: Request) -> dict[str, Any]:
+    from bridge.semantic_core import SemanticResource
+
+    try:
+        principal, actor = _semantic_principal(request, 'create')
+        payload = req.model_dump()
+        payload.pop('actor', None)
+        payload['resources'] = [SemanticResource.from_dict(item) for item in payload['resources']]
+        payload['actor'] = actor
+        payload['scope'] = {**payload['scope'], 'tenant_id': principal.tenant_id}
+        return _semantic_governance().create_proposal(**payload)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.get('/v1/semantic/proposals/{proposal_id}')
+async def get_semantic_proposal(proposal_id: str, request: Request) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        return _semantic_governance().get_proposal(proposal_id, tenant_id=principal.tenant_id)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/validate')
+async def validate_semantic_proposal(proposal_id: str, req: SemanticActorReq, request: Request) -> dict[str, Any]:
+    try:
+        principal, actor = _semantic_principal(request, 'validate')
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.validate(proposal_id, actor=actor)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.get('/v1/semantic/proposals/{proposal_id}/impact')
+async def semantic_proposal_impact(proposal_id: str, request: Request) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        return _semantic_governance().impact(proposal_id, tenant_id=principal.tenant_id)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/waivers', status_code=201)
+async def waive_semantic_finding(proposal_id: str, req: SemanticWaiverReq, request: Request) -> dict[str, Any]:
+    try:
+        principal, actor = _semantic_principal(request, 'waive')
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        payload = req.model_dump()
+        payload.pop('actor', None)
+        payload['actor'] = actor
+        return service.waive_finding(proposal_id, **payload)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/request-changes')
+async def request_semantic_changes(proposal_id: str, req: SemanticReviewReq, request: Request) -> dict[str, Any]:
+    try:
+        principal, actor = _semantic_principal(request, 'request_changes')
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.request_changes(proposal_id, actor=actor, rationale=req.rationale)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/approve')
+async def approve_semantic_proposal(proposal_id: str, req: SemanticReviewReq, request: Request) -> dict[str, Any]:
+    try:
+        principal, actor = _semantic_principal(request, 'approve')
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.approve(proposal_id, actor=actor, rationale=req.rationale)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/compile')
+async def compile_semantic_proposal(proposal_id: str, req: SemanticCompileReq, request: Request) -> dict[str, Any]:
+    try:
+        principal, actor = _semantic_principal(request, 'compile')
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.compile(proposal_id, actor=actor, targets=req.targets)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/proposals/{proposal_id}/publish')
+async def publish_semantic_proposal(proposal_id: str, req: SemanticActorReq, request: Request) -> dict[str, Any]:
+    try:
+        principal, actor = _semantic_principal(request, 'publish')
+        service = _semantic_governance()
+        service.get_proposal(proposal_id, tenant_id=principal.tenant_id)
+        return service.publish(proposal_id, actor=actor)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.get('/v1/semantic/releases/{release_id}')
+async def get_semantic_release(
+    release_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        repository = _semantic_governance().release_repository
+        release = repository.get(release_id, tenant_id=principal.tenant_id)
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+    if release is None:
+        raise HTTPException(status_code=404, detail=f'release not found: {release_id}')
+    return release.to_dict()
+
+
+@app.post('/v1/semantic/compiler/plan')
+async def plan_semantic_compilation(
+    req: SemanticCompilerContextReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().plan(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/evaluate')
+async def evaluate_semantic_compilation(
+    req: SemanticCompilerContextReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().evaluate(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/runs', status_code=201)
+async def execute_semantic_compilation(
+    req: SemanticCompilerRunReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().execute(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/runs/replay', status_code=201)
+async def replay_semantic_compilation(
+    req: SemanticCompilerReplayReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().replay(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.get('/v1/semantic/compiler/runs/{run_id}')
+async def get_semantic_compilation_run(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().get_run(run_id, headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/channels/approvals', status_code=201)
+async def approve_semantic_compilation_promotion(
+    req: SemanticCompilerChannelReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().approve_promotion(
+            req.model_dump(exclude_none=True), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/channels/promote')
+async def promote_semantic_compilation(
+    req: SemanticCompilerChannelReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().promote(
+            req.model_dump(exclude_none=True), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/compiler/channels/rollback')
+async def rollback_semantic_compilation(
+    req: SemanticCompilerRollbackReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().rollback(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.get('/v1/semantic/compiler/channels/{channel}')
+async def get_semantic_compilation_channel(channel: str, request: Request) -> dict[str, Any]:
+    try:
+        return _semantic_compiler_control().get_channel(channel, headers=request.headers)
+    except Exception as exc:
+        raise _semantic_compiler_error(exc) from exc
+
+
+@app.post('/v1/semantic/query')
+async def execute_trusted_semantic_query(
+    req: SemanticQueryReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_query_control().execute(
+            req.model_dump(exclude_none=True), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_query_error(exc) from exc
+
+
+@app.post('/v1/semantic/query-runs/replay', status_code=201)
+async def replay_trusted_semantic_query(
+    req: SemanticQueryReplayReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_query_control().replay(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _semantic_query_error(exc) from exc
+
+
+@app.get('/v1/semantic/query-runs/{query_run_id}')
+async def get_trusted_semantic_query_run(
+    query_run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_query_control().get_run(query_run_id, headers=request.headers)
+    except Exception as exc:
+        raise _semantic_query_error(exc) from exc
+
+
+@app.post('/v1/semantic/actions/plan')
+async def plan_governed_semantic_action(
+    req: SemanticActionReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).plan(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
+
+
+@app.post('/v1/semantic/action-runs', status_code=201)
+async def submit_governed_semantic_action(
+    req: SemanticActionSubmitReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).submit(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
+
+
+@app.post('/v1/semantic/action-runs/{run_id}/approve')
+async def approve_governed_semantic_action(
+    run_id: str, req: SemanticActionApprovalReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).approve(
+            {'run_id': run_id, **req.model_dump()}, headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
+
+
+@app.post('/v1/semantic/action-runs/{run_id}/execute')
+async def execute_governed_semantic_action(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).execute(
+            {'run_id': run_id}, headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
+
+
+@app.get('/v1/semantic/action-runs/{run_id}')
+async def get_governed_semantic_action_run(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _semantic_action_control(request.headers).get_run(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _semantic_action_error(exc) from exc
+
+
+@app.post('/v1/knowledge/sources', status_code=201)
+async def register_continuous_knowledge_source(req: KnowledgeSourceReq, request: Request) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().register(req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
+
+
+@app.get('/v1/knowledge/sources')
+async def list_continuous_knowledge_sources(request: Request) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().list_sources(headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
+
+
+@app.post('/v1/knowledge/sources/{source_id}/ingest', status_code=201)
+async def ingest_continuous_knowledge_source(source_id: str, req: KnowledgeIngestReq, request: Request) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().ingest(source_id, req.model_dump(), headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
+
+
+@app.get('/v1/knowledge/ingestion-runs')
+async def list_continuous_ingestion_runs(request: Request, source_id: Optional[str] = None) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().list_runs(source_id=source_id, headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
+
+
+@app.get('/v1/knowledge/ingestion-runs/{run_id}')
+async def get_continuous_ingestion_run(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        return _continuous_ingestion_control().get_run(run_id, headers=request.headers)
+    except Exception as exc:
+        raise _continuous_ingestion_error(exc) from exc
+
+
+@app.post('/v1/knowledge/ingestion-runs/{run_id}/stage', status_code=201)
+async def stage_continuous_knowledge_compilation(
+    run_id: str, req: ContinuousCompileStageReq, request: Request
+) -> dict[str, Any]:
+    from bridge.semantic_core import SemanticResource
+
+    try:
+        principal, actor = _semantic_principal(request, 'create')
+        validator = principal.actor_for('validate')
+        return _continuous_knowledge_compiler(principal.tenant_id).stage(
+            run_id,
+            tenant_id=principal.tenant_id,
+            release_id=req.release_id,
+            resources=[SemanticResource.from_dict(item) for item in req.resources],
+            actor=actor,
+            validator=validator,
+            parent_release=req.parent_release,
+        )
+    except Exception as exc:
+        raise _semantic_governance_error(exc) from exc
+
+
+@app.post('/v1/semantic/reasoning-runs', status_code=201)
+async def apply_enterprise_reasoning(
+    req: RuntimeReasoningReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().apply_reasoning(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/reasoning-runs')
+async def list_enterprise_reasoning_runs(request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().list_reasoning_runs(headers=request.headers)
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/reasoning/facts')
+async def query_enterprise_reasoning_facts(
+    request: Request, ruleset_id: str, predicate: Optional[str] = None
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().query_reasoning(
+            ruleset_id=ruleset_id, predicate=predicate, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/reasoning-runs/{run_id}')
+async def get_enterprise_reasoning_run(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().get_reasoning_run(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/reasoning-runs/{run_id}/replay')
+async def replay_enterprise_reasoning_run(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().replay_reasoning(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/workflow-runs', status_code=201)
+async def start_enterprise_workflow(
+    req: RuntimeWorkflowStartReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().start_workflow(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/workflow-runs')
+async def list_enterprise_workflows(request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().list_workflow_runs(headers=request.headers)
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/workflow-runs/{run_id}')
+async def get_enterprise_workflow(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().get_workflow_run(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/workflow-runs/{run_id}/nodes/{node_id}/approve')
+async def approve_enterprise_workflow_node(
+    run_id: str,
+    node_id: str,
+    req: RuntimeWorkflowApprovalReq,
+    request: Request,
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().approve_workflow_node(
+            run_id, node_id, req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/workflow-runs/{run_id}/advance')
+async def advance_enterprise_workflow(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().advance_workflow(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/simulations', status_code=201)
+async def run_enterprise_simulation(
+    req: RuntimeSimulationReq, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().simulate(
+            req.model_dump(), headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/simulations')
+async def list_enterprise_simulations(request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().list_simulations(headers=request.headers)
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.get('/v1/semantic/simulations/{run_id}')
+async def get_enterprise_simulation(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().get_simulation(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+@app.post('/v1/semantic/simulations/{run_id}/replay')
+async def replay_enterprise_simulation(
+    run_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        return _enterprise_runtime_control().replay_simulation(
+            run_id, headers=request.headers
+        )
+    except Exception as exc:
+        raise _enterprise_runtime_error(exc) from exc
+
+
+# ==================== Ontology governance & deterministic reasoning ====================
+
+class OntologyDraftCreateReq(BaseModel):
+    ontology_id: str = Field(min_length=1)
+    created_by: str = ''
+    ontology_text: str = Field(min_length=1)
+    shapes_text: str = Field(min_length=1)
+    skos_text: str = ''
+    base_version: Optional[str] = None
+
+
+class OntologyDraftUpdateReq(BaseModel):
+    actor: str = ''
+    ontology_text: Optional[str] = None
+    shapes_text: Optional[str] = None
+    skos_text: Optional[str] = None
+
+
+class OntologyActorReq(BaseModel):
+    actor: str = ''
+
+
+class OntologyWaiverReq(BaseModel):
+    finding_id: str = Field(min_length=1)
+    actor: str = ''
+    rationale: str = Field(min_length=1)
+    policy: str = Field(min_length=1)
+    expires_at: Optional[str] = None
+
+
+class OntologyApprovalReq(BaseModel):
+    approver: str = ''
+    rationale: str = Field(min_length=1)
+    policies: list[str] = Field(default_factory=list)
+
+
+class OntologyChangesReq(BaseModel):
+    reviewer: str = ''
+    rationale: str = Field(min_length=1)
+
+
+class DatalogRunReq(BaseModel):
+    program: str = Field(min_length=1)
+    ruleset_id: str = 'ruleset:default'
+    facts: list[dict[str, Any]] = Field(default_factory=list)
+    agent_id: str = 'engine:datalog'
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class DatalogRuleSetPublishReq(BaseModel):
+    ruleset_id: str = Field(min_length=1)
+    program: str = Field(min_length=1)
+    actor: str = Field(min_length=1)
+    description: str = ''
+
+
+class DatalogRuleSetRunReq(BaseModel):
+    facts: list[dict[str, Any]] = Field(default_factory=list)
+    agent_id: str = 'engine:datalog'
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class SparqlQueryReq(BaseModel):
+    query: str = Field(min_length=1)
+
+
+def _ontology_governance(tenant_id: str):
+    from bridge.ontology_governance import OntologyGovernanceService
+    return OntologyGovernanceService(
+        AOF_ROOT / 'data' / 'ontology_governance' / tenant_id,
+        _decision_store(),
+    )
+
+
+def _ontology_context(request: Request, action: str):
+    principal, actor = _semantic_principal(request, action)
+    return principal, actor, _ontology_governance(principal.tenant_id)
+
+
+def _datalog_rulesets():
+    from bridge.ontology_governance import RuleSetRepository
+    return RuleSetRepository(AOF_ROOT / 'data' / 'ontology_governance' / 'rulesets', _decision_store())
+
+
+def _ontology_error(exc: Exception) -> HTTPException:
+    from bridge.semantic_core import PrincipalVerificationError
+
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if isinstance(exc, PrincipalVerificationError):
+        status_code = 401
+    elif 'not found:' in message:
+        status_code = 404
+    elif any(word in message for word in ('blocked', 'cannot be edited', 'only an approved', 'separation of duties')):
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
+
+
+@app.post('/v1/ontology/drafts', status_code=201)
+async def create_ontology_draft(req: OntologyDraftCreateReq, request: Request) -> dict[str, Any]:
+    try:
+        _, actor, service = _ontology_context(request, 'create')
+        payload = req.model_dump()
+        payload['created_by'] = actor
+        return service.create_draft(**payload)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/drafts')
+async def list_ontology_drafts(request: Request) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        drafts = service.list_drafts()
+        return {'drafts': drafts, 'count': len(drafts)}
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/workbench/session')
+async def get_ontology_workbench_session(request: Request) -> dict[str, Any]:
+    try:
+        principal, _, _ = _ontology_context(request, 'read')
+        roles = set(principal.roles)
+        permissions = {
+            'read': True,
+            'edit': bool(roles.intersection({'admin', 'owner', 'editor'})),
+            'validate': bool(roles.intersection({'admin', 'validator'})),
+            'waive': bool(roles.intersection({'admin', 'risk-owner'})),
+            'review': bool(roles.intersection({'admin', 'reviewer'})),
+            'publish': bool(roles.intersection({'admin', 'publisher'})),
+        }
+        return {
+            'subject': principal.subject,
+            'tenant_id': principal.tenant_id,
+            'roles': list(principal.roles),
+            'permissions': permissions,
+        }
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/workbench/summary')
+async def get_ontology_workbench_summary(request: Request) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        return service.workbench_summary()
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/drafts/{draft_id}/audit-trail')
+async def get_ontology_draft_audit_trail(
+    draft_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        return service.audit_trail(draft_id)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/drafts/{draft_id}')
+async def get_ontology_draft(draft_id: str, request: Request) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        return service.get_draft_bundle(draft_id)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.put('/v1/ontology/drafts/{draft_id}')
+async def update_ontology_draft(draft_id: str, req: OntologyDraftUpdateReq, request: Request) -> dict[str, Any]:
+    try:
+        _, actor, service = _ontology_context(request, 'edit')
+        payload = req.model_dump()
+        payload['actor'] = actor
+        return service.update_draft(draft_id, **payload)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/validate')
+async def validate_ontology_draft(draft_id: str, req: OntologyActorReq, request: Request) -> dict[str, Any]:
+    try:
+        _, actor, service = _ontology_context(request, 'validate')
+        return service.validate_draft(draft_id, actor=actor)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/waivers', status_code=201)
+async def waive_ontology_finding(draft_id: str, req: OntologyWaiverReq, request: Request) -> dict[str, Any]:
+    try:
+        _, actor, service = _ontology_context(request, 'waive')
+        payload = req.model_dump()
+        payload['actor'] = actor
+        return service.waive_finding(draft_id, **payload)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/approve')
+async def approve_ontology_draft(draft_id: str, req: OntologyApprovalReq, request: Request) -> dict[str, Any]:
+    try:
+        _, actor, service = _ontology_context(request, 'approve')
+        payload = req.model_dump()
+        payload['approver'] = actor
+        return service.approve(draft_id, **payload)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/request-changes')
+async def request_ontology_changes(draft_id: str, req: OntologyChangesReq, request: Request) -> dict[str, Any]:
+    try:
+        _, actor, service = _ontology_context(request, 'request_changes')
+        return service.request_changes(draft_id, reviewer=actor, rationale=req.rationale)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/drafts/{draft_id}/publish')
+async def publish_ontology_draft(draft_id: str, req: OntologyActorReq, request: Request) -> dict[str, Any]:
+    try:
+        _, actor, service = _ontology_context(request, 'publish')
+        return service.publish(draft_id, actor=actor)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/drafts/{draft_id}/impact')
+async def preview_ontology_impact(draft_id: str, request: Request) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        return service.impact_preview(draft_id)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/releases')
+async def list_ontology_releases(request: Request, ontology_id: Optional[str] = None) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        releases = service.list_releases(ontology_id)
+        return {'releases': releases, 'count': len(releases)}
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/ontology/releases/{ontology_id}/{version}')
+async def get_ontology_release(ontology_id: str, version: str, request: Request) -> dict[str, Any]:
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        return service.get_release(ontology_id, version)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/reasoning/datalog/run')
+async def run_datalog(req: DatalogRunReq) -> dict[str, Any]:
+    from bridge.ontology_governance import DatalogEngine
+    try:
+        facts = [(item['predicate'], item.get('terms', [])) for item in req.facts]
+        return DatalogEngine(req.program, ruleset_id=req.ruleset_id).run(
+            facts, decision_store=_decision_store(), agent_id=req.agent_id, evidence=req.evidence,
+        )
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/reasoning/rulesets', status_code=201)
+async def publish_datalog_ruleset(req: DatalogRuleSetPublishReq) -> dict[str, Any]:
+    try:
+        return _datalog_rulesets().publish(**req.model_dump())
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.get('/v1/reasoning/rulesets')
+async def list_datalog_rulesets(ruleset_id: Optional[str] = None) -> dict[str, Any]:
+    rulesets = _datalog_rulesets().list(ruleset_id)
+    return {'rulesets': rulesets, 'count': len(rulesets)}
+
+
+@app.get('/v1/reasoning/rulesets/{ruleset_id}/{version}')
+async def get_datalog_ruleset(ruleset_id: str, version: str) -> dict[str, Any]:
+    try:
+        return _datalog_rulesets().get(ruleset_id, version)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/reasoning/rulesets/{ruleset_id}/{version}/run')
+async def run_datalog_ruleset(ruleset_id: str, version: str, req: DatalogRuleSetRunReq) -> dict[str, Any]:
+    try:
+        facts = [(item['predicate'], item.get('terms', [])) for item in req.facts]
+        return _datalog_rulesets().run(ruleset_id, version, facts, agent_id=req.agent_id, evidence=req.evidence)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/ontology/releases/{ontology_id}/{version}/sparql')
+async def query_ontology_release(ontology_id: str, version: str, req: SparqlQueryReq, request: Request) -> dict[str, Any]:
+    from bridge.ontology_governance import SparqlService
+    try:
+        _, _, service = _ontology_context(request, 'read')
+        release = service.get_release(ontology_id, version)
+        rdf_text = release['ontology_text'] + '\n' + release['skos_text']
+        return SparqlService(rdf_text, snapshot_id=f'ontology:{ontology_id}:{version}').query(req.query)
+    except Exception as exc:
+        raise _ontology_error(exc) from exc
+
+
+@app.post('/v1/rag/retrieve')
+async def rag_retrieve(req: RagRetrieveReq) -> dict[str, Any]:
+    """RAG 统一检索：关键词 + 向量 + 图谱路径多路召回，RRF 融合，带命中溯源.
+
+    返回结构中每条 result 携带 provenance（来源路 / 数据集 / 种子实体 / 图谱路径 / 关系），
+    供 Agent 消费时追踪"为什么命中".
+    """
+    import sys as _sys
+    if str(AOF_ROOT) not in _sys.path:
+        _sys.path.insert(0, str(AOF_ROOT))
+    from exporters.rag_service import rag_retrieve as _retrieve
+
+    dataset_name = req.dataset_name
+    if not dataset_name:
+        try:
+            spec_path = os.environ.get('AOF_SPEC_PATH', 'aof_spec.example.json')
+            sp = Path(spec_path)
+            if not sp.is_absolute():
+                sp = AOF_ROOT / sp
+            if sp.exists():
+                dataset_name = (json.loads(sp.read_text(encoding='utf-8')).get('dataset') or '')
+        except Exception:
+            dataset_name = ''
+    result = await _retrieve(
+        query=req.query,
+        dataset_id=req.dataset_id,
+        dataset_name=dataset_name,
+        limit=req.limit,
+        expansion=req.expansion,
+        include_graph=req.include_graph,
+    )
+    return result.to_dict()
+
+
+# ==================== Frontend Static Hosting (lightweight deploy) ====================
+# 放在所有 API 路由之后，catch-all 最后注册不抢占 /v1/* 等 API。
+_app_dist = AOF_ROOT / 'web' / 'dist'
+if os.environ.get('AOF_SERVE_WEB', '1') == '1' and _app_dist.is_dir():
+    if (_app_dist / 'assets').is_dir():
+        app.mount('/assets', StaticFiles(directory=_app_dist / 'assets'), name='aof_assets')
+
+    @app.get('/{full_path:path}', include_in_schema=False)
+    async def _spa_fallback(full_path: str):
+        target = (_app_dist / full_path).resolve() if full_path else _app_dist
+        try:
+            target.relative_to(_app_dist.resolve())
+        except ValueError:
+            return HTMLResponse(content='Not Found', status_code=404)
+        if target.is_file():
+            return FileResponse(target)
+        return FileResponse(_app_dist / 'index.html')
+
+    logging.getLogger(__name__).info('[AOF] 前端静态托管已启用: %s', _app_dist)
 
 
 if __name__ == '__main__':

@@ -12,7 +12,7 @@ from typing import Any
 
 from bridge.errors import CogneeImportError, CognifyExecutionError, OntologyConfigError
 from bridge.spec_mapper import map_aof_spec_to_cognee
-from bridge.ontology_adapter import build_cognee_ontology_config
+from bridge.ontology_adapter import apply_ontology
 
 
 def _import_cognee(cognee_root: str | None = None):
@@ -31,27 +31,11 @@ def _import_cognee(cognee_root: str | None = None):
 
 
 def _build_ontology_config(spec: dict[str, Any]):
-    ontology = spec.get("ontology") or {}
-    ontology_file = ontology.get("file")
-    if not ontology_file:
-        return None
-
-    if not Path(ontology_file).exists():
-        raise OntologyConfigError(f"ontology.file 不存在: {ontology_file}")
-
+    """从 spec 构建 cognee ontology config（薄包装，复用 ontology_adapter.apply_ontology）。"""
     try:
-        from cognee.modules.ontology.rdf_xml.RDFLibOntologyResolver import (  # type: ignore
-            RDFLibOntologyResolver,
-        )
-        from cognee.modules.ontology.matching_strategies import FuzzyMatchingStrategy  # type: ignore
-
-        cutoff = float(ontology.get("matching_cutoff", 0.8))
-        strategy = FuzzyMatchingStrategy(cutoff=cutoff)
-        return build_cognee_ontology_config(
-            ontology_file=ontology_file,
-            resolver_cls=RDFLibOntologyResolver,
-            matching_strategy=strategy,
-        )
+        return apply_ontology(spec)
+    except OntologyConfigError:
+        raise
     except Exception as e:  # pragma: no cover - runtime dependency boundary
         raise OntologyConfigError("构建 ontology config 失败") from e
 
