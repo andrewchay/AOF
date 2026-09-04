@@ -178,12 +178,18 @@ class TestSemanticEndpoints:
         assert "no manifest" in response.json()["detail"]
 
     def test_semantic_compile_no_manifest(self, client: TestClient) -> None:
-        """Test semantic compile without manifest."""
+        """Legacy compilation is retired before manifest lookup."""
         response = client.post(
             "/v1/semantic/compile",
             json={"topic": "unknown_topic", "intent": "get users"}
         )
-        assert response.status_code == 404
+        assert response.status_code == 410
+        assert response.json()["detail"] == {
+            "code": "legacy_semantic_compile_retired",
+            "message": "Ungoverned semantic compilation is retired",
+            "replacement": "/v1/semantic/query",
+            "capability": "semantic_sql",
+        }
 
     def test_semantic_evaluate(self, client: TestClient) -> None:
         """Test semantic evaluate endpoint."""

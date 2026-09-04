@@ -1,43 +1,51 @@
-# Trusted semantic vertical slice
+# Trusted semantic P0-P2 baseline
 
-This slice is the system-of-record boundary for enterprise knowledge.  It does
-not replace the graph, vector store, relational warehouse, or Skill runtime.
-Those systems may only consume a published semantic release.
+## P0: one governed runtime baseline
 
-## Lifecycle
+`bridge.semantic_core` is the canonical runtime contract. It owns immutable
+semantic resources, release manifests, signed principals, compilation runs,
+query plans and query receipts. `bridge.decision_provenance` supplies an
+append-only, hash-chained explanation of why a release or decision exists.
+
+The former `/v1/semantic/compile` endpoint is deliberately retired. A raw LLM
+SQL response is not a governed semantic query. The public boundary returns HTTP
+410 and directs callers to the release-pinned semantic query capability.
+
+## P1: source evidence to semantic resources
+
+`bridge.document_parser` accepts local text and Office/PDF parser outputs only
+through a path allowlist, normalizes parser output, retains source context, and
+has an async parse queue. `KnowledgeSource`, `SourceBatch`, and
+`ContinuousIngestionService` bind each source snapshot, cursor, change set and
+ingestion run to a tenant and a deterministic digest.
+
+Adapters convert approved mapping libraries, OKF bundles, ontology documents,
+and rule sets into `SemanticResource` revisions. A revision preserves its
+evidence references and cannot be silently changed after a release is built.
+
+## P2: governed validation, release, and consumption
 
 ```text
-SourceAsset -> Evidence -> candidate SemanticFact -> proposal review
-  -> approved SemanticFact -> immutable Release -> consumer projections
+source snapshot -> evidence-bearing SemanticResource -> proposal
+  -> SHACL/OWL/SKOS validation + impact -> review/waiver -> compile
+  -> signed immutable release -> release-pinned query or projection
 ```
 
-`SourceAsset` records the observed source version and access classification.
-`Evidence` points to an exact source locator and excerpt.  A fact without
-evidence cannot be proposed.  Evidence from another tenant cannot support a
-fact.  A proposer cannot approve their own proposal.
+`bridge.ontology_governance` implements the bounded SHACL Core gate, OWL/SKOS
+validation and versioned Datalog baseline. Unsupported constraints fail the
+gate rather than being ignored. `SemanticGovernanceService` requires role
+separation for create, validate, review, compile and publish. The REST and MCP
+control planes derive actor, tenant and roles from a signed principal header;
+body fields are never authoritative.
 
-Only approved facts can be added to a release.  A release has a deterministic
-digest over its tenant and ordered fact identifiers; reads verify that digest
-and fail closed when its stored record has been altered.
+Consumers use `/v1/semantic/query` and compiler endpoints. They receive only
+release-pinned artifacts and record a query run, evidence package and digest.
+Graph, vector, SQL and Skills are projections/capabilities of the same release,
+not independent truth sources.
 
-## Boundary for consumers
+## Verified repository example
 
-Graph, vector, SQL, and Skill projections must include both `tenant_id` and
-`release_id`.  A query plan must refuse a projection that does not match the
-requested release digest.  Candidate facts may be displayed in a review UI,
-but must not be used by production query or Agent execution paths.
-
-## API exposure is deliberately deferred
-
-The current public FastAPI service accepts tenant and reviewer fields in request
-bodies and does not yet establish them from a verified principal.  Exposing
-approval or publish endpoints there would allow caller-controlled identity.
-Until the authentication middleware supplies a signed principal and tenant
-context, `SemanticService` is a trusted in-process interface only.
-
-## First domain acceptance example
-
-For a revenue metric, register the warehouse snapshot as a `SourceAsset`, bind
-the precise SQL definition or data-dictionary excerpt as `Evidence`, propose
-the metric fact, approve it as a distinct reviewer, and publish a release.
-The resulting release query must return the fact, source, and evidence together.
+`tests/test_semantic_release_e2e.py` publishes a signed release from the
+repository's mapping library, Genshin ontology, Datalog rule, and OKF bundle;
+then compiles, independently replays, approves, and promotes all six targets:
+semantic JSON, OWL, SHACL, Datalog, RAG and MCP.

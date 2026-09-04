@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+   xmlns:csorb="http://example.org/cso/ontology#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+>
+
+  <!-- ===== CSO 类 ===== -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#AnalysisPopulation">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>AnalysisPopulation</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Disease">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Disease</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Drug">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Drug</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Endpoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Endpoint</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#StatisticalMethod">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>StatisticalMethod</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#StudyObjective">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>StudyObjective</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Timepoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Timepoint</rdfs:label>
+  </rdf:Description>
+
+  <!-- ===== 关系(对象属性) ===== -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#isEvaluatedBy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>isEvaluatedBy</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#hasStatisticalMethod">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>hasStatisticalMethod</rdfs:label>
+  </rdf:Description>
+</rdf:RDF>

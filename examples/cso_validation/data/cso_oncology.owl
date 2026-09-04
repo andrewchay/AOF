@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+   xmlns:csorb="http://example.org/cso/ontology#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+>
+  <!-- ========== CSO 类 ========== -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#StudyObjective">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Study Objective</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Endpoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Endpoint</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#StatisticalMethod">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Statistical Method</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#AnalysisPopulation">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Analysis Population</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Drug">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Drug</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Disease">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Disease</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Timepoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label>Timepoint</rdfs:label>
+  </rdf:Description>
+
+  <!-- ========== CSO 关系 ========== -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#isEvaluatedBy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>is evaluated by</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#hasStatisticalMethod">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>has statistical method</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#analyzedBy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>analyzed by</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#assessedAt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label>assessed at</rdfs:label>
+  </rdf:Description>
+
+  <!-- ========== CSO 实例: 以NCT02458638 Atezolizumab为例 ========== -->
+  <!-- 药物 -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Atezolizumab">
+    <rdf:type rdf:resource="http://example.org/cso/ontology#Drug"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label>Atezolizumab</rdfs:label>
+  </rdf:Description>
+  <!-- 疾病 -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#AdvancedSolidTumors">
+    <rdf:type rdf:resource="http://example.org/cso/ontology#Disease"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label>Advanced Solid Tumors</rdfs:label>
+  </rdf:Description>
+  <!-- Objective -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#PrimaryObjective_NPR">
+    <rdf:type rdf:resource="http://example.org/cso/ontology#StudyObjective"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label>Primary Objective: evaluate non-progression rate (NPR) at 18 weeks</rdfs:label>
+  </rdf:Description>
+  <!-- Endpoint -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#PrimaryEndpoint_NPR_18w">
+    <rdf:type rdf:resource="http://example.org/cso/ontology#Endpoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label>Primary Endpoint: Non progression rate (NPR) at 18 weeks</rdfs:label>
+  </rdf:Description>
+  <!-- Statistical Method -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#SimonTwoStageDesign">
+    <rdf:type rdf:resource="http://example.org/cso/ontology#StatisticalMethod"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label>Simon's optimal two-stage design</rdfs:label>
+  </rdf:Description>
+  <!-- Analysis Population -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#SafetyPopulation">
+    <rdf:type rdf:resource="http://example.org/cso/ontology#AnalysisPopulation"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label>Safety Population</rdfs:label>
+  </rdf:Description>
+  <!-- Timepoint -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#Timepoint_18weeks">
+    <rdf:type rdf:resource="http://example.org/cso/ontology#Timepoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    <rdfs:label>18 weeks</rdfs:label>
+  </rdf:Description>
+
+  <!-- ===== 关系实例 ===== -->
+  <rdf:Description rdf:about="http://example.org/cso/ontology#PrimaryObjective_NPR">
+    <csorb:isEvaluatedBy rdf:resource="http://example.org/cso/ontology#PrimaryEndpoint_NPR_18w"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://example.org/cso/ontology#PrimaryEndpoint_NPR_18w">
+    <csorb:hasStatisticalMethod rdf:resource="http://example.org/cso/ontology#SimonTwoStageDesign"/>
+    <csorb:analyzedBy rdf:resource="http://example.org/cso/ontology#SafetyPopulation"/>
+    <csorb:assessedAt rdf:resource="http://example.org/cso/ontology#Timepoint_18weeks"/>
+  </rdf:Description>
+</rdf:RDF>
