@@ -31,6 +31,8 @@ spec:
         env:
         - name: AOF_ROOT
           value: "/app"
+        - name: AOF_API_AUTH_MODE
+          value: "strict"
         envFrom:
         - configMapRef:
             name: aof-config

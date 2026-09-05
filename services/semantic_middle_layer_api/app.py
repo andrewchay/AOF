@@ -149,6 +149,44 @@ def _percentile(values: list[float], p: float) -> float:
     return values[max(0, min(k, len(values) - 1))]
 
 
+# ==================== W01.04 Global authentication gate ====================
+# Default-deny operation gate. AOF_API_AUTH_MODE:
+#   'default' (dev/test compat): endpoints authenticate individually, as today.
+#   'strict'  : every operation requires a verified signed principal unless it
+#               is an explicitly public diagnostic/health path. This is the
+#               temporary mitigation for D01 legacy endpoints (W01.04) until
+#               per-operation policies land (W01.01).
+_API_AUTH_STRICT = os.environ.get('AOF_API_AUTH_MODE', 'default').strip().lower() == 'strict'
+
+_API_PUBLIC_PATHS = {
+    '/healthz',
+    '/readyz',
+    '/metrics',
+    '/v1/ops/readiness',
+    '/v1/ops/slo',
+    '/v1/ops/slo/targets',
+    '/v1/ops/trusted-runtime',
+}
+_API_PUBLIC_PREFIXES = ('/docs', '/openapi.json', '/redoc')
+
+
+@app.middleware('http')
+async def auth_middleware(request: Request, call_next):
+    if not _API_AUTH_STRICT:
+        return await call_next(request)
+    path = request.url.path
+    if path in _API_PUBLIC_PATHS or path.startswith(_API_PUBLIC_PREFIXES):
+        return await call_next(request)
+    try:
+        _decision_principal(request, 'read')
+    except HTTPException as exc:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={'code': 'authentication_required', 'detail': exc.detail},
+        )
+    return await call_next(request)
+
+
 @app.middleware('http')
 async def metrics_middleware(request: Request, call_next):
     started = time.perf_counter()

@@ -20,6 +20,12 @@ services:
     
     environment:
       - AOF_ROOT=/app/AOF
+      # D04/W01.04: production hard gate - runtime mode, auth mode and signing
+      # keys are required; compose will fail fast with unset ${VAR:?} placeholders
+      - AOF_RUNTIME_MODE=${AOF_RUNTIME_MODE:?production required}
+      - AOF_API_AUTH_MODE=strict
+      - AOF_SEMANTIC_IDENTITY_SECRET=${AOF_SEMANTIC_IDENTITY_SECRET:?required}
+      - AOF_SEMANTIC_IDENTITY_KEY_ID=${AOF_SEMANTIC_IDENTITY_KEY_ID:-identity-key-default}
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_PROVIDER=${LLM_PROVIDER:-custom}
       - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-chat}
@@ -36,7 +42,7 @@ services:
       - aof-ontologies:/app/AOF/ontologies
     
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8787/healthz"]
+      test: ["CMD", "sh", "-c", "curl -sf http://localhost:8787/healthz && curl -sf http://localhost:8787/readyz"]
       interval: 30s
       timeout: 10s
       retries: 3
