@@ -5,6 +5,7 @@ from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import sqlite3
+import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,7 +13,11 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Protocol
 
-from bridge.decision_provenance import DecisionProvenanceStore
+from bridge.decision_provenance import (
+    DecisionProvenanceStore,
+    DecisionRecord,
+    EvidenceRef,
+)
 
 from .action_plans import ActionPlan
 from .canonical import canonical_data, canonical_json, content_digest
@@ -315,59 +320,70 @@ class SqliteActionRunRepository:
         connection = self._connect()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            row = connection.execute(
-                "SELECT payload FROM action_runs WHERE idempotency_identity = ?",
-                (run.idempotency_identity,),
-            ).fetchone()
-            if row is not None:
-                current = ActionRun.from_dict(json.loads(row[0]))
-                if current.plan.get("plan_digest") != run.plan.get("plan_digest"):
-                    raise ActionRunError("idempotency key is already bound to another plan")
-                connection.commit()
-                return current
-            connection.execute(
-                "INSERT INTO action_runs "
-                "(run_id, tenant_id, idempotency_identity, run_digest, payload) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (
-                    run.run_id,
-                    run.tenant_id,
-                    run.idempotency_identity,
-                    run.run_digest,
-                    canonical_json(run.to_dict()),
-                ),
-            )
+            result = self._put_new_on(connection, run)
             connection.commit()
-            return run
+            return result
         except Exception:
             connection.rollback()
             raise
         finally:
             connection.close()
 
+    def _put_new_on(self, connection: sqlite3.Connection, run: ActionRun) -> ActionRun:
+        """put_new on a caller-owned connection (W02.04 UnitOfWork support)."""
+        row = connection.execute(
+            "SELECT payload FROM action_runs WHERE idempotency_identity = ?",
+            (run.idempotency_identity,),
+        ).fetchone()
+        if row is not None:
+            current = ActionRun.from_dict(json.loads(row[0]))
+            if current.plan.get("plan_digest") != run.plan.get("plan_digest"):
+                raise ActionRunError("idempotency key is already bound to another plan")
+            return current
+        connection.execute(
+            "INSERT INTO action_runs "
+            "(run_id, tenant_id, idempotency_identity, run_digest, payload) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                run.run_id,
+                run.tenant_id,
+                run.idempotency_identity,
+                run.run_digest,
+                canonical_json(run.to_dict()),
+            ),
+        )
+        return run
+
     def update(self, run: ActionRun, *, expected_digest: str) -> ActionRun:
         connection = self._connect()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            changed = connection.execute(
-                "UPDATE action_runs SET run_digest = ?, payload = ? "
-                "WHERE run_id = ? AND run_digest = ?",
-                (
-                    run.run_digest,
-                    canonical_json(run.to_dict()),
-                    run.run_id,
-                    expected_digest,
-                ),
-            ).rowcount
-            if changed != 1:
-                raise ActionRunError("action run transition lost an optimistic concurrency race")
+            result = self._update_on(connection, run, expected_digest=expected_digest)
             connection.commit()
-            return run
+            return result
         except Exception:
             connection.rollback()
             raise
         finally:
             connection.close()
+
+    def _update_on(
+        self, connection: sqlite3.Connection, run: ActionRun, *, expected_digest: str
+    ) -> ActionRun:
+        """update on a caller-owned connection (W02.04 UnitOfWork support)."""
+        changed = connection.execute(
+            "UPDATE action_runs SET run_digest = ?, payload = ? "
+            "WHERE run_id = ? AND run_digest = ?",
+            (
+                run.run_digest,
+                canonical_json(run.to_dict()),
+                run.run_id,
+                expected_digest,
+            ),
+        ).rowcount
+        if changed != 1:
+            raise ActionRunError("action run transition lost an optimistic concurrency race")
+        return run
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
@@ -421,10 +437,13 @@ class ActionRunService:
         *,
         connectors: ActionConnectorRegistry,
         decision_store: DecisionProvenanceStore,
+        unit_of_work=None,
     ) -> None:
         self.repository = repository
         self.connectors = connectors
         self.decision_store = decision_store
+        # W02.04: when provided, decision+state writes share one transaction
+        self.unit_of_work = unit_of_work
 
     def submit(self, plan: ActionPlan, *, actor: str, rationale: str) -> ActionRun:
         identity = ActionRun.create(
@@ -438,6 +457,24 @@ class ActionRunService:
             if existing.plan.get("plan_digest") != plan.plan_digest:
                 raise ActionRunError("idempotency key is already bound to another plan")
             return existing
+        if self.unit_of_work is not None:
+            # W02.04: decision audit + state insert in ONE transaction
+            with self.unit_of_work.atomic() as session:
+                decision = self._decision(
+                    actor=actor,
+                    decision_type="action_submitted",
+                    conclusion="awaiting_approval" if plan.required_approval_roles else "approved",
+                    rationale=rationale,
+                    plan=plan.to_dict(),
+                    session=session,
+                )
+                run = ActionRun.create(
+                    plan,
+                    requester=actor,
+                    rationale=rationale,
+                    decision_id=decision,
+                )
+                return session.put_action_run(run)
         decision = self._decision(
             actor=actor,
             decision_type="action_submitted",
@@ -471,6 +508,32 @@ class ActionRunService:
         required = set(run.plan.get("required_approval_roles", ()))
         if required and not required.intersection(roles):
             raise ActionRunError("actor does not hold a required approval role")
+        if self.unit_of_work is not None:
+            # W02.04: approval audit + state transition in ONE transaction
+            with self.unit_of_work.atomic() as session:
+                decision = self._decision(
+                    actor=actor,
+                    decision_type="action_approved",
+                    conclusion="approved",
+                    rationale=rationale,
+                    plan=run.plan,
+                    session=session,
+                )
+                approval = {
+                    "actor": actor,
+                    "roles": sorted(set(roles)),
+                    "decision_id": decision,
+                    "rationale": rationale,
+                }
+                updated = run.transition(
+                    status="approved",
+                    action="approve",
+                    actor=actor,
+                    rationale=rationale,
+                    decision_id=decision,
+                    approval=approval,
+                )
+                return session.update_action_run(updated, expected_digest=run.run_digest)
         decision = self._decision(
             actor=actor,
             decision_type="action_approved",
@@ -682,30 +745,53 @@ class ActionRunService:
         conclusion: str,
         rationale: str,
         plan: Mapping[str, Any],
+        session=None,
     ) -> str:
+        evidence = [
+            {
+                "id": str(plan["plan_digest"]),
+                "type": "action_plan",
+                "content_hash": str(plan["plan_digest"]),
+            }
+        ]
+        output_entities = [
+            {
+                "id": str(plan["action_type_id"]),
+                "type": "action_type",
+            }
+        ]
+        policies = [f"{plan['policy_resource_id']}@{plan['policy_revision']}"]
+        tenant_id = str(plan["tenant_id"])
+        metadata = {
+            "release_id": plan["release_id"],
+            "release_digest": plan["release_digest"],
+            "compilation_run_id": plan["run_id"],
+        }
+        if session is not None:
+            # W02.04: persist via the UnitOfWork connection (same transaction
+            # as the accompanying state change)
+            record = DecisionRecord(
+                id=f"decision:{uuid.uuid4()}",
+                recorded_at=datetime.now(timezone.utc).isoformat(),
+                agent_id=actor,
+                decision_type=decision_type,
+                conclusion=conclusion,
+                rationale=rationale,
+                tenant_id=tenant_id,
+                evidence=[EvidenceRef(**item) for item in evidence],
+                output_entities=output_entities,
+                policies=sorted(set(policies)),
+                metadata=metadata,
+            )
+            return session.record_decision(record)
         return self.decision_store.record(
             agent_id=actor,
             decision_type=decision_type,
             conclusion=conclusion,
             rationale=rationale,
-            evidence=[
-                {
-                    "id": str(plan["plan_digest"]),
-                    "type": "action_plan",
-                    "content_hash": str(plan["plan_digest"]),
-                }
-            ],
-            output_entities=[
-                {
-                    "id": str(plan["action_type_id"]),
-                    "type": "action_type",
-                }
-            ],
-            policies=[f"{plan['policy_resource_id']}@{plan['policy_revision']}"],
-            tenant_id=str(plan["tenant_id"]),
-            metadata={
-                "release_id": plan["release_id"],
-                "release_digest": plan["release_digest"],
-                "compilation_run_id": plan["run_id"],
-            },
+            evidence=evidence,
+            output_entities=output_entities,
+            policies=policies,
+            tenant_id=tenant_id,
+            metadata=metadata,
         )["decision"]["id"]
