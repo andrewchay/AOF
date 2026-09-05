@@ -129,13 +129,22 @@ class TenantManager:
         db_session=None,
         rbac_manager: Optional[RBACManager] = None,
         nebula_pool=None,
+        store_path=None,  # W04.01: durable SQLite store (reference-local)
     ):
         self.db = db_session
         self.rbac = rbac_manager
         self.nebula_pool = nebula_pool
-        
-        # 内存存储（当 db_session 为 None 时使用）
-        self._tenants_store: Dict[str, Tenant] = {}
+
+        # 存储：db_session > store_path（SQLite 持久化） > 内存 dict
+        if store_path is not None:
+            from bridge.persistence.sqlite_iam_store import SqliteIamStore
+
+            self._store = SqliteIamStore(store_path)
+            self._tenants_store = self._store.tenants
+        else:
+            self._store = None
+            # 内存存储（当 db_session 为 None 时使用）
+            self._tenants_store: Dict[str, Tenant] = {}
     
     # ========== 租户 CRUD ==========
     
@@ -205,6 +214,8 @@ class TenantManager:
                     granted_by="system"
                 )
                 tenant.admin_user_id = admin.id
+                # W04.01: write back so the store copy carries admin binding
+                self._tenants_store[tenant.id] = tenant
                 
                 # 同步到 NebulaGraph
                 if self.nebula_pool:
@@ -727,6 +738,9 @@ class TenantManager:
             if tenant:
                 tenant.status = status
                 tenant.updated_at = datetime.utcnow()
+                # W04.01: write through — facade-backed stores decode fresh
+                # copies on get(), so identity mutation alone does not persist.
+                self._tenants_store[tenant.id] = tenant
                 return True
             return False
     

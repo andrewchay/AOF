@@ -63,17 +63,28 @@ class RBACManager:
         self, 
         db_session=None,
         nebula_pool=None,  # NebulaGraph 连接池（可选）
-        cache_client=None   # Redis 缓存客户端（可选）
+        cache_client=None,  # Redis 缓存客户端（可选）
+        store_path=None,    # W04.01: durable SQLite store (reference-local)
     ):
         self.db = db_session
         self.nebula_pool = nebula_pool
         self.cache = cache_client
         self._user_cache: Dict[str, User] = {}  # 内存缓存（短时效）
-        
-        # 内存存储（当 db_session 为 None 时使用）
-        self._users_store: Dict[str, User] = {}
-        self._roles_store: Dict[str, Role] = {}
-        self._assignments_store: List[UserRoleAssignment] = []
+
+        # 存储：db_session > store_path（SQLite 持久化） > 内存 dict
+        if store_path is not None:
+            from bridge.persistence.sqlite_iam_store import SqliteIamStore
+
+            self._store = SqliteIamStore(store_path)
+            self._users_store = self._store.users
+            self._roles_store = self._store.roles
+            self._assignments_store = self._store.assignments
+        else:
+            self._store = None
+            # 内存存储（当 db_session 为 None 时使用）
+            self._users_store: Dict[str, User] = {}
+            self._roles_store: Dict[str, Role] = {}
+            self._assignments_store: List[UserRoleAssignment] = []
         
     # ========== 用户管理 ==========
     
@@ -664,7 +675,9 @@ class RBACManager:
                 return result.rowcount > 0
         else:
             original_len = len(self._assignments_store)
-            self._assignments_store = [
+            # In-place slice assignment: works for the plain list AND the
+            # W04.01 SQLite facade (which replaces all rows transactionally).
+            self._assignments_store[:] = [
                 a for a in self._assignments_store
                 if not (a.user_id == user_id and a.role_id == role_id
                         and a.resource_type == resource_type
