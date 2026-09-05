@@ -4145,48 +4145,109 @@ def _decision_error(exc: Exception) -> HTTPException:
     return HTTPException(status_code=404 if message.startswith('decision not found:') else 422, detail=message)
 
 
-@app.post('/v1/decisions', status_code=201)
-async def record_decision(req: DecisionRecordReq) -> dict[str, Any]:
-    """Record an Agent Decision Activity and its evidence/causal predecessors."""
+def _decision_principal(request: Request, action: str = 'read'):
+    """Verify signed principal for decision API access (D01 fix)."""
+    from bridge.semantic_core.identity import PrincipalVerificationError, SignedPrincipalVerifier
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='identity verifier is not configured')
+    verifier = SignedPrincipalVerifier(
+        key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+        secret=secret,
+    )
     try:
-        return _decision_store().record(**req.model_dump())
+        principal = verifier.verify(request.headers)
+        return principal
+    except PrincipalVerificationError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+@app.post('/v1/decisions', status_code=201)
+async def record_decision(req: DecisionRecordReq, request: Request) -> dict[str, Any]:
+    """Record an Agent Decision Activity and its evidence/causal predecessors."""
+    principal = _decision_principal(request, 'read')
+    try:
+        payload = req.model_dump()
+        # Server-side identity: override client-supplied agent_id/tenant_id (D01 fix)
+        payload['agent_id'] = principal.subject
+        payload['tenant_id'] = principal.tenant_id
+        return _decision_store().record(**payload)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _decision_error(exc) from exc
 
 
 @app.get('/v1/decisions/{decision_id}')
-async def get_decision(decision_id: str) -> dict[str, Any]:
+async def get_decision(decision_id: str, request: Request) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
     entry = _decision_store().get(decision_id)
     if entry is None:
+        raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
+    # Tenant isolation: only return decisions belonging to the caller's tenant
+    if entry.get('decision', {}).get('tenant_id') != principal.tenant_id:
         raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
     return entry
 
 
 @app.get('/v1/decisions/{decision_id}/causal-chain')
-async def decision_causal_chain(decision_id: str, direction: str = Query('ancestors'), max_depth: int = Query(8, ge=1, le=50)) -> dict[str, Any]:
+async def decision_causal_chain(decision_id: str, request: Request, direction: str = Query('ancestors'), max_depth: int = Query(8, ge=1, le=50)) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
     try:
-        return _decision_store().causal_chain(decision_id, direction=direction, max_depth=max_depth)
+        result = _decision_store().causal_chain(decision_id, direction=direction, max_depth=max_depth)
+        # Filter nodes to only include caller's tenant
+        result['nodes'] = [
+            node for node in result.get('nodes', [])
+            if node.get('decision', {}).get('tenant_id') == principal.tenant_id
+        ]
+        return result
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _decision_error(exc) from exc
 
 
 @app.post('/v1/decisions/precedents/search')
-async def search_decision_precedents(req: DecisionPrecedentReq) -> dict[str, Any]:
-    return {'results': _decision_store().find_precedents(**req.model_dump())}
+async def search_decision_precedents(req: DecisionPrecedentReq, request: Request) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
+    payload = req.model_dump()
+    # Force tenant filter to caller's tenant (D01 fix)
+    payload['tenant_id'] = principal.tenant_id
+    return {'results': _decision_store().find_precedents(**payload)}
 
 
 @app.post('/v1/decisions/impact')
-async def decision_impact(req: DecisionImpactReq) -> dict[str, Any]:
+async def decision_impact(req: DecisionImpactReq, request: Request) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
     try:
-        return _decision_store().impact(**req.model_dump())
+        result = _decision_store().impact(**req.model_dump())
+        # Filter nodes to only include caller's tenant
+        result['nodes'] = [
+            node for node in result.get('nodes', [])
+            if node.get('decision', {}).get('tenant_id') == principal.tenant_id
+        ]
+        return result
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _decision_error(exc) from exc
 
 
 @app.get('/v1/decisions/{decision_id}/audit-trail')
-async def decision_audit_trail(decision_id: str) -> dict[str, Any]:
+async def decision_audit_trail(decision_id: str, request: Request) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
     try:
-        return _decision_store().audit_trail(decision_id)
+        result = _decision_store().audit_trail(decision_id)
+        # Filter causal chain nodes to only include caller's tenant
+        if 'causal_chain' in result:
+            result['causal_chain']['nodes'] = [
+                node for node in result['causal_chain'].get('nodes', [])
+                if node.get('decision', {}).get('tenant_id') == principal.tenant_id
+            ]
+        return result
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _decision_error(exc) from exc
 

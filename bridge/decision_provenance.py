@@ -7,6 +7,7 @@ agent reached a conclusion, what it used, and what later work it influenced*.
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -32,6 +33,10 @@ PROV_CONTEXT = {
 
 class DecisionProvenanceError(ValueError):
     """Raised when a provenance record cannot be safely created or read."""
+
+
+class LedgerIntegrityError(DecisionProvenanceError):
+    """Raised when the ledger fails integrity verification."""
 
 
 def _now() -> str:
@@ -87,11 +92,29 @@ class DecisionRecord:
 
 
 class DecisionProvenanceStore:
-    """JSONL ledger with a per-record hash chain and deterministic local queries."""
+    """JSONL ledger with a per-record hash chain and deterministic local queries.
+
+    Thread-safety and process-safety are provided via fcntl file locking
+    on a companion lock file. All reads that return decision data verify
+    chain integrity before returning results.
+    """
 
     def __init__(self, path: str | Path | None = None) -> None:
         configured = os.environ.get("AOF_DECISION_PROVENANCE_FILE")
         self.path = Path(path or configured or "data/audit/decision_provenance.jsonl")
+        self._lock_path = self.path.with_suffix(".lock")
+
+    def _acquire_lock(self):
+        """Acquire an exclusive advisory lock on the ledger lock file."""
+        self._lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_fd = open(self._lock_path, "w")
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        return lock_fd
+
+    @staticmethod
+    def _release_lock(lock_fd) -> None:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        lock_fd.close()
 
     def record(
         self,
@@ -122,52 +145,58 @@ class DecisionProvenanceStore:
         parents = list(dict.fromkeys(parent_decision_ids or []))
         if record_id in parents:
             raise DecisionProvenanceError("a decision cannot be its own parent")
-        entries = self._entries()
-        existing = {item["decision"]["id"] for item in entries}
-        if record_id in existing:
-            raise DecisionProvenanceError(f"decision already exists: {record_id}")
-        unknown = sorted(set(parents) - existing)
-        if unknown:
-            raise DecisionProvenanceError(
-                f"unknown parent decision(s): {', '.join(unknown)}"
+
+        lock_fd = self._acquire_lock()
+        try:
+            entries = self._entries_unlocked()
+            existing = {item["decision"]["id"] for item in entries}
+            if record_id in existing:
+                raise DecisionProvenanceError(f"decision already exists: {record_id}")
+            unknown = sorted(set(parents) - existing)
+            if unknown:
+                raise DecisionProvenanceError(
+                    f"unknown parent decision(s): {', '.join(unknown)}"
+                )
+            refs = [
+                item if isinstance(item, EvidenceRef) else EvidenceRef(**item)
+                for item in (evidence or [])
+            ]
+            decision = DecisionRecord(
+                id=record_id,
+                recorded_at=_now(),
+                agent_id=agent_id,
+                decision_type=decision_type,
+                conclusion=conclusion,
+                rationale=rationale,
+                status=status,
+                tenant_id=tenant_id,
+                session_id=session_id,
+                evidence=refs,
+                parent_decision_ids=parents,
+                output_entities=list(output_entities or []),
+                tags=sorted(set(tags or [])),
+                policies=sorted(set(policies or [])),
+                metadata=metadata or {},
             )
-        refs = [
-            item if isinstance(item, EvidenceRef) else EvidenceRef(**item)
-            for item in (evidence or [])
-        ]
-        decision = DecisionRecord(
-            id=record_id,
-            recorded_at=_now(),
-            agent_id=agent_id,
-            decision_type=decision_type,
-            conclusion=conclusion,
-            rationale=rationale,
-            status=status,
-            tenant_id=tenant_id,
-            session_id=session_id,
-            evidence=refs,
-            parent_decision_ids=parents,
-            output_entities=list(output_entities or []),
-            tags=sorted(set(tags or [])),
-            policies=sorted(set(policies or [])),
-            metadata=metadata or {},
-        )
-        previous_hash = entries[-1]["integrity"]["hash"] if entries else None
-        payload = {"decision": decision.to_dict(), "previous_hash": previous_hash}
-        entry = {
-            **payload,
-            "integrity": {"algorithm": "sha256", "hash": _hash(payload)},
-        }
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(_canonical_json(entry) + "\n")
-        return entry
+            previous_hash = entries[-1]["integrity"]["hash"] if entries else None
+            payload = {"decision": decision.to_dict(), "previous_hash": previous_hash}
+            entry = {
+                **payload,
+                "integrity": {"algorithm": "sha256", "hash": _hash(payload)},
+            }
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(_canonical_json(entry) + "\n")
+            return entry
+        finally:
+            self._release_lock(lock_fd)
 
     def get(self, decision_id: str) -> dict[str, Any] | None:
+        entries = self._entries_verified()
         return next(
             (
                 entry
-                for entry in self._entries()
+                for entry in entries
                 if entry["decision"]["id"] == decision_id
             ),
             None,
@@ -180,7 +209,7 @@ class DecisionProvenanceStore:
             raise DecisionProvenanceError("direction must be ancestors or descendants")
         if not 1 <= max_depth <= 50:
             raise DecisionProvenanceError("max_depth must be between 1 and 50")
-        entries = self._entries()
+        entries = self._entries_verified()
         by_id = {entry["decision"]["id"]: entry for entry in entries}
         if decision_id not in by_id:
             raise DecisionProvenanceError(f"decision not found: {decision_id}")
@@ -228,7 +257,7 @@ class DecisionProvenanceStore:
     ) -> list[dict[str, Any]]:
         wanted = set(tags or [])
         matches = []
-        for entry in self._entries():
+        for entry in self._entries_verified():
             decision = entry["decision"]
             if decision["decision_type"] != decision_type or (
                 tenant_id and decision.get("tenant_id") != tenant_id
@@ -297,7 +326,7 @@ class DecisionProvenanceStore:
 
     def verify_integrity(self) -> dict[str, Any]:
         previous_hash = None
-        for index, entry in enumerate(self._entries(), start=1):
+        for index, entry in enumerate(self._entries_unlocked(), start=1):
             payload = {
                 "decision": entry.get("decision"),
                 "previous_hash": entry.get("previous_hash"),
@@ -317,7 +346,29 @@ class DecisionProvenanceStore:
             "head_hash": previous_hash,
         }
 
-    def _entries(self) -> list[dict[str, Any]]:
+    def _entries_verified(self) -> list[dict[str, Any]]:
+        """Read all entries and verify chain integrity. Raises on corruption."""
+        entries = self._entries_unlocked()
+        if not entries:
+            return entries
+        previous_hash = None
+        for index, entry in enumerate(entries, start=1):
+            payload = {
+                "decision": entry.get("decision"),
+                "previous_hash": entry.get("previous_hash"),
+            }
+            if entry.get("previous_hash") != previous_hash or entry.get(
+                "integrity", {}
+            ).get("hash") != _hash(payload):
+                raise LedgerIntegrityError(
+                    f"ledger integrity check failed at entry {index} "
+                    f"(decision: {entry.get('decision', {}).get('id', 'unknown')})"
+                )
+            previous_hash = entry["integrity"]["hash"]
+        return entries
+
+    def _entries_unlocked(self) -> list[dict[str, Any]]:
+        """Read all entries without integrity verification (internal use only)."""
         if not self.path.exists():
             return []
         entries = []
@@ -333,3 +384,6 @@ class DecisionProvenanceStore:
                     f"invalid provenance ledger at line {line_number}"
                 ) from exc
         return entries
+
+    # Keep backward-compatible alias
+    _entries = _entries_verified
