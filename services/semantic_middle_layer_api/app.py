@@ -158,16 +158,19 @@ def _percentile(values: list[float], p: float) -> float:
 #               per-operation policies land (W01.01).
 _API_AUTH_STRICT = os.environ.get('AOF_API_AUTH_MODE', 'default').strip().lower() == 'strict'
 
-_API_PUBLIC_PATHS = {
-    '/healthz',
-    '/readyz',
-    '/metrics',
-    '/v1/ops/readiness',
-    '/v1/ops/slo',
-    '/v1/ops/slo/targets',
-    '/v1/ops/trusted-runtime',
-}
+# Registry-driven anonymous paths (W01.01). Fail-closed: if the registry
+# cannot be loaded, only the minimal health probes stay anonymous.
+_API_MINIMUM_ANONYMOUS_PATHS = {'/healthz', '/readyz'}
 _API_PUBLIC_PREFIXES = ('/docs', '/openapi.json', '/redoc')
+_API_PUBLIC_PATHS: set[str] = set(_API_MINIMUM_ANONYMOUS_PATHS)
+try:
+    from bridge.access.operation_registry import load_registry as _load_operation_registry
+
+    for _op in _load_operation_registry().values():
+        if _op.public and _op.method != 'TOOL':
+            _API_PUBLIC_PATHS.add(_op.path)
+except Exception as _reg_exc:  # pragma: no cover - fail-closed fallback
+    logger.warning('operation registry unavailable, failing closed: %s', _reg_exc)
 
 
 @app.middleware('http')
