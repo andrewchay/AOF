@@ -103,6 +103,9 @@ class DecisionProvenanceStore:
         configured = os.environ.get("AOF_DECISION_PROVENANCE_FILE")
         self.path = Path(path or configured or "data/audit/decision_provenance.jsonl")
         self._lock_path = self.path.with_suffix(".lock")
+        # Sidecar checkpoint records entry_count + head_hash so that tail
+        # truncation (lost lines) is detectable, not just internal corruption.
+        self._checkpoint_path = self.path.with_suffix(".checkpoint")
 
     def _acquire_lock(self):
         """Acquire an exclusive advisory lock on the ledger lock file."""
@@ -187,6 +190,7 @@ class DecisionProvenanceStore:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with self.path.open("a", encoding="utf-8") as handle:
                 handle.write(_canonical_json(entry) + "\n")
+            self._write_checkpoint(len(entries) + 1, entry["integrity"]["hash"])
             return entry
         finally:
             self._release_lock(lock_fd)
@@ -324,7 +328,27 @@ class DecisionProvenanceStore:
             },
         }
 
+    def _read_checkpoint(self) -> tuple[int, str] | None:
+        try:
+            data = json.loads(self._checkpoint_path.read_text(encoding="utf-8"))
+            return int(data["entry_count"]), str(data["head_hash"])
+        except (OSError, json.JSONDecodeError, KeyError, TypeError):
+            return None
+
+    def _write_checkpoint(self, entry_count: int, head_hash: str) -> None:
+        self._checkpoint_path.write_text(
+            _canonical_json({"entry_count": entry_count, "head_hash": head_hash}),
+            encoding="utf-8",
+        )
+
     def verify_integrity(self) -> dict[str, Any]:
+        lock_fd = self._acquire_lock()
+        try:
+            return self._verify_integrity_locked()
+        finally:
+            self._release_lock(lock_fd)
+
+    def _verify_integrity_locked(self) -> dict[str, Any]:
         previous_hash = None
         for index, entry in enumerate(self._entries_unlocked(), start=1):
             payload = {
@@ -347,10 +371,28 @@ class DecisionProvenanceStore:
         }
 
     def _entries_verified(self) -> list[dict[str, Any]]:
-        """Read all entries and verify chain integrity. Raises on corruption."""
+        """Read all entries and verify chain integrity. Raises on corruption.
+
+        Tail truncation is detected against the sidecar checkpoint: when the
+        checkpoint records more entries than the ledger file contains, the
+        tail was lost and reads must fail closed.
+        """
+        lock_fd = self._acquire_lock()
+        try:
+            return self._entries_verified_locked()
+        finally:
+            self._release_lock(lock_fd)
+
+    def _entries_verified_locked(self) -> list[dict[str, Any]]:
         entries = self._entries_unlocked()
         if not entries:
             return entries
+        checkpoint = self._read_checkpoint()
+        if checkpoint is not None and checkpoint[0] != len(entries):
+            raise LedgerIntegrityError(
+                f"ledger length mismatch: checkpoint records "
+                f"{checkpoint[0]} entries but file contains {len(entries)}"
+            )
         previous_hash = None
         for index, entry in enumerate(entries, start=1):
             payload = {

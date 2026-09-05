@@ -159,6 +159,7 @@ async def metrics_middleware(request: Request, call_next):
     if runtime_mode not in {'development', 'test'}:
         diagnostic_paths = {
             '/healthz',
+            '/readyz',
             '/metrics',
             '/v1/ops/readiness',
             '/v1/ops/slo',
@@ -3435,6 +3436,27 @@ def healthz() -> dict[str, Any]:
         'version': '0.2.0',
         'llm_configured': 'yes' if LLM_API_KEY else 'no'
     }
+
+
+@app.get('/readyz')
+def readyz() -> JSONResponse:
+    """Readiness probe: process is able to serve governed traffic.
+
+    Checks production trust/observability prerequisites (runtime mode,
+    signing keys, telemetry, SLO targets). Returns 503 with findings when
+    the deployment is not ready; never leaks secret values.
+    """
+    from bridge.semantic_core.production import ProductionReadiness
+
+    report = ProductionReadiness.evaluate(os.environ)
+    return JSONResponse(
+        status_code=200 if report.ready else 503,
+        content={
+            'ready': report.ready,
+            'mode': os.environ.get('AOF_RUNTIME_MODE', 'development'),
+            'findings': report.to_dict(),
+        },
+    )
 
 
 # ==================== Graph API Endpoints (v1) ====================
