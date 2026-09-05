@@ -32,6 +32,8 @@ class SemanticPrincipal:
             "read": ("admin", "owner", "editor", "reviewer", "validator", "risk-owner", "compiler", "publisher", "reasoner", "analyst", "operator", "worker", "viewer"),
             "reason": ("admin", "reasoner"),
             "simulate": ("admin", "analyst"),
+            "agentic_run": ("admin", "analyst", "operator"),
+            "agentic_replay": ("admin", "analyst", "operator"),
             "workflow_start": ("admin", "operator"),
             "workflow_approve": ("admin", "reviewer"),
             "workflow_advance": ("admin", "worker"),

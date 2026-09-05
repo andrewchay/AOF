@@ -141,6 +141,23 @@ class ProductionReadiness:
                 )
             else:
                 cls._validate_slo_targets(Path(slo_path), findings)
+            agentic_database = str(
+                environment.get("AOF_AGENTIC_RUN_DATABASE", "")
+            ).strip()
+            if not agentic_database and environment.get('AOF_AGENTIC_ENABLED', 'false').lower() == 'true':
+                findings.append(
+                    ReadinessFinding(
+                        "production_agentic_database_missing",
+                        "AOF_AGENTIC_RUN_DATABASE must be explicit in production",
+                    )
+                )
+            elif agentic_database and not Path(agentic_database).is_absolute():
+                findings.append(
+                    ReadinessFinding(
+                        "production_agentic_database_not_absolute",
+                        "AOF_AGENTIC_RUN_DATABASE must be an absolute durable path",
+                    )
+                )
         findings.sort(key=lambda item: item.code)
         payload = {
             "api_version": "aof.production-readiness/v1",

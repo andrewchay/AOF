@@ -4328,6 +4328,26 @@ class RuntimeSimulationReq(BaseModel):
     request: dict[str, Any]
 
 
+class AgenticRunReq(BaseModel):
+    run_id: str = Field(min_length=1)
+    session_id: str = Field(min_length=1)
+    query: str = Field(min_length=1)
+    purpose: str = Field(min_length=1)
+    channel: str = Field(min_length=1)
+    release_id: str = Field(min_length=1)
+    release_digest: str = Field(min_length=1)
+    policy_resource_id: str = Field(min_length=1)
+    allowed_capabilities: list[str] = Field(min_length=1)
+    max_steps: int = Field(default=4, ge=1, le=8)
+    allow_rag_fallback: bool = True
+    allow_llm_fallback: bool = False
+    query_contract_id: Optional[str] = None
+
+
+class AgenticReplayReq(BaseModel):
+    run_id: str = Field(min_length=1)
+
+
 def _semantic_governance():
     from bridge.semantic_core.compilers import default_compiler_registry
     from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
@@ -4669,6 +4689,126 @@ def _enterprise_runtime_control():
             decision_store=decisions,
         ),
     )
+
+
+def _agentic_system(headers: Mapping[str, str]):
+    from bridge.semantic_core import AgenticSystemService, SqliteAgenticRunRepository
+    from bridge.semantic_core.business_plan import published_plan
+
+    if os.environ.get('AOF_RUNTIME_MODE') == 'production' and not Path(
+        os.environ.get('AOF_AGENTIC_RUN_DATABASE', '')
+    ).is_absolute():
+        raise HTTPException(status_code=503, detail='Agentic requires an explicit durable database in production')
+
+    injected = getattr(app.state, 'agentic_capability_executor', None)
+    if injected is not None and os.environ.get('AOF_RUNTIME_MODE') == 'production':
+        raise ValueError('injected Agentic executor is not allowed in production')
+    query_control = None if injected is not None else _semantic_query_control()
+    capability_map = {
+        'graph_search': 'graph',
+        'skill_search': 'semantic_search',
+        'vector_search': 'semantic_search',
+        'semantic_sql': 'semantic_sql',
+        'rag_retrieve': 'semantic_search',
+        'rule_search': 'datalog',
+    }
+
+    def execute(capability: str, context: Mapping[str, Any]) -> Mapping[str, Any]:
+        if injected is not None:
+            return injected(capability, context)
+        step = context.get('step', {})
+        if capability == 'action_submit':
+            from bridge.semantic_core.business_plan import submit_review_action
+            return submit_review_action(_semantic_action_control(headers), context, headers)
+        if capability == 'skill_execute':
+            from bridge.semantic_core.business_plan import execute_finance_analysis
+            return execute_finance_analysis(context)
+        mapped = capability_map.get(capability)
+        if mapped is None:
+            raise ValueError(
+                f'no governed executor is configured for Agentic capability: {capability}'
+            )
+        parameters = dict(step.get('parameters', {}))
+        parameters.update({
+            'expected_release_id': context['release_id'],
+            'expected_release_digest': context['release_digest'],
+        })
+        if capability == 'rule_search':
+            from bridge.semantic_core.business_plan import rule_facts
+            parameters['facts'] = rule_facts(step, context.get('previous_results', {}))
+        elif capability in {'graph_search', 'semantic_sql'} and not step.get('query'):
+            parameters['natural_language'] = True
+        elif capability not in {'graph_search', 'semantic_sql'}:
+            parameters['retrieval_mode'] = {
+                'skill_search': 'skill', 'vector_search': 'vector', 'rag_retrieve': 'rag'
+            }[capability]
+        query_run = query_control.execute(
+            {
+                'channel': context['channel'],
+                'capability': mapped,
+                'query': step.get('query', context['query']),
+                'purpose': context['purpose'],
+                'policy_resource_id': context['policy_resource_id'],
+                'rationale': f'Agentic plan selected {capability}.',
+                'parameters': parameters,
+                'session_id': context['session_id'],
+            },
+            headers=headers,
+        )
+        if (
+            query_run['release_id'] != context['release_id']
+            or query_run['release_digest'] != context['release_digest']
+        ):
+            raise ValueError('Agentic query resolved a different trusted release snapshot')
+        governed = query_run['governed_result']
+        data = governed['result']['data']
+        if data.get('executed') is False:
+            raise ValueError('SQL execution backend is not configured; a compiled plan is not an answer')
+        if data.get('count') == 0:
+            raise ValueError('no supported answer in the published release; clarification required')
+        summary = data.get('answer') or data.get('summary')
+        if not isinstance(summary, str) or not summary.strip():
+            summary = json.dumps(data, ensure_ascii=False, sort_keys=True, default=str)
+        evidence_package = query_run['evidence_package']
+        evidence = [
+            *evidence_package.get('artifact_evidence', []),
+            *evidence_package.get('field_evidence', []),
+        ]
+        return {
+            'output': {
+                'summary': summary,
+                'data': data,
+                'governed_result_digest': governed['governed_result_digest'],
+            },
+            'receipt': {'query_run_id': query_run['query_run_id'],
+                        'decision_id': evidence_package['execution_decision_id']},
+            'evidence': evidence,
+        }
+
+    database = Path(os.environ.get(
+        'AOF_AGENTIC_RUN_DATABASE',
+        str(AOF_ROOT / 'data' / 'agentic_system' / 'agentic-runs.sqlite3'),
+    ))
+    return AgenticSystemService(
+        SqliteAgenticRunRepository(database),
+        executor=execute,
+        decision_store=_decision_store(),
+        planner=lambda req: published_plan(query_control, req, headers),
+        action_reader=lambda run_id: _semantic_action_control(headers).get_run(run_id, headers=headers),
+    )
+
+
+def _agentic_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, HTTPException):
+        return exc
+    message = str(exc)
+    if 'not found:' in message:
+        status_code = 404
+    elif 'already exists:' in message:
+        status_code = 409
+    else:
+        status_code = 422
+    return HTTPException(status_code=status_code, detail=message)
 
 
 def _enterprise_runtime_error(exc: Exception) -> HTTPException:
@@ -5302,6 +5442,109 @@ async def replay_enterprise_simulation(
         )
     except Exception as exc:
         raise _enterprise_runtime_error(exc) from exc
+
+
+# ==================== Agentic ontology consumption (P3-P6) ====================
+
+def _agentic_request(req: AgenticRunReq, tenant_id: str):
+    from bridge.semantic_core import AgenticRequest
+
+    return AgenticRequest.create(tenant_id=tenant_id, **req.model_dump())
+
+
+@app.post('/v1/agentic/route')
+async def route_agentic_query(req: AgenticRunReq, request: Request) -> dict[str, Any]:
+    from bridge.semantic_core import OntologyIntentRouter
+
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        if req.query_contract_id:
+            steps = _agentic_system(request.headers).planner(_agentic_request(req, principal.tenant_id))
+            return {'capabilities': [step['capability'] for step in steps],
+                    'rationale_codes': ['published-query-contract'], 'fallback': None}
+        return OntologyIntentRouter().route(
+            _agentic_request(req, principal.tenant_id)
+        ).to_dict()
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.post('/v1/agentic/runs', status_code=201)
+async def run_agentic_query(req: AgenticRunReq, request: Request) -> dict[str, Any]:
+    try:
+        principal, actor = _semantic_principal(request, 'agentic_run')
+        with trusted_runtime_telemetry().operation(
+            'agentic.run', {'tenant_id': principal.tenant_id}
+        ) as correlation:
+            result = _agentic_system(request.headers).run(
+                _agentic_request(req, principal.tenant_id), actor=actor
+            )
+            correlation.update(
+                release_id=result['plan']['release_id'],
+                release_digest=result['plan']['release_digest'],
+            )
+            return result
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.get('/v1/agentic/runs/{run_id}')
+async def get_agentic_run(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        return _agentic_system(request.headers).repository.get(
+            run_id, tenant_id=principal.tenant_id
+        )
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.post('/v1/agentic/runs/{source_run_id}/replay', status_code=201)
+async def replay_agentic_run(
+    source_run_id: str, req: AgenticReplayReq, request: Request
+) -> dict[str, Any]:
+    try:
+        principal, actor = _semantic_principal(request, 'agentic_replay')
+        return _agentic_system(request.headers).replay(
+            source_run_id,
+            run_id=req.run_id,
+            tenant_id=principal.tenant_id,
+            actor=actor,
+        )
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.get('/v1/agentic/runs/{run_id}/evaluation')
+async def evaluate_agentic_run(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        return _agentic_system(request.headers).evaluate(
+            run_id, tenant_id=principal.tenant_id
+        )
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.get('/v1/agentic/sessions/{session_id}/memory')
+async def get_agentic_memory(session_id: str, request: Request) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        values = _agentic_system(request.headers).repository.memory(
+            tenant_id=principal.tenant_id, session_id=session_id
+        )
+        return {'items': values, 'count': len(values)}
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.post('/v1/agentic/runs/{run_id}/refresh-actions')
+async def refresh_agentic_actions(run_id: str, request: Request) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        return _agentic_system(request.headers).refresh_actions(run_id, tenant_id=principal.tenant_id)
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
 
 
 # ==================== Ontology governance & deterministic reasoning ====================

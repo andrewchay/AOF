@@ -1,5 +1,9 @@
 # AOF 通用本体抽提 SOP（文档 + 数据库）
 
+> 适用性更新（2026-09-05）：本 SOP 是 Cognee/传统抽提兼容路径，可用于探索和候选资产生成；它不是受治理知识发布流程。对企业生产知识，完成本 SOP 后还必须走 `source snapshot -> SemanticResource -> proposal -> validate -> approve -> compile -> signed release -> release-pinned consumption`。
+
+受治理主路径的具体协议见 [语义中间层接口契约](语义中间层接口契约.md) 和 [API 参考](../services/semantic_middle_layer_api/API.md)。未经验证/审批的 OWL、mapping、回归产物不得作为生产 graph、vector、SQL 或 Skill 的真相源。
+
 ## 1. 目标
 
 把任意 topic 的原始资料（文档、数据库导出、结构化表）接入 AOF，完成：

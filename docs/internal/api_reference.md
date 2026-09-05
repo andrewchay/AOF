@@ -1,5 +1,7 @@
 # AOF API 参考文档
 
+> 维护提示（2026-09-05）：本长文以传统 Topic API 为主。企业语义控制面包括 `/v1/semantic/proposals/*`、`/v1/semantic/compiler/*`、`/v1/semantic/query*`、`/v1/knowledge/*`、`/v1/ontology/*` 受控操作与 `/v1/agentic/*`；请先阅读 [服务 API 文档](../../services/semantic_middle_layer_api/API.md)。传统 `/v1/reasoning/*` 不是签名多租户控制面。旧 `/v1/semantic/compile` 已退役且返回 `410 Gone`。
+
 本文档提供 AOF Semantic Middle Layer API 的完整参考。
 
 **基础信息**

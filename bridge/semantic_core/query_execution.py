@@ -314,10 +314,20 @@ class QueryExecutor:
         return {**normalized, "hits": projected, "count": len(projected)}
 
     def _semantic_search(self, plan: QueryPlan) -> dict[str, Any]:
-        payload = self._artifact_payload(plan, "rag")
+        payload = self._artifact_payload(plan, 'semantic-json' if plan.parameters.get('retrieval_mode') == 'skill' else 'rag')
         raw_limit = plan.parameters.get("limit", 10)
         if isinstance(raw_limit, bool) or not isinstance(raw_limit, int) or raw_limit < 1:
             raise TrustedQueryError("semantic_search limit must be a positive integer")
+        mode = plan.parameters.get("retrieval_mode")
+        if mode is not None:
+            from .natural_query import rank_resources
+
+            if mode not in {"vector", "rag", "skill"}:
+                raise TrustedQueryError("unsupported retrieval_mode")
+            kinds = ("ActionType", "Workflow", "Function") if mode == "skill" else ()
+            hits = rank_resources(plan.query, payload.get("resources", []), mode, kinds)[:raw_limit]
+            return {"query": plan.query, "hits": hits, "count": len(hits),
+                    "retrieval_algorithm": "sparse-term-frequency-cosine", "retrieval_mode": mode}
         needle = plan.query.casefold()
         hits = []
         for resource in payload.get("resources", []):
@@ -371,6 +381,22 @@ class QueryExecutor:
             raise TrustedQueryError("graph predicate must be a non-empty URI string")
         predicate = URIRef(raw_predicate) if raw_predicate else None
         graph = self._ontology_graph(plan)
+        if plan.parameters.get("natural_language"):
+            from .natural_query import mentions
+            from rdflib.namespace import RDFS, SKOS
+
+            candidates = set()
+            for subject in set(graph.subjects()):
+                if not isinstance(subject, URIRef):
+                    continue
+                labels = [str(subject).rsplit("/", 1)[-1].rsplit("#", 1)[-1]]
+                labels.extend(str(label) for predicate_uri in (RDFS.label, SKOS.prefLabel, SKOS.altLabel)
+                              for label in graph.objects(subject, predicate_uri))
+                if any(mentions(plan.query, label) for label in labels):
+                    candidates.add(subject)
+            if len(candidates) != 1:
+                raise TrustedQueryError("clarification required: graph query must identify one published entity")
+            node = next(iter(candidates))
         triples = set()
         if direction in {"out", "both"}:
             triples.update(graph.triples((node, predicate, None)))
@@ -384,7 +410,7 @@ class QueryExecutor:
         ]
         return {
             "snapshot_id": f"release:{plan.release_digest}",
-            "node": plan.query,
+            "node": str(node),
             "direction": direction,
             "edges": edges,
             "count": len(edges),

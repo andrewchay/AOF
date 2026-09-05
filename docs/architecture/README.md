@@ -1,13 +1,41 @@
 # AOF 架构总览（主入口）
 
+最后更新：`2026-09-05`。P0–P2 已提供可验证的受治理语义发布纵切；P3–P6 的本地 Agentic 查询链路见 [实现边界](agentic-system-p3-p6.md) 和 [验收台账](p0-p6-acceptance.md)。下方旧图描述传统 topic/Cognee 中间层，不能替代本节的发布与消费控制边界。
+
+## 当前规范架构
+
+```text
+文档 / 数据字典 / 表 / mapping / 本体 / 规则
+  -> 来源快照、解析上下文和证据引用（P1）
+  -> 不可变 SemanticResource
+  -> proposal -> SHACL/OWL/SKOS + 规则验证 -> review/waiver
+  -> 编译 -> 已签名、不可变 KnowledgeRelease（P0/P2）
+  -> release-pinned graph / vector / SQL / Skills / RAG / MCP
+  -> query/action receipt、审计和独立 replay
+```
+
+核心边界：来源不是已发布知识；提案不是 release；投影不是真相源；模型输出不是授权；不支持的约束和未验证身份必须失败关闭。
+
+| 能力 | 代码入口 |
+|---|---|
+| 资源、release、查询/动作控制与连续摄入 | `bridge/semantic_core/` |
+| 来源受限解析与标准化 | `bridge/document_parser/` |
+| OWL/SKOS/SHACL 与版本化 Datalog | `bridge/ontology_governance/` |
+| 哈希链决策溯源 | `bridge/decision_provenance.py` |
+| REST/MCP 控制面 | `services/semantic_middle_layer_api/app.py`、`mcp_server.py` |
+
+端到端回归 `tests/test_semantic_release_e2e.py` 使用仓库真实资源验证六种 release 目标的发布、重放和 promotion；这不是生产接入或 Agent 自主闭环的证明。
+
+---
+
+## 传统中间层架构（兼容路径）
+
 本文档是 `docs/architecture/` 的统一入口，包含：
 
 1. 主架构图（系统级）
 2. 核心能力边界
 3. 术语表（Glossary）
 4. 分文档导航
-
-最后更新：`2026-03-31`
 
 ## 1. 主架构图
 
@@ -69,9 +97,10 @@ Cognee 引擎层（add / cognify / search / graph）
 - AOF 与 Cognee 集成：[cognee-integration.md](/Users/chaihao/LLM/AOF/docs/architecture/cognee-integration.md)
 - 能力覆盖与差距快照：[cognee-capabilities-gap-analysis.md](/Users/chaihao/LLM/AOF/docs/architecture/cognee-capabilities-gap-analysis.md)
 - 历史新增功能总结（阶段性）：[new-features-summary.md](/Users/chaihao/LLM/AOF/docs/architecture/new-features-summary.md)
+- 受治理语义纵切：[trusted-semantic-vertical-slice.md](trusted-semantic-vertical-slice.md)
 
 ## 5. 维护约定
 
-1. 架构变更先更新本文档主图与术语，再更新分文档细节
+1. 架构变更先更新“当前规范架构”，再更新分文档细节
 2. 路由与模块统计值以代码为准（`app.py` + `bridge/`）
 3. 历史文档可保留，但需标注“阶段性”避免误读

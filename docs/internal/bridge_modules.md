@@ -1,6 +1,6 @@
 # AOF Bridge 模块文档
 
-本文档记录 AOF 的 Bridge 层模块，这些模块提供与 Cognee 和其他外部服务的集成能力。
+本文档记录 AOF 的 Bridge 层模块。传统 Cognee 适配能力与 P0–P2 受治理语义运行时并存；企业知识发布和消费以受治理路径为准。
 
 ## 模块概览
 
@@ -17,6 +17,20 @@
 | `batch_ingestion.py` | 批量目录摄取 | ✅ 完成 |
 | `memify_feedback_loop.py` | Memify 反馈循环 | ✅ 完成 |
 | `database_schema_extractor.py` | 数据库模式提取 | ✅ 完成 |
+| `semantic_core/` | 语义资源、release、编译、查询/动作回执、连续摄入 | ✅ P0–P2 |
+| `document_parser/` | 受白名单约束的文档解析、标准化与来源上下文 | ✅ P1 |
+| `ontology_governance/` | OWL/SKOS/SHACL、草案/发布、版本化 Datalog | ✅ P2 |
+| `decision_provenance.py` | 决策与证据的 append-only 哈希链 | ✅ P0 |
+
+## 受治理运行时（P0–P2）
+
+规范生命周期为：`source snapshot -> SemanticResource -> proposal -> validate -> approve/waiver -> compile -> signed release -> release-pinned query/action receipt`。图、向量、SQL、Skill、RAG 与 MCP 均为同一 release 的投影或能力。
+
+该路径由 `bridge.semantic_core.identity.SignedPrincipalVerifier` 验证签名主体，按租户和角色实施职责分离；请求体中的 actor 不能作为授权来源。传统模块（下文）可生成候选资产，但不能绕过这条发布门禁。
+
+---
+
+## 传统集成模块（兼容）
 
 ---
 

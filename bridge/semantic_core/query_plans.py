@@ -210,6 +210,8 @@ class TrustedSnapshotResolver:
         if len(artifacts_by_target) != len(run.artifacts):
             raise TrustedQueryError("compilation run contains duplicate artifact targets")
         required_targets = _CAPABILITY_TARGETS[request.capability]
+        if request.capability is QueryCapability.SEMANTIC_SEARCH and request.parameters.get('retrieval_mode') == 'skill':
+            required_targets = ('semantic-json',)
         missing = [target for target in required_targets if target not in artifacts_by_target]
         if missing:
             raise TrustedQueryError(
@@ -218,6 +220,19 @@ class TrustedSnapshotResolver:
         artifacts = tuple(
             self._verify_artifact(run, artifacts_by_target[target]) for target in required_targets
         )
+        for key, actual in (("expected_release_id", run.release_id), ("expected_release_digest", run.release_digest)):
+            if key in request.parameters and request.parameters[key] != actual:
+                raise TrustedQueryError("query resolved a different trusted release snapshot")
+        if request.capability is QueryCapability.SEMANTIC_SQL and request.parameters.get("natural_language"):
+            from .natural_query import ground_intent
+
+            semantic = self._artifact_payload(run, artifacts[0])
+            intent = ground_intent(request.query, semantic.get("resources", ()), request.purpose)
+            parameters = dict(request.parameters)
+            parameters.pop("natural_language")
+            parameters["intent"] = intent.to_dict()
+            return self.plan(QueryRequest.create(channel=request.channel, capability=request.capability,
+                query=intent.intent_digest, purpose=request.purpose, parameters=parameters), tenant_id=tenant_id)
         resolved_resource_ids = self._resolved_resource_ids(request, run, artifacts)
         payload = {
             "api_version": "aof.query-plan/v1",

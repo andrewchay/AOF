@@ -1,11 +1,11 @@
 ---
 name: aof-skill-02
-description: AOF FastAPI服务开发规范，涵盖端点设计、错误处理、LLM集成、质量评估等。适用于构建可维护、可扩展的语义中间层API服务。
+description: AOF FastAPI服务开发规范，涵盖端点设计、受治理身份/租户边界、错误处理和质量评估。适用于构建可维护、可审计的语义中间层API服务。
 ---
 
 # AOF-SKILL-02: API 服务开发
 
-> **定位**: AOF服务层开发标准，确保API设计的一致性、可靠性和可观测性。
+> **定位**: AOF服务层开发标准，确保 API 的一致性、可靠性、可观测性及受治理语义边界。传统 topic API 可以保留兼容；知识发布、编译、查询和动作必须使用签名主体和 release-pinned 控制面。
 
 ---
 
@@ -16,6 +16,7 @@ description: AOF FastAPI服务开发规范，涵盖端点设计、错误处理�
 - **混合驱动**: 规则检查（快）+ LLM评估（准）结合
 - **防御式编程**: 输入验证、错误处理、降级策略
 - **可观测性**: 健康检查、日志、指标全覆盖
+- **治理优先**: 来源不是发布知识，body 中 actor 不是授权，查询必须可关联 release 与 receipt
 
 ---
 
@@ -24,7 +25,8 @@ description: AOF FastAPI服务开发规范，涵盖端点设计、错误处理�
 | 场景 | 示例 |
 |------|------|
 | 新增语义端点 | 添加 `/v1/semantic/search` 端点 |
-| 集成 LLM 能力 | 实现 SQL 生成、查询评估 |
+| 集成 LLM 能力 | 生成候选/辅助评估，不能绕过发布、策略与回执 |
+| 受治理语义端点 | proposal、compiler、query、ontology、continuous ingestion |
 | 数据摄取接口 | 文档、元数据、反馈的摄取端点 |
 | 导出功能 | OWL、Mapping、Regression 导出 |
 
@@ -40,9 +42,12 @@ description: AOF FastAPI服务开发规范，涵盖端点设计、错误处理�
 
 示例:
 - `/v1/semantic/retrieve` - 语义检索
-- `/v1/semantic/compile` - SQL 生成
+- `/v1/semantic/query` - release-pinned、策略受控的查询
+- `/v1/semantic/proposals/*` - 资源提案、验证、审批、编译和发布
 - `/v1/ingest/docs` - 文档摄取
 - `/v1/build/topic` - 构建主题
+
+`/v1/semantic/compile` 已退役并返回 `410 Gone`；不得用新的“生成 SQL”端点重建该旁路。
 
 ### HTTP 方法
 

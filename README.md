@@ -1,4 +1,32 @@
-# Agentic Ontology Factory (AOF) v2.0
+# Agentic Ontology Factory (AOF)
+
+> 当前基线（2026-09-05）：P0–P2 的受治理语义纵切已合入 `main`。以下历史功能清单保留为兼容能力说明；涉及企业知识发布和消费时，以本节定义的规范路径为准。
+
+## 当前产品边界
+
+AOF 把文档、数据字典、关系数据、业务规则和既有 mapping 转化为带来源证据的 `SemanticResource`，再经验证、审批、编译和签名发布为 `KnowledgeRelease`。图、向量、SQL、Skill、RAG 与 MCP 是同一 release 的投影或能力，而不是各自独立的真相源。
+
+```text
+来源快照 -> 证据资源 -> proposal -> validate -> review/waiver
+  -> compile -> signed release -> release-pinned query/action -> receipt & replay
+```
+
+P0–P2 提供来源到签名 release 的仓库级基线。P3–P6 已增加受治理 Agentic 查询、真实本地 RDF/SQLite 执行、Skill 资源检索、稀疏向量检索、会话记忆、审计与回放。完整目标仍有未关闭事项，逐项证据见 [P0–P6 验收台账](docs/architecture/p0-p6-acceptance.md)；本地回归不代表生产就绪。
+
+### 关键入口
+
+- 受治理架构：[docs/architecture/README.md](docs/architecture/README.md)
+- 纵切与回归证据：[docs/architecture/trusted-semantic-vertical-slice.md](docs/architecture/trusted-semantic-vertical-slice.md)
+- API 协议：[services/semantic_middle_layer_api/API.md](services/semantic_middle_layer_api/API.md)
+- 发布门禁：[docs/生产发布清单.md](docs/生产发布清单.md)
+
+`POST /v1/semantic/compile` 已退役并固定返回 `410 Gone`，因为无 release、策略和回执的 SQL 生成不是受治理语义消费。使用 `POST /v1/semantic/query` 替代。
+
+受治理 REST/MCP 端点以签名 principal headers 确定 tenant、subject 和 role；请求体中 `actor` 字段不具有授权效力。运行服务前至少配置 `AOF_SEMANTIC_IDENTITY_SECRET`；需要签名 release 时还需配置 `AOF_RELEASE_SIGNING_SECRET`。
+
+---
+
+## 历史功能与兼容能力
 
 AOF 是一个**企业级知识工程平台**，支持从多源数据中自动构建、管理和分析知识图谱。基于 Cognee 知识图谱引擎，提供完整的数据摄取、本体构建、智能搜索、图谱分析和**企业级安全**能力。
 
