@@ -1,0 +1,398 @@
+{
+  "schema_version": "aof.capability-manifest/v1",
+  "generated_from": "config/capabilities/operations.json",
+  "baseline_commit": "bfc1e02d + codex/remediation-b0-security-baseline",
+  "capabilities": [
+    {
+      "capability_id": "cap:agentic",
+      "domain": "agentic",
+      "entry_points": 7,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "agentic runs/sessions",
+      "owner_role": "领域集成负责人",
+      "owner_person": null,
+      "related_findings": "D09/K02",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:analytics",
+      "domain": "analytics",
+      "entry_points": 6,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "graph analytics",
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "related_findings": "D10",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:artifacts",
+      "domain": "artifacts",
+      "entry_points": 1,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:build",
+      "domain": "build",
+      "entry_points": 1,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:datasets",
+      "domain": "datasets",
+      "entry_points": 4,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:decisions",
+      "domain": "decisions",
+      "entry_points": 6,
+      "classifications": [
+        "governed"
+      ],
+      "data_ownership": "decision_provenance ledger",
+      "owner_role": "安全后端负责人",
+      "owner_person": null,
+      "related_findings": "D01/D02",
+      "profile": "reference-local",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "per-endpoint principal tests"
+    },
+    {
+      "capability_id": "cap:documents",
+      "domain": "documents",
+      "entry_points": 1,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:export",
+      "domain": "export",
+      "entry_points": 3,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:feedback",
+      "domain": "feedback",
+      "entry_points": 1,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:graph",
+      "domain": "graph",
+      "entry_points": 9,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "graph store",
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "related_findings": "D03/D10",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:harness",
+      "domain": "harness",
+      "entry_points": 6,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "harness sessions",
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "related_findings": "D03",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:healthz",
+      "domain": "healthz",
+      "entry_points": 1,
+      "classifications": [
+        "public-diagnostic"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "per-endpoint principal tests"
+    },
+    {
+      "capability_id": "cap:ingest",
+      "domain": "ingest",
+      "entry_points": 20,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "source snapshots",
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "related_findings": "D01/D10",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:knowledge",
+      "domain": "knowledge",
+      "entry_points": 6,
+      "classifications": [
+        "governed"
+      ],
+      "data_ownership": "knowledge ingestion",
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "related_findings": "D03",
+      "profile": "reference-local",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "per-endpoint principal tests"
+    },
+    {
+      "capability_id": "cap:mcp-tools",
+      "domain": "mcp-tools",
+      "entry_points": 29,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "MCP tool surface",
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "related_findings": "D01/D03",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:metrics",
+      "domain": "metrics",
+      "entry_points": 1,
+      "classifications": [
+        "public-diagnostic"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "per-endpoint principal tests"
+    },
+    {
+      "capability_id": "cap:okf",
+      "domain": "okf",
+      "entry_points": 6,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "OKF bundles",
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "related_findings": "D03",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:ontology",
+      "domain": "ontology",
+      "entry_points": 16,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:ops",
+      "domain": "ops",
+      "entry_points": 7,
+      "classifications": [
+        "public-diagnostic"
+      ],
+      "data_ownership": "telemetry",
+      "owner_role": "SRE负责人",
+      "owner_person": null,
+      "related_findings": "D04/D11",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "per-endpoint principal tests"
+    },
+    {
+      "capability_id": "cap:rag",
+      "domain": "rag",
+      "entry_points": 1,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "RAG index",
+      "owner_role": "领域集成负责人",
+      "owner_person": null,
+      "related_findings": "D03/K02",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:readyz",
+      "domain": "readyz",
+      "entry_points": 1,
+      "classifications": [
+        "public-diagnostic"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "per-endpoint principal tests"
+    },
+    {
+      "capability_id": "cap:reasoning",
+      "domain": "reasoning",
+      "entry_points": 5,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "datalog rulesets",
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "related_findings": "K02",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:semantic",
+      "domain": "semantic",
+      "entry_points": 47,
+      "classifications": [
+        "governed",
+        "retired-410"
+      ],
+      "data_ownership": "semantic resources/releases",
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "related_findings": "D03",
+      "profile": "reference-local",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "per-endpoint principal tests"
+    },
+    {
+      "capability_id": "cap:sync",
+      "domain": "sync",
+      "entry_points": 5,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "sync state",
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "related_findings": "D10",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:training-data",
+      "domain": "training-data",
+      "entry_points": 4,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "training corpora",
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "related_findings": "D03",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:visualize",
+      "domain": "visualize",
+      "entry_points": 4,
+      "classifications": [
+        "legacy"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "legacy",
+      "migration_path": "per-operation policy matrix (W01.01 continuation)",
+      "test_coverage": "registry validation + strict gate"
+    }
+  ]
+}
