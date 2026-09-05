@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Query
+from starlette.routing import Match
 from fastapi.responses import PlainTextResponse, FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -123,13 +124,45 @@ def _trusted_trace_sink(correlation: Mapping[str, str]) -> None:
 TRUSTED_RUNTIME_TELEMETRY.set_trace_sink(_trusted_trace_sink)
 
 
+_ROUTE_TEMPLATE_CACHE: dict[str, str] = {}
+_METRIC_UNMATCHED_LABEL = 'unmatched'
+
+
+def _metric_route_label(request_path: str) -> str:
+    """Map a raw request path to its bounded route template (W09.02).
+
+    Dynamic IDs (e.g. /v1/decisions/decision:abc) collapse to the route
+    template (/v1/decisions/{decision_id}); unknown paths share one
+    'unmatched' bucket so the metric key space cannot grow unboundedly.
+    Method is not part of the label: per-route latency/errors are tracked at
+    path granularity, matching the documented /metrics semantics.
+    """
+    cached = _ROUTE_TEMPLATE_CACHE.get(request_path)
+    if cached is not None:
+        return cached
+    label = _METRIC_UNMATCHED_LABEL
+    scope = {'type': 'http', 'path': request_path, 'method': 'GET'}
+    for route in app.routes:
+        try:
+            match, _child_scope = route.matches(scope)
+        except Exception:
+            continue
+        if match == Match.FULL:
+            label = route.path
+            break
+    # Cache is bounded: templates plus a cap on one-off unmatched probes
+    if len(_ROUTE_TEMPLATE_CACHE) < 10_000 or label != _METRIC_UNMATCHED_LABEL:
+        _ROUTE_TEMPLATE_CACHE[request_path] = label
+    return label
+
+
 def _record_request_metric(path: str, status_code: int, latency_ms: float) -> None:
     global OBS_TOTAL_REQUESTS, OBS_TOTAL_ERRORS
     OBS_TOTAL_REQUESTS += 1
     if status_code >= 500:
         OBS_TOTAL_ERRORS += 1
 
-    stats = OBS_PATH_STATS[path]
+    stats = OBS_PATH_STATS[_metric_route_label(path)]
     stats['requests'] += 1
     if status_code >= 500:
         stats['errors'] += 1
