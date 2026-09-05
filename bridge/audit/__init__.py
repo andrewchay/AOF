@@ -18,13 +18,27 @@
     ))
 """
 
-from .logger import AuditLogger, AuditEvent, AuditLevel
+from .logger import (
+    AuditLogger, 
+    AuditEvent, 
+    AuditLevel, 
+    AuditBackendError, 
+    AuditConfigurationError,
+    FileOutbox,
+)
 from .query import AuditQuery, AuditReportGenerator
+from .db_models import DBAuditLog, init_audit_tables, drop_audit_tables
 
 __all__ = [
     "AuditLogger",
     "AuditEvent",
     "AuditLevel",
+    "AuditBackendError",
+    "AuditConfigurationError",
+    "FileOutbox",
     "AuditQuery",
     "AuditReportGenerator",
+    "DBAuditLog",
+    "init_audit_tables",
+    "drop_audit_tables",
 ]

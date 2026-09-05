@@ -9,10 +9,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 import json
+import re
+from pathlib import Path
 
 from .logger import AuditEvent, AuditLevel
 
@@ -116,9 +118,6 @@ class AuditQuery:
     
     async def query(self, filter: AuditQueryFilter) -> AuditQueryResult:
         """查询审计日志"""
-        # TODO: 实现数据库查询
-        # 这里提供伪代码示例
-        
         events = []
         total = 0
         
@@ -138,8 +137,11 @@ class AuditQuery:
     
     async def get_event_by_id(self, event_id: str) -> Optional[AuditEvent]:
         """根据 ID 获取单个事件"""
-        # TODO: 实现
-        pass
+        if self.db:
+            return await self._get_event_by_id_from_db(event_id)
+        elif self.log_file:
+            return await self._get_event_by_id_from_file(event_id)
+        return None
     
     async def get_user_activity(
         self,
@@ -202,12 +204,15 @@ class AuditQuery:
         min_count: int = 5
     ) -> List[Dict[str, Any]]:
         """获取高频失败操作（用于安全监控）"""
-        # TODO: 实现聚合查询
-        # SELECT action, COUNT(*) as fail_count 
-        # FROM audit_logs 
-        # WHERE status='failure' AND timestamp > NOW() - INTERVAL '24 hours'
-        # GROUP BY action HAVING COUNT(*) > 5
-        pass
+        end_time = datetime.utcnow()
+        start_time = end_time - timedelta(hours=hours)
+        
+        if self.db:
+            return await self._get_failed_actions_from_db(start_time, end_time, min_count)
+        elif self.log_file:
+            return await self._get_failed_actions_from_file(start_time, end_time, min_count)
+        
+        return []
     
     async def get_login_anomalies(
         self,
@@ -215,10 +220,72 @@ class AuditQuery:
         days: int = 7
     ) -> List[AuditEvent]:
         """检测登录异常（时间/IP 异常）"""
-        # 获取用户历史登录模式
-        # 检测偏离模式的事件
-        # TODO: 实现异常检测算法
-        pass
+        end_time = datetime.utcnow()
+        start_time = end_time - timedelta(days=days)
+        
+        # 获取用户历史登录事件
+        filter = AuditQueryFilter(
+            user_id=user_id,
+            action="auth:login",
+            start_time=start_time,
+            end_time=end_time,
+            limit=1000
+        )
+        
+        result = await self.query(filter)
+        events = result.events
+        
+        if len(events) < 5:
+            # 数据不足，无法检测异常
+            return []
+        
+        # 分析登录模式
+        anomalies = []
+        
+        # 1. 检测异常时间（非工作时间）
+        for event in events:
+            hour = event.timestamp.hour
+            # 假设工作时间是 9:00-18:00
+            if hour < 6 or hour > 22:
+                event.metadata = event.metadata or {}
+                event.metadata["anomaly_type"] = "unusual_time"
+                event.metadata["anomaly_reason"] = f"Login at unusual hour: {hour}:00"
+                anomalies.append(event)
+        
+        # 2. 检测异常 IP（如果用户通常从固定 IP 登录）
+        ip_counts = {}
+        for event in events:
+            if event.client_ip:
+                ip_counts[event.client_ip] = ip_counts.get(event.client_ip, 0) + 1
+        
+        if ip_counts:
+            # 找出最常用的 IP
+            common_ip = max(ip_counts, key=ip_counts.get)
+            common_ip_count = ip_counts[common_ip]
+            
+            # 如果某个 IP 使用次数明显少于常用 IP，标记为异常
+            threshold = max(1, common_ip_count // 3)
+            for event in events:
+                if event.client_ip and event.client_ip != common_ip:
+                    if ip_counts.get(event.client_ip, 0) < threshold:
+                        event.metadata = event.metadata or {}
+                        event.metadata["anomaly_type"] = "unusual_ip"
+                        event.metadata["anomaly_reason"] = f"Login from unusual IP: {event.client_ip}"
+                        if event not in anomalies:
+                            anomalies.append(event)
+        
+        # 3. 检测频繁失败
+        failure_count = sum(1 for e in events if e.status == "failure")
+        if failure_count > len(events) * 0.3:  # 失败率超过 30%
+            for event in events:
+                if event.status == "failure":
+                    event.metadata = event.metadata or {}
+                    event.metadata["anomaly_type"] = "frequent_failures"
+                    event.metadata["anomaly_reason"] = "High failure rate detected"
+                    if event not in anomalies:
+                        anomalies.append(event)
+        
+        return anomalies
     
     def _calculate_summary(
         self,
@@ -296,17 +363,329 @@ class AuditQuery:
             avg_duration_ms=avg_duration
         )
     
-    async def _query_from_db(self, filter: AuditQueryFilter) -> tuple[List[AuditEvent], int]:
-        """从数据库查询"""
-        # TODO: 实现 SQL 查询构建
-        # 这里返回空结果作为占位
-        return [], 0
+    # ========== 数据库查询实现 ==========
     
-    async def _query_from_file(self, filter: AuditQueryFilter) -> tuple[List[AuditEvent], int]:
+    async def _query_from_db(self, filter: AuditQueryFilter) -> Tuple[List[AuditEvent], int]:
+        """从数据库查询"""
+        from sqlalchemy import select, func, and_, or_
+        from .db_models import DBAuditLog
+        
+        # 构建查询条件
+        conditions = []
+        
+        if filter.start_time:
+            conditions.append(DBAuditLog.timestamp >= filter.start_time)
+        if filter.end_time:
+            conditions.append(DBAuditLog.timestamp <= filter.end_time)
+        if filter.user_id:
+            conditions.append(DBAuditLog.user_id == filter.user_id)
+        if filter.username:
+            conditions.append(DBAuditLog.username == filter.username)
+        if filter.tenant_id:
+            conditions.append(DBAuditLog.tenant_id == filter.tenant_id)
+        if filter.action:
+            conditions.append(DBAuditLog.action == filter.action)
+        if filter.actions:
+            conditions.append(DBAuditLog.action.in_(filter.actions))
+        if filter.status:
+            conditions.append(DBAuditLog.status == filter.status)
+        if filter.level:
+            conditions.append(DBAuditLog.level == filter.level.value)
+        if filter.resource_type:
+            conditions.append(DBAuditLog.resource_type == filter.resource_type)
+        if filter.resource_id:
+            conditions.append(DBAuditLog.resource_id == filter.resource_id)
+        if filter.client_ip:
+            conditions.append(DBAuditLog.client_ip == filter.client_ip)
+        if filter.request_id:
+            conditions.append(DBAuditLog.request_id == filter.request_id)
+        if filter.keyword:
+            # 关键词搜索：在 action, error_message, request_payload 中搜索
+            keyword_pattern = f"%{filter.keyword}%"
+            keyword_conditions = [
+                DBAuditLog.action.ilike(keyword_pattern),
+                DBAuditLog.error_message.ilike(keyword_pattern),
+                DBAuditLog.username.ilike(keyword_pattern),
+            ]
+            conditions.append(or_(*keyword_conditions))
+        
+        # 查询总数
+        count_query = select(func.count(DBAuditLog.id))
+        if conditions:
+            count_query = count_query.where(and_(*conditions))
+        
+        result = await self.db.execute(count_query)
+        total = result.scalar() or 0
+        
+        # 查询数据
+        query = select(DBAuditLog)
+        if conditions:
+            query = query.where(and_(*conditions))
+        
+        # 排序：按时间倒序
+        query = query.order_by(DBAuditLog.timestamp.desc())
+        
+        # 分页
+        query = query.offset(filter.offset).limit(filter.limit)
+        
+        result = await self.db.execute(query)
+        db_logs = result.scalars().all()
+        
+        # 转换为 AuditEvent
+        events = [self._db_log_to_event(log) for log in db_logs]
+        
+        return events, total
+    
+    async def _get_event_by_id_from_db(self, event_id: str) -> Optional[AuditEvent]:
+        """从数据库根据 ID 获取事件"""
+        from sqlalchemy import select
+        from .db_models import DBAuditLog
+        
+        query = select(DBAuditLog).where(DBAuditLog.event_id == event_id)
+        result = await self.db.execute(query)
+        db_log = result.scalar_one_or_none()
+        
+        if db_log:
+            return self._db_log_to_event(db_log)
+        return None
+    
+    async def _get_failed_actions_from_db(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        min_count: int
+    ) -> List[Dict[str, Any]]:
+        """从数据库获取高频失败操作"""
+        from sqlalchemy import select, func, and_
+        from .db_models import DBAuditLog
+        
+        query = select(
+            DBAuditLog.action,
+            func.count(DBAuditLog.id).label('fail_count')
+        ).where(
+            and_(
+                DBAuditLog.status == 'failure',
+                DBAuditLog.timestamp >= start_time,
+                DBAuditLog.timestamp <= end_time
+            )
+        ).group_by(
+            DBAuditLog.action
+        ).having(
+            func.count(DBAuditLog.id) >= min_count
+        ).order_by(
+            func.count(DBAuditLog.id).desc()
+        )
+        
+        result = await self.db.execute(query)
+        rows = result.all()
+        
+        return [
+            {"action": row.action, "fail_count": row.fail_count}
+            for row in rows
+        ]
+    
+    def _db_log_to_event(self, db_log) -> AuditEvent:
+        """将数据库模型转换为 AuditEvent"""
+        return AuditEvent(
+            event_id=db_log.event_id,
+            timestamp=db_log.timestamp,
+            level=AuditLevel(db_log.level) if db_log.level else AuditLevel.INFO,
+            user_id=db_log.user_id,
+            username=db_log.username,
+            tenant_id=db_log.tenant_id,
+            session_id=db_log.session_id,
+            action=db_log.action,
+            status=db_log.status,
+            resource_type=db_log.resource_type,
+            resource_id=db_log.resource_id,
+            request_payload=db_log.request_payload,
+            response_summary=db_log.response_summary,
+            error_message=db_log.error_message,
+            error_code=db_log.error_code,
+            client_ip=db_log.client_ip,
+            user_agent=db_log.user_agent,
+            request_id=db_log.request_id,
+            duration_ms=db_log.duration_ms,
+            metadata=db_log.metadata_json or {},
+        )
+    
+    # ========== 文件查询实现 ==========
+    
+    async def _query_from_file(self, filter: AuditQueryFilter) -> Tuple[List[AuditEvent], int]:
         """从日志文件查询"""
-        # TODO: 实现文件扫描
-        # 这里返回空结果作为占位
-        return [], 0
+        if not self.log_file or not Path(self.log_file).exists():
+            return [], 0
+        
+        events = []
+        
+        with open(self.log_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                
+                try:
+                    data = json.loads(line)
+                    event = self._dict_to_event(data)
+                    
+                    # 应用过滤器
+                    if self._matches_filter(event, filter):
+                        events.append(event)
+                        
+                except json.JSONDecodeError:
+                    continue
+        
+        # 按时间倒序排序
+        events.sort(key=lambda e: e.timestamp, reverse=True)
+        
+        total = len(events)
+        
+        # 分页
+        start = filter.offset
+        end = filter.offset + filter.limit
+        paginated_events = events[start:end]
+        
+        return paginated_events, total
+    
+    async def _get_event_by_id_from_file(self, event_id: str) -> Optional[AuditEvent]:
+        """从文件根据 ID 获取事件"""
+        if not self.log_file or not Path(self.log_file).exists():
+            return None
+        
+        with open(self.log_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                
+                try:
+                    data = json.loads(line)
+                    if data.get('event_id') == event_id:
+                        return self._dict_to_event(data)
+                except json.JSONDecodeError:
+                    continue
+        
+        return None
+    
+    async def _get_failed_actions_from_file(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        min_count: int
+    ) -> List[Dict[str, Any]]:
+        """从文件获取高频失败操作"""
+        if not self.log_file or not Path(self.log_file).exists():
+            return []
+        
+        action_counts = {}
+        
+        with open(self.log_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                
+                try:
+                    data = json.loads(line)
+                    
+                    # 检查时间和状态
+                    timestamp = datetime.fromisoformat(data.get('timestamp', ''))
+                    if timestamp < start_time or timestamp > end_time:
+                        continue
+                    
+                    if data.get('status') != 'failure':
+                        continue
+                    
+                    action = data.get('action', 'unknown')
+                    action_counts[action] = action_counts.get(action, 0) + 1
+                    
+                except (json.JSONDecodeError, ValueError):
+                    continue
+        
+        # 过滤并排序
+        result = [
+            {"action": action, "fail_count": count}
+            for action, count in action_counts.items()
+            if count >= min_count
+        ]
+        result.sort(key=lambda x: -x["fail_count"])
+        
+        return result
+    
+    def _dict_to_event(self, data: Dict[str, Any]) -> AuditEvent:
+        """将字典转换为 AuditEvent"""
+        # 解析时间戳
+        timestamp = data.get('timestamp')
+        if isinstance(timestamp, str):
+            timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        elif timestamp is None:
+            timestamp = datetime.utcnow()
+        
+        # 解析级别
+        level = data.get('level', 'info')
+        if isinstance(level, str):
+            level = AuditLevel(level)
+        
+        return AuditEvent(
+            event_id=data.get('event_id', ''),
+            timestamp=timestamp,
+            level=level,
+            user_id=data.get('user_id'),
+            username=data.get('username'),
+            tenant_id=data.get('tenant_id'),
+            session_id=data.get('session_id'),
+            action=data.get('action', ''),
+            status=data.get('status', 'pending'),
+            resource_type=data.get('resource_type'),
+            resource_id=data.get('resource_id'),
+            request_payload=data.get('request_payload'),
+            response_summary=data.get('response_summary'),
+            error_message=data.get('error_message'),
+            error_code=data.get('error_code'),
+            client_ip=data.get('client_ip'),
+            user_agent=data.get('user_agent'),
+            request_id=data.get('request_id'),
+            duration_ms=data.get('duration_ms'),
+            metadata=data.get('metadata', {}),
+        )
+    
+    def _matches_filter(self, event: AuditEvent, filter: AuditQueryFilter) -> bool:
+        """检查事件是否匹配过滤条件"""
+        if filter.start_time and event.timestamp < filter.start_time:
+            return False
+        if filter.end_time and event.timestamp > filter.end_time:
+            return False
+        if filter.user_id and event.user_id != filter.user_id:
+            return False
+        if filter.username and event.username != filter.username:
+            return False
+        if filter.tenant_id and event.tenant_id != filter.tenant_id:
+            return False
+        if filter.action and event.action != filter.action:
+            return False
+        if filter.actions and event.action not in filter.actions:
+            return False
+        if filter.status and event.status != filter.status:
+            return False
+        if filter.level and event.level != filter.level:
+            return False
+        if filter.resource_type and event.resource_type != filter.resource_type:
+            return False
+        if filter.resource_id and event.resource_id != filter.resource_id:
+            return False
+        if filter.client_ip and event.client_ip != filter.client_ip:
+            return False
+        if filter.request_id and event.request_id != filter.request_id:
+            return False
+        if filter.keyword:
+            keyword_lower = filter.keyword.lower()
+            searchable = [
+                event.action or '',
+                event.error_message or '',
+                event.username or '',
+                json.dumps(event.request_payload or {}),
+            ]
+            if not any(keyword_lower in s.lower() for s in searchable):
+                return False
+        
+        return True
 
 
 class AuditReportGenerator:

@@ -13,12 +13,14 @@ import uuid
 import json
 import logging
 import asyncio
+import os
 from functools import wraps
 from datetime import datetime
 from enum import Enum
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field, asdict
 from collections import deque
+from pathlib import Path
 from fastapi import Request
 
 # 配置
@@ -26,11 +28,22 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_BATCH_SIZE = 100
 DEFAULT_FLUSH_INTERVAL = 5  # 秒
+DEFAULT_OUTBOX_DIR = "/tmp/aof_audit_outbox"
 SENSITIVE_FIELDS = {
     "password", "secret", "token", "api_key", "apikey", "api-key",
     "authorization", "auth", "credential", "credentials",
     "private_key", "privatekey", "private-key",
 }
+
+
+class AuditBackendError(Exception):
+    """审计后端错误"""
+    pass
+
+
+class AuditConfigurationError(AuditBackendError):
+    """审计配置错误"""
+    pass
 
 
 class AuditLevel(str, Enum):
@@ -163,6 +176,64 @@ class DataMasker:
         return "****"
 
 
+class FileOutbox:
+    """文件 Outbox 模式实现（当没有真实 MQ 时的参考实现）
+    
+    确保事件不丢失，即使系统崩溃也能恢复
+    """
+    
+    def __init__(self, outbox_dir: str = DEFAULT_OUTBOX_DIR):
+        self.outbox_dir = Path(outbox_dir)
+        self.outbox_dir.mkdir(parents=True, exist_ok=True)
+        self._lock = asyncio.Lock()
+    
+    async def write_batch(self, events: List[AuditEvent]) -> bool:
+        """批量写入 outbox 文件"""
+        if not events:
+            return True
+        
+        async with self._lock:
+            # 按时间戳分文件存储，避免单个文件过大
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            filename = self.outbox_dir / f"audit_outbox_{timestamp}_{uuid.uuid4().hex[:8]}.jsonl"
+            
+            try:
+                with open(filename, 'w', encoding='utf-8') as f:
+                    for event in events:
+                        f.write(event.to_json() + "\n")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to write to outbox: {e}")
+                raise AuditBackendError(f"Outbox write failed: {e}")
+    
+    async def write_single(self, event: AuditEvent) -> bool:
+        """单条写入 outbox 文件"""
+        return await self.write_batch([event])
+    
+    def read_pending_events(self, limit: int = 1000) -> List[Dict[str, Any]]:
+        """读取待处理的事件（用于恢复或转发到真实 MQ）"""
+        events = []
+        files = sorted(self.outbox_dir.glob("audit_outbox_*.jsonl"))
+        
+        for filepath in files[:limit]:
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if line.strip():
+                            events.append(json.loads(line))
+            except Exception as e:
+                logger.error(f"Failed to read outbox file {filepath}: {e}")
+        
+        return events
+    
+    def mark_processed(self, filepath: str):
+        """标记文件已处理（重命名为 .processed）"""
+        path = Path(filepath)
+        if path.exists():
+            processed_path = path.with_suffix('.processed')
+            path.rename(processed_path)
+
+
 class AuditLogger:
     """审计日志记录器
     
@@ -171,6 +242,8 @@ class AuditLogger:
     - 支持多后端（数据库、文件、消息队列）
     - 自动脱敏敏感数据
     - 失败重试和降级
+    
+    注意：如果配置了 DB 或 MQ，写入失败会抛出异常，不会静默成功
     """
     
     def __init__(
@@ -178,16 +251,32 @@ class AuditLogger:
         db_session=None,
         log_file: Optional[str] = None,
         mq_client=None,  # 消息队列客户端（如 Kafka）
+        mq_outbox_dir: Optional[str] = None,  # 文件 outbox 目录（当没有真实 MQ 时）
         batch_size: int = DEFAULT_BATCH_SIZE,
         flush_interval: int = DEFAULT_FLUSH_INTERVAL,
         enable_masking: bool = True,
+        strict_mode: bool = True,  # 严格模式：写入失败返回 False 而不是静默成功
     ):
+        # 验证配置：至少需要一个后端
+        if not any([db_session, log_file, mq_client, mq_outbox_dir]):
+            if strict_mode:
+                raise AuditConfigurationError(
+                    "At least one audit backend must be configured: "
+                    "db_session, log_file, mq_client, or mq_outbox_dir"
+                )
+        
         self.db = db_session
         self.log_file = log_file
         self.mq = mq_client
         self.batch_size = batch_size
         self.flush_interval = flush_interval
         self.enable_masking = enable_masking
+        self.strict_mode = strict_mode
+        
+        # 文件 outbox（当没有真实 MQ 时）
+        self._outbox: Optional[FileOutbox] = None
+        if mq_outbox_dir and not mq_client:
+            self._outbox = FileOutbox(mq_outbox_dir)
         
         # 批量写入缓冲
         self._buffer: deque = deque()
@@ -237,7 +326,7 @@ class AuditLogger:
             immediate: 是否立即写入（不缓冲）
         
         Returns:
-            是否成功
+            是否成功（严格模式下，失败会抛出异常）
         """
         # 脱敏
         if self.enable_masking and event.request_payload:
@@ -314,57 +403,139 @@ class AuditLogger:
     
     async def _write_batch(self, events: List[AuditEvent]) -> bool:
         """批量写入"""
-        try:
-            # 写入数据库
-            if self.db:
+        errors = []
+        
+        # 写入数据库
+        if self.db:
+            try:
                 await self._write_to_db_batch(events)
-            
-            # 写入文件
-            if self._file_handle:
+            except Exception as e:
+                logger.error(f"DB batch write failed: {e}")
+                errors.append(f"DB: {e}")
+                if self.strict_mode:
+                    raise AuditBackendError(f"DB write failed: {e}")
+        
+        # 写入文件
+        if self._file_handle:
+            try:
                 await self._write_to_file_batch(events)
-            
-            # 写入消息队列
-            if self.mq:
+            except Exception as e:
+                logger.error(f"File batch write failed: {e}")
+                errors.append(f"File: {e}")
+                if self.strict_mode:
+                    raise AuditBackendError(f"File write failed: {e}")
+        
+        # 写入消息队列
+        if self.mq:
+            try:
                 await self._write_to_mq_batch(events)
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Batch write failed: {e}")
-            return False
+            except Exception as e:
+                logger.error(f"MQ batch write failed: {e}")
+                errors.append(f"MQ: {e}")
+                if self.strict_mode:
+                    raise AuditBackendError(f"MQ write failed: {e}")
+        elif self._outbox:
+            # 使用文件 outbox 作为降级
+            try:
+                await self._outbox.write_batch(events)
+            except Exception as e:
+                logger.error(f"Outbox batch write failed: {e}")
+                errors.append(f"Outbox: {e}")
+                if self.strict_mode:
+                    raise AuditBackendError(f"Outbox write failed: {e}")
+        
+        return len(errors) == 0
     
     async def _write_single(self, event: AuditEvent) -> bool:
         """单条写入（降级用）"""
-        try:
-            if self.db:
+        errors = []
+        
+        if self.db:
+            try:
                 await self._write_to_db_single(event)
-            
-            if self._file_handle:
+            except Exception as e:
+                logger.error(f"DB single write failed: {e}")
+                errors.append(f"DB: {e}")
+                if self.strict_mode:
+                    self._total_failed += 1
+                    raise AuditBackendError(f"DB write failed: {e}")
+        
+        if self._file_handle:
+            try:
                 await self._write_to_file_single(event)
-            
-            if self.mq:
+            except Exception as e:
+                logger.error(f"File single write failed: {e}")
+                errors.append(f"File: {e}")
+                if self.strict_mode:
+                    self._total_failed += 1
+                    raise AuditBackendError(f"File write failed: {e}")
+        
+        if self.mq:
+            try:
                 await self._write_to_mq_single(event)
-            
-            self._total_logged += 1
-            return True
-            
-        except Exception as e:
-            logger.error(f"Single write failed: {e}")
+            except Exception as e:
+                logger.error(f"MQ single write failed: {e}")
+                errors.append(f"MQ: {e}")
+                if self.strict_mode:
+                    self._total_failed += 1
+                    raise AuditBackendError(f"MQ write failed: {e}")
+        elif self._outbox:
+            try:
+                await self._outbox.write_single(event)
+            except Exception as e:
+                logger.error(f"Outbox single write failed: {e}")
+                errors.append(f"Outbox: {e}")
+                if self.strict_mode:
+                    self._total_failed += 1
+                    raise AuditBackendError(f"Outbox write failed: {e}")
+        
+        if errors:
             self._total_failed += 1
             return False
+        
+        self._total_logged += 1
+        return True
     
     # ========== 具体写入实现 ==========
     
     async def _write_to_db_batch(self, events: List[AuditEvent]):
         """批量写入数据库"""
-        # TODO: 实现批量 INSERT
-        # 示例：INSERT INTO audit_logs (...) VALUES (...), (...), ...
-        pass
+        if not self.db:
+            raise AuditBackendError("Database session not configured")
+        
+        from .db_models import DBAuditLog
+        
+        try:
+            # 转换为数据库模型
+            db_logs = [DBAuditLog.from_audit_event(e) for e in events]
+            
+            # 批量插入
+            self.db.add_all(db_logs)
+            await self.db.commit()
+            
+            logger.debug(f"Batch inserted {len(events)} audit events to DB")
+            
+        except Exception as e:
+            await self.db.rollback()
+            raise AuditBackendError(f"Failed to batch insert audit events: {e}")
     
     async def _write_to_db_single(self, event: AuditEvent):
         """单条写入数据库"""
-        # TODO: 实现单条 INSERT
-        pass
+        if not self.db:
+            raise AuditBackendError("Database session not configured")
+        
+        from .db_models import DBAuditLog
+        
+        try:
+            db_log = DBAuditLog.from_audit_event(event)
+            self.db.add(db_log)
+            await self.db.commit()
+            
+            logger.debug(f"Inserted audit event {event.event_id} to DB")
+            
+        except Exception as e:
+            await self.db.rollback()
+            raise AuditBackendError(f"Failed to insert audit event: {e}")
     
     async def _write_to_file_batch(self, events: List[AuditEvent]):
         """批量写入文件"""
@@ -379,13 +550,48 @@ class AuditLogger:
     
     async def _write_to_mq_batch(self, events: List[AuditEvent]):
         """批量写入消息队列"""
-        # TODO: 实现 Kafka/RabbitMQ 批量发送
-        pass
+        if not self.mq:
+            raise AuditBackendError("MQ client not configured")
+        
+        try:
+            # 检查 MQ 客户端类型并调用相应方法
+            if hasattr(self.mq, 'send_batch'):
+                # Kafka 风格
+                messages = [e.to_dict() for e in events]
+                await self.mq.send_batch(messages)
+            elif hasattr(self.mq, 'publish_batch'):
+                # RabbitMQ 风格
+                messages = [e.to_json() for e in events]
+                await self.mq.publish_batch(messages)
+            elif hasattr(self.mq, 'send'):
+                # 单条发送
+                for event in events:
+                    await self.mq.send(event.to_dict())
+            else:
+                raise AuditBackendError(f"Unsupported MQ client type: {type(self.mq)}")
+            
+            logger.debug(f"Batch sent {len(events)} audit events to MQ")
+            
+        except Exception as e:
+            raise AuditBackendError(f"Failed to send audit events to MQ: {e}")
     
     async def _write_to_mq_single(self, event: AuditEvent):
         """单条写入消息队列"""
-        # TODO: 实现 Kafka/RabbitMQ 单条发送
-        pass
+        if not self.mq:
+            raise AuditBackendError("MQ client not configured")
+        
+        try:
+            if hasattr(self.mq, 'send'):
+                await self.mq.send(event.to_dict())
+            elif hasattr(self.mq, 'publish'):
+                await self.mq.publish(event.to_json())
+            else:
+                raise AuditBackendError(f"Unsupported MQ client type: {type(self.mq)}")
+            
+            logger.debug(f"Sent audit event {event.event_id} to MQ")
+            
+        except Exception as e:
+            raise AuditBackendError(f"Failed to send audit event to MQ: {e}")
     
     # ========== 统计信息 ==========
     
