@@ -2,6 +2,8 @@
 
 > 本文档描述 AOF (Agentic Ontology Factory) 的整体架构设计，包括系统分层、模块关系、数据流和扩展点。
 
+> 2026-09-05：当前受治理架构入口为 [架构总览](docs/architecture/README.md)，阶段范围和证据以 [P0–P6 验收台账](docs/architecture/p0-p6-acceptance.md) 为准。本文件后续图表含传统 Topic/Cognee 设计，不代表所有入口已经统一鉴权或全部生产能力已经部署。
+
 ## 目录
 
 1. [架构概览](#架构概览)

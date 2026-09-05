@@ -76,6 +76,7 @@ class ActionControlPlane:
         self, payload: Mapping[str, Any], *, headers: Mapping[str, str]
     ) -> dict[str, Any]:
         principal = self.verifier.verify(headers)
+        self._tenant_run(self._required(payload, 'run_id'), principal.tenant_id)
         return self.service.approve(
             self._required(payload, "run_id"),
             actor=f"principal:{principal.subject}",

@@ -95,6 +95,18 @@ from .query_runs import (
 )
 from .production import ProductionReadiness, ReadinessFinding, ReadinessReport
 from .observability import TrustedRuntimeTelemetry, trusted_runtime_telemetry
+from .agentic_system import (
+    CAPABILITIES,
+    AgenticPlan,
+    AgenticRequest,
+    AgenticSummaryValidator,
+    AgenticSystemError,
+    AgenticSystemService,
+    CapabilityResult,
+    IntentRoute,
+    OntologyIntentRouter,
+    SqliteAgenticRunRepository,
+)
 from .semantic_query import (
     IntentFilter,
     SemanticIntent,
@@ -233,6 +245,16 @@ __all__ = [
     "ReadinessReport",
     "TrustedRuntimeTelemetry",
     "trusted_runtime_telemetry",
+    "CAPABILITIES",
+    "AgenticPlan",
+    "AgenticRequest",
+    "AgenticSummaryValidator",
+    "AgenticSystemError",
+    "AgenticSystemService",
+    "CapabilityResult",
+    "IntentRoute",
+    "OntologyIntentRouter",
+    "SqliteAgenticRunRepository",
     "SemanticIntent",
     "IntentFilter",
     "SemanticQueryCompileError",

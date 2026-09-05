@@ -34,3 +34,6 @@ jobs:
 
       - name: Run tests
         run: pytest -v
+
+      - name: API documentation drift
+        run: python tools/export_openapi.py --check

@@ -1,5 +1,39 @@
 # AOF Semantic Middle Layer API
 
+> 当前接口基线（2026-09-05）：服务同时承载传统 topic API 与 P0–P2 受治理语义控制面。下文早期“SQL 生成”描述仅适用于已退役的实现背景，不能作为当前调用方式。
+
+## 受治理 API：先发布，再消费
+
+```text
+source -> SemanticResource -> proposal -> validate -> approve
+  -> compile -> signed release -> channel promotion -> query/action receipt
+```
+
+| 任务 | 规范端点 |
+|---|---|
+| 创建/验证/审批/编译/发布语义变更 | `/v1/semantic/proposals/*` |
+| 查看已发布 release | `GET /v1/semantic/releases/{release_id}` |
+| 编译计划、执行、重放、channel promotion | `/v1/semantic/compiler/*` |
+| release-pinned 查询与回放 | `/v1/semantic/query`、`/v1/semantic/query-runs/*` |
+| 连续来源接入 | `/v1/knowledge/sources/*`、`/v1/knowledge/ingestion-runs/*` |
+| 本体草案/发布及规则 | `/v1/ontology/*`、`/v1/reasoning/*` |
+
+受治理端点以 HMAC 签名 principal headers 识别 tenant、subject 和角色。必须配置：
+
+```bash
+export AOF_SEMANTIC_IDENTITY_SECRET='replace-in-real-environment'
+# 发布签名 release 时需要
+export AOF_RELEASE_SIGNING_SECRET='replace-in-real-environment'
+```
+
+请求体中的 `actor` 不参与授权。`POST /v1/semantic/compile` 已退役并返回 `410 Gone`；请调用 `/v1/semantic/query`，并提供 `channel`、`capability`、`purpose`、`policy_resource_id` 和 `rationale`。
+
+运行态检查：`GET /healthz` 与 `GET /v1/ops/trusted-runtime`。生产前执行 [发布清单](../../docs/生产发布清单.md)，并以 `tests/test_semantic_release_e2e.py` 的多目标发布/重放闭环作为最低回归证据。
+
+---
+
+## 传统 Topic API（兼容）
+
 FastAPI 服务，提供本体构建、语义检索、SQL 生成和查询评估能力。
 
 ## 快速开始
@@ -54,7 +88,7 @@ LLM_ENDPOINT=https://api.deepseek.com/v1
 | `/v1/ingest/docs` | POST | 摄取文档 |
 | `/v1/build/topic` | POST | 构建主题本体 |
 | `/v1/semantic/retrieve` | POST | 语义检索 |
-| `/v1/semantic/compile` | POST | SQL 生成 |
+| `/v1/semantic/compile` | POST | **已退役：固定返回 410** |
 | `/v1/semantic/evaluate` | POST | 查询评估 |
 
 ## Docker 镜像
