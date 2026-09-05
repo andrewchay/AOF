@@ -70,6 +70,11 @@ class RBACManager:
         self.cache = cache_client
         self._user_cache: Dict[str, User] = {}  # 内存缓存（短时效）
         
+        # 内存存储（当 db_session 为 None 时使用）
+        self._users_store: Dict[str, User] = {}
+        self._roles_store: Dict[str, Role] = {}
+        self._assignments_store: List[UserRoleAssignment] = []
+        
     # ========== 用户管理 ==========
     
     async def create_user(
@@ -407,29 +412,164 @@ class RBACManager:
     
     async def _persist_user(self, user: User) -> None:
         """持久化用户到数据库"""
-        # TODO: 实现数据库写入
-        # 示例: await self.db.execute("INSERT INTO users ...", user.to_dict())
-        pass
+        if self.db is not None:
+            from .db_models import DBUser
+            from sqlalchemy import select
+            async with self.db() as session:
+                # Check if user already exists
+                result = await session.execute(
+                    select(DBUser).where(DBUser.id == user.id)
+                )
+                existing = result.scalar_one_or_none()
+                if existing:
+                    existing.username = user.username
+                    existing.email = user.email
+                    existing.tenant_id = user.tenant_id
+                    existing.is_active = user.is_active
+                    existing.is_superuser = user.is_superuser
+                    existing.metadata_json = user.metadata
+                    existing.updated_at = datetime.utcnow()
+                else:
+                    db_user = DBUser(
+                        id=user.id,
+                        username=user.username,
+                        email=user.email,
+                        tenant_id=user.tenant_id,
+                        is_active=user.is_active,
+                        is_superuser=user.is_superuser,
+                        metadata_json=user.metadata,
+                    )
+                    session.add(db_user)
+                await session.commit()
+        else:
+            self._users_store[user.id] = user
     
     async def _fetch_user_from_db(self, user_id: str) -> Optional[User]:
         """从数据库获取用户"""
-        # TODO: 实现数据库查询
-        pass
+        if self.db is not None:
+            from .db_models import DBUser
+            from sqlalchemy import select
+            async with self.db() as session:
+                result = await session.execute(
+                    select(DBUser).where(DBUser.id == user_id)
+                )
+                db_user = result.scalar_one_or_none()
+                if db_user:
+                    return User(
+                        id=db_user.id,
+                        username=db_user.username,
+                        email=db_user.email,
+                        tenant_id=db_user.tenant_id,
+                        is_active=db_user.is_active,
+                        is_superuser=db_user.is_superuser,
+                        metadata=db_user.metadata_json or {},
+                        created_at=db_user.created_at,
+                        updated_at=db_user.updated_at,
+                    )
+                return None
+        else:
+            return self._users_store.get(user_id)
     
     async def _fetch_user_by_username(self, username: str) -> Optional[User]:
         """通过用户名查询用户"""
-        # TODO: 实现数据库查询
-        pass
+        if self.db is not None:
+            from .db_models import DBUser
+            from sqlalchemy import select
+            async with self.db() as session:
+                result = await session.execute(
+                    select(DBUser).where(DBUser.username == username)
+                )
+                db_user = result.scalar_one_or_none()
+                if db_user:
+                    return User(
+                        id=db_user.id,
+                        username=db_user.username,
+                        email=db_user.email,
+                        tenant_id=db_user.tenant_id,
+                        is_active=db_user.is_active,
+                        is_superuser=db_user.is_superuser,
+                        metadata=db_user.metadata_json or {},
+                        created_at=db_user.created_at,
+                        updated_at=db_user.updated_at,
+                    )
+                return None
+        else:
+            for user in self._users_store.values():
+                if user.username == username:
+                    return user
+            return None
     
     async def _persist_role(self, role: Role) -> None:
         """持久化角色"""
-        # TODO: 实现数据库写入
-        pass
+        if self.db is not None:
+            from .db_models import DBRole, DBPermission
+            from sqlalchemy import select
+            async with self.db() as session:
+                result = await session.execute(
+                    select(DBRole).where(DBRole.id == role.id)
+                )
+                existing = result.scalar_one_or_none()
+                if existing:
+                    existing.name = role.name
+                    existing.role_type = role.role_type.value
+                    existing.tenant_id = role.tenant_id
+                    existing.description = role.description
+                else:
+                    db_role = DBRole(
+                        id=role.id,
+                        name=role.name,
+                        role_type=role.role_type.value,
+                        tenant_id=role.tenant_id,
+                        description=role.description,
+                    )
+                    session.add(db_role)
+                    # Persist permissions
+                    for perm in role.permissions:
+                        db_perm = DBPermission(
+                            id=str(uuid.uuid4()),
+                            role_id=role.id,
+                            resource_type=perm.resource_type.value,
+                            action=perm.action.value,
+                            resource_id=perm.resource_id,
+                        )
+                        session.add(db_perm)
+                await session.commit()
+        else:
+            self._roles_store[role.id] = role
     
     async def _fetch_role_from_db(self, role_id: str) -> Optional[Role]:
         """从数据库获取角色"""
-        # TODO: 实现数据库查询
-        pass
+        if self.db is not None:
+            from .db_models import DBRole
+            from sqlalchemy import select
+            from sqlalchemy.orm import selectinload
+            async with self.db() as session:
+                result = await session.execute(
+                    select(DBRole).where(DBRole.id == role_id)
+                    .options(selectinload(DBRole.permissions))
+                )
+                db_role = result.scalar_one_or_none()
+                if db_role:
+                    permissions = [
+                        Permission(
+                            resource_type=ResourceType(p.resource_type),
+                            action=Action(p.action),
+                            resource_id=p.resource_id,
+                        )
+                        for p in db_role.permissions
+                    ]
+                    return Role(
+                        id=db_role.id,
+                        name=db_role.name,
+                        role_type=RoleType(db_role.role_type),
+                        tenant_id=db_role.tenant_id,
+                        permissions=permissions,
+                        description=db_role.description,
+                        created_at=db_role.created_at,
+                    )
+                return None
+        else:
+            return self._roles_store.get(role_id)
     
     async def _fetch_roles(
         self,
@@ -437,13 +577,65 @@ class RBACManager:
         role_type: Optional[RoleType] = None
     ) -> List[Role]:
         """查询角色列表"""
-        # TODO: 实现数据库查询
-        return []
+        if self.db is not None:
+            from .db_models import DBRole
+            from sqlalchemy import select
+            from sqlalchemy.orm import selectinload
+            async with self.db() as session:
+                query = select(DBRole).options(selectinload(DBRole.permissions))
+                if tenant_id is not None:
+                    query = query.where(DBRole.tenant_id == tenant_id)
+                if role_type is not None:
+                    query = query.where(DBRole.role_type == role_type.value)
+                result = await session.execute(query)
+                db_roles = result.scalars().all()
+                roles = []
+                for db_role in db_roles:
+                    permissions = [
+                        Permission(
+                            resource_type=ResourceType(p.resource_type),
+                            action=Action(p.action),
+                            resource_id=p.resource_id,
+                        )
+                        for p in db_role.permissions
+                    ]
+                    roles.append(Role(
+                        id=db_role.id,
+                        name=db_role.name,
+                        role_type=RoleType(db_role.role_type),
+                        tenant_id=db_role.tenant_id,
+                        permissions=permissions,
+                        description=db_role.description,
+                        created_at=db_role.created_at,
+                    ))
+                return roles
+        else:
+            roles = list(self._roles_store.values())
+            if tenant_id is not None:
+                roles = [r for r in roles if r.tenant_id == tenant_id]
+            if role_type is not None:
+                roles = [r for r in roles if r.role_type == role_type]
+            return roles
     
     async def _persist_assignment(self, assignment: UserRoleAssignment) -> None:
         """持久化角色分配"""
-        # TODO: 实现数据库写入
-        pass
+        if self.db is not None:
+            from .db_models import user_roles_table
+            from sqlalchemy import insert
+            async with self.db() as session:
+                stmt = insert(user_roles_table).values(
+                    user_id=assignment.user_id,
+                    role_id=assignment.role_id,
+                    resource_type=assignment.resource_type.value,
+                    resource_id=assignment.resource_id,
+                    granted_by=assignment.granted_by,
+                    granted_at=assignment.granted_at,
+                    expires_at=assignment.expires_at,
+                )
+                await session.execute(stmt)
+                await session.commit()
+        else:
+            self._assignments_store.append(assignment)
     
     async def _delete_assignment(
         self,
@@ -453,13 +645,57 @@ class RBACManager:
         resource_id: Optional[str] = None
     ) -> bool:
         """删除角色分配"""
-        # TODO: 实现数据库删除
-        return True
+        if self.db is not None:
+            from .db_models import user_roles_table
+            from sqlalchemy import delete, and_
+            async with self.db() as session:
+                conditions = [
+                    user_roles_table.c.user_id == user_id,
+                    user_roles_table.c.role_id == role_id,
+                    user_roles_table.c.resource_type == resource_type.value,
+                ]
+                if resource_id is not None:
+                    conditions.append(user_roles_table.c.resource_id == resource_id)
+                else:
+                    conditions.append(user_roles_table.c.resource_id.is_(None))
+                stmt = delete(user_roles_table).where(and_(*conditions))
+                result = await session.execute(stmt)
+                await session.commit()
+                return result.rowcount > 0
+        else:
+            original_len = len(self._assignments_store)
+            self._assignments_store = [
+                a for a in self._assignments_store
+                if not (a.user_id == user_id and a.role_id == role_id
+                        and a.resource_type == resource_type
+                        and a.resource_id == resource_id)
+            ]
+            return len(self._assignments_store) < original_len
     
     async def _fetch_user_assignments(self, user_id: str) -> List[UserRoleAssignment]:
         """获取用户的角色分配"""
-        # TODO: 实现数据库查询
-        return []
+        if self.db is not None:
+            from .db_models import user_roles_table
+            from sqlalchemy import select
+            async with self.db() as session:
+                result = await session.execute(
+                    select(user_roles_table).where(user_roles_table.c.user_id == user_id)
+                )
+                rows = result.fetchall()
+                return [
+                    UserRoleAssignment(
+                        user_id=row.user_id,
+                        role_id=row.role_id,
+                        resource_type=ResourceType(row.resource_type),
+                        resource_id=row.resource_id,
+                        granted_by=row.granted_by,
+                        granted_at=row.granted_at,
+                        expires_at=row.expires_at,
+                    )
+                    for row in rows
+                ]
+        else:
+            return [a for a in self._assignments_store if a.user_id == user_id]
     
     async def _fetch_resource_members(
         self,
@@ -467,13 +703,86 @@ class RBACManager:
         resource_id: str
     ) -> List[Dict[str, Any]]:
         """获取资源成员"""
-        # TODO: 实现数据库查询
-        return []
+        if self.db is not None:
+            from .db_models import user_roles_table, DBUser, DBRole
+            from sqlalchemy import select
+            async with self.db() as session:
+                result = await session.execute(
+                    select(
+                        user_roles_table.c.user_id,
+                        user_roles_table.c.role_id,
+                        user_roles_table.c.granted_by,
+                        user_roles_table.c.granted_at,
+                        user_roles_table.c.expires_at,
+                        DBUser.username,
+                        DBRole.name.label('role_name'),
+                    )
+                    .join(DBUser, user_roles_table.c.user_id == DBUser.id)
+                    .join(DBRole, user_roles_table.c.role_id == DBRole.id)
+                    .where(user_roles_table.c.resource_type == resource_type.value)
+                    .where(user_roles_table.c.resource_id == resource_id)
+                )
+                rows = result.fetchall()
+                return [
+                    {
+                        'user_id': row.user_id,
+                        'username': row.username,
+                        'role_id': row.role_id,
+                        'role_name': row.role_name,
+                        'granted_by': row.granted_by,
+                        'granted_at': row.granted_at.isoformat() if row.granted_at else None,
+                        'expires_at': row.expires_at.isoformat() if row.expires_at else None,
+                    }
+                    for row in rows
+                ]
+        else:
+            members = []
+            for a in self._assignments_store:
+                if a.resource_type == resource_type and a.resource_id == resource_id:
+                    user = self._users_store.get(a.user_id)
+                    role = self._roles_store.get(a.role_id)
+                    members.append({
+                        'user_id': a.user_id,
+                        'username': user.username if user else None,
+                        'role_id': a.role_id,
+                        'role_name': role.name if role else None,
+                        'granted_by': a.granted_by,
+                        'granted_at': a.granted_at.isoformat() if a.granted_at else None,
+                        'expires_at': a.expires_at.isoformat() if a.expires_at else None,
+                    })
+            return members
     
     async def _fetch_user_by_role(self, role_id: str) -> Optional[User]:
         """通过角色查询用户"""
-        # TODO: 实现数据库查询
-        pass
+        if self.db is not None:
+            from .db_models import user_roles_table, DBUser
+            from sqlalchemy import select
+            async with self.db() as session:
+                result = await session.execute(
+                    select(DBUser)
+                    .join(user_roles_table, DBUser.id == user_roles_table.c.user_id)
+                    .where(user_roles_table.c.role_id == role_id)
+                    .limit(1)
+                )
+                db_user = result.scalar_one_or_none()
+                if db_user:
+                    return User(
+                        id=db_user.id,
+                        username=db_user.username,
+                        email=db_user.email,
+                        tenant_id=db_user.tenant_id,
+                        is_active=db_user.is_active,
+                        is_superuser=db_user.is_superuser,
+                        metadata=db_user.metadata_json or {},
+                        created_at=db_user.created_at,
+                        updated_at=db_user.updated_at,
+                    )
+                return None
+        else:
+            for a in self._assignments_store:
+                if a.role_id == role_id:
+                    return self._users_store.get(a.user_id)
+            return None
     
     def _serialize_user(self, user: User) -> str:
         """序列化用户"""
@@ -482,8 +791,37 @@ class RBACManager:
     
     def _deserialize_user(self, data: str) -> User:
         """反序列化用户"""
-        # TODO: 实现反序列化
-        pass
+        import json
+        d = json.loads(data)
+        roles = []
+        for r in d.get('roles', []):
+            permissions = [
+                Permission(
+                    resource_type=ResourceType(p['resource_type']),
+                    action=Action(p['action']),
+                    resource_id=p.get('resource_id'),
+                )
+                for p in r.get('permissions', [])
+            ]
+            roles.append(Role(
+                id=r['id'],
+                name=r['name'],
+                role_type=RoleType(r['role_type']),
+                tenant_id=r.get('tenant_id'),
+                permissions=permissions,
+                description=r.get('description'),
+            ))
+        return User(
+            id=d['id'],
+            username=d['username'],
+            email=d.get('email'),
+            tenant_id=d.get('tenant_id'),
+            roles=roles,
+            is_active=d.get('is_active', True),
+            is_superuser=d.get('is_superuser', False),
+            created_at=datetime.fromisoformat(d['created_at']) if d.get('created_at') else datetime.utcnow(),
+            metadata=d.get('metadata', {}),
+        )
 
 
 # ========== 装饰器工具 ==========

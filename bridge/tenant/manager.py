@@ -133,6 +133,9 @@ class TenantManager:
         self.db = db_session
         self.rbac = rbac_manager
         self.nebula_pool = nebula_pool
+        
+        # 内存存储（当 db_session 为 None 时使用）
+        self._tenants_store: Dict[str, Tenant] = {}
     
     # ========== 租户 CRUD ==========
     
@@ -502,23 +505,161 @@ class TenantManager:
     
     async def _slug_exists(self, slug: str) -> bool:
         """检查 slug 是否已存在"""
-        # TODO: 实现数据库查询
-        return False
+        if self.db is not None:
+            from sqlalchemy import select, text
+            async with self.db() as session:
+                # Use raw SQL for tenant table since we don't have a SQLAlchemy model for it
+                result = await session.execute(
+                    text("SELECT COUNT(*) FROM tenants WHERE slug = :slug"),
+                    {"slug": slug}
+                )
+                count = result.scalar()
+                return count > 0
+        else:
+            for tenant in self._tenants_store.values():
+                if tenant.slug == slug:
+                    return True
+            return False
     
     async def _persist_tenant(self, tenant: Tenant) -> None:
         """持久化租户"""
-        # TODO: 实现数据库写入
-        pass
+        if self.db is not None:
+            from sqlalchemy import text
+            import json
+            async with self.db() as session:
+                # Check if tenant exists
+                result = await session.execute(
+                    text("SELECT id FROM tenants WHERE id = :id"),
+                    {"id": tenant.id}
+                )
+                exists = result.scalar_one_or_none()
+                
+                if exists:
+                    await session.execute(
+                        text("""
+                            UPDATE tenants SET
+                                name = :name,
+                                slug = :slug,
+                                status = :status,
+                                config = :config,
+                                admin_user_id = :admin_user_id,
+                                nebula_space = :nebula_space,
+                                updated_at = :updated_at,
+                                dataset_count = :dataset_count,
+                                total_nodes = :total_nodes,
+                                total_edges = :total_edges,
+                                metadata = :metadata
+                            WHERE id = :id
+                        """),
+                        {
+                            "id": tenant.id,
+                            "name": tenant.name,
+                            "slug": tenant.slug,
+                            "status": tenant.status.value,
+                            "config": json.dumps(tenant.config.to_dict()),
+                            "admin_user_id": tenant.admin_user_id,
+                            "nebula_space": tenant.nebula_space,
+                            "updated_at": datetime.utcnow(),
+                            "dataset_count": tenant.dataset_count,
+                            "total_nodes": tenant.total_nodes,
+                            "total_edges": tenant.total_edges,
+                            "metadata": json.dumps(tenant.metadata),
+                        }
+                    )
+                else:
+                    await session.execute(
+                        text("""
+                            INSERT INTO tenants 
+                            (id, name, slug, status, config, admin_user_id, nebula_space,
+                             created_at, updated_at, dataset_count, total_nodes, total_edges, metadata)
+                            VALUES 
+                            (:id, :name, :slug, :status, :config, :admin_user_id, :nebula_space,
+                             :created_at, :updated_at, :dataset_count, :total_nodes, :total_edges, :metadata)
+                        """),
+                        {
+                            "id": tenant.id,
+                            "name": tenant.name,
+                            "slug": tenant.slug,
+                            "status": tenant.status.value,
+                            "config": json.dumps(tenant.config.to_dict()),
+                            "admin_user_id": tenant.admin_user_id,
+                            "nebula_space": tenant.nebula_space,
+                            "created_at": tenant.created_at,
+                            "updated_at": tenant.updated_at,
+                            "dataset_count": tenant.dataset_count,
+                            "total_nodes": tenant.total_nodes,
+                            "total_edges": tenant.total_edges,
+                            "metadata": json.dumps(tenant.metadata),
+                        }
+                    )
+                await session.commit()
+        else:
+            self._tenants_store[tenant.id] = tenant
     
     async def _fetch_tenant(self, tenant_id: str) -> Optional[Tenant]:
         """获取租户"""
-        # TODO: 实现数据库查询
-        pass
+        if self.db is not None:
+            from sqlalchemy import text
+            import json
+            async with self.db() as session:
+                result = await session.execute(
+                    text("SELECT * FROM tenants WHERE id = :id"),
+                    {"id": tenant_id}
+                )
+                row = result.fetchone()
+                if row:
+                    return Tenant(
+                        id=row.id,
+                        name=row.name,
+                        slug=row.slug,
+                        status=TenantStatus(row.status),
+                        config=TenantConfig.from_dict(json.loads(row.config) if isinstance(row.config, str) else row.config),
+                        admin_user_id=row.admin_user_id,
+                        nebula_space=row.nebula_space,
+                        created_at=row.created_at,
+                        updated_at=row.updated_at,
+                        dataset_count=row.dataset_count or 0,
+                        total_nodes=row.total_nodes or 0,
+                        total_edges=row.total_edges or 0,
+                        metadata=json.loads(row.metadata) if isinstance(row.metadata, str) else (row.metadata or {}),
+                    )
+                return None
+        else:
+            return self._tenants_store.get(tenant_id)
     
     async def _fetch_tenant_by_slug(self, slug: str) -> Optional[Tenant]:
         """通过 slug 获取租户"""
-        # TODO: 实现数据库查询
-        pass
+        if self.db is not None:
+            from sqlalchemy import text
+            import json
+            async with self.db() as session:
+                result = await session.execute(
+                    text("SELECT * FROM tenants WHERE slug = :slug"),
+                    {"slug": slug}
+                )
+                row = result.fetchone()
+                if row:
+                    return Tenant(
+                        id=row.id,
+                        name=row.name,
+                        slug=row.slug,
+                        status=TenantStatus(row.status),
+                        config=TenantConfig.from_dict(json.loads(row.config) if isinstance(row.config, str) else row.config),
+                        admin_user_id=row.admin_user_id,
+                        nebula_space=row.nebula_space,
+                        created_at=row.created_at,
+                        updated_at=row.updated_at,
+                        dataset_count=row.dataset_count or 0,
+                        total_nodes=row.total_nodes or 0,
+                        total_edges=row.total_edges or 0,
+                        metadata=json.loads(row.metadata) if isinstance(row.metadata, str) else (row.metadata or {}),
+                    )
+                return None
+        else:
+            for tenant in self._tenants_store.values():
+                if tenant.slug == slug:
+                    return tenant
+            return None
     
     async def _fetch_tenants(
         self,
@@ -527,8 +668,44 @@ class TenantManager:
         offset: int = 0
     ) -> List[Tenant]:
         """列出租户"""
-        # TODO: 实现数据库查询
-        return []
+        if self.db is not None:
+            from sqlalchemy import text
+            import json
+            async with self.db() as session:
+                if status is not None:
+                    result = await session.execute(
+                        text("SELECT * FROM tenants WHERE status = :status LIMIT :limit OFFSET :offset"),
+                        {"status": status.value, "limit": limit, "offset": offset}
+                    )
+                else:
+                    result = await session.execute(
+                        text("SELECT * FROM tenants LIMIT :limit OFFSET :offset"),
+                        {"limit": limit, "offset": offset}
+                    )
+                rows = result.fetchall()
+                tenants = []
+                for row in rows:
+                    tenants.append(Tenant(
+                        id=row.id,
+                        name=row.name,
+                        slug=row.slug,
+                        status=TenantStatus(row.status),
+                        config=TenantConfig.from_dict(json.loads(row.config) if isinstance(row.config, str) else row.config),
+                        admin_user_id=row.admin_user_id,
+                        nebula_space=row.nebula_space,
+                        created_at=row.created_at,
+                        updated_at=row.updated_at,
+                        dataset_count=row.dataset_count or 0,
+                        total_nodes=row.total_nodes or 0,
+                        total_edges=row.total_edges or 0,
+                        metadata=json.loads(row.metadata) if isinstance(row.metadata, str) else (row.metadata or {}),
+                    ))
+                return tenants
+        else:
+            tenants = list(self._tenants_store.values())
+            if status is not None:
+                tenants = [t for t in tenants if t.status == status]
+            return tenants[offset:offset + limit]
     
     async def _update_tenant_status(
         self,
@@ -536,8 +713,22 @@ class TenantManager:
         status: TenantStatus
     ) -> bool:
         """更新租户状态"""
-        # TODO: 实现数据库更新
-        return True
+        if self.db is not None:
+            from sqlalchemy import text
+            async with self.db() as session:
+                result = await session.execute(
+                    text("UPDATE tenants SET status = :status, updated_at = :updated_at WHERE id = :id"),
+                    {"id": tenant_id, "status": status.value, "updated_at": datetime.utcnow()}
+                )
+                await session.commit()
+                return result.rowcount > 0
+        else:
+            tenant = self._tenants_store.get(tenant_id)
+            if tenant:
+                tenant.status = status
+                tenant.updated_at = datetime.utcnow()
+                return True
+            return False
     
     async def _delete_tenant_data(self, tenant_id: str) -> None:
         """删除租户数据"""
