@@ -1,6 +1,7 @@
 """Tenant-isolated bitemporal Object/Fact state with evidence snapshots."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import sqlite3
@@ -39,7 +40,7 @@ class BitemporalObjectStore:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute(
                 """
@@ -70,6 +71,10 @@ class BitemporalObjectStore:
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=30)
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def assert_fact(
         self,
@@ -193,7 +198,7 @@ class BitemporalObjectStore:
         object_key = _text(object_id, "object_id")
         valid = _instant(valid_at, "valid_at")
         known = _instant(known_at, "known_at")
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT fact_id, version, field, value_json, valid_from, valid_to, "
                 "tx_from, tx_to, source_json, action_run_id, fact_digest "
@@ -245,12 +250,12 @@ class BitemporalObjectStore:
         return {**payload, "snapshot_digest": content_digest(payload)}
 
     def schema_version(self) -> int:
-        with self._connect() as connection:
+        with self._connection() as connection:
             return int(connection.execute("PRAGMA user_version").fetchone()[0])
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT tenant_id, object_type_id, object_id, fact_id, version, field, "
                 "value_json, valid_from, valid_to, tx_from, tx_to, source_json, "

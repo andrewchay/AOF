@@ -1,6 +1,7 @@
 """Governed, cursor-bound enterprise knowledge ingestion contracts."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import sqlite3
@@ -335,7 +336,7 @@ class SqliteContinuousIngestionRepository:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as db:
+        with self._connection() as db:
             db.execute("PRAGMA journal_mode=WAL")
             db.execute(
                 "CREATE TABLE IF NOT EXISTS knowledge_sources (tenant_id TEXT, source_id TEXT, revision_id TEXT, payload TEXT, PRIMARY KEY (tenant_id, source_id))"
@@ -356,9 +357,13 @@ class SqliteContinuousIngestionRepository:
 
     def _connect(self):
         return sqlite3.connect(self.path, timeout=30)
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def register_source(self, source: KnowledgeSource) -> KnowledgeSource:
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT payload FROM knowledge_sources WHERE tenant_id=? AND source_id=?",
                 (source.tenant_id, source.source_id),
@@ -382,7 +387,7 @@ class SqliteContinuousIngestionRepository:
         return source
 
     def get_source(self, source_id: str, *, tenant_id: str) -> KnowledgeSource:
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT payload FROM knowledge_sources WHERE tenant_id=? AND source_id=?",
                 (tenant_id, source_id),
@@ -394,7 +399,7 @@ class SqliteContinuousIngestionRepository:
     def prepare_change_set(
         self, source: KnowledgeSource, batch: SourceBatch
     ) -> KnowledgeChangeSet:
-        with self._connect() as db:
+        with self._connection() as db:
             rows = db.execute(
                 "SELECT entity_id, payload FROM source_entities WHERE tenant_id=? AND source_id=?",
                 (source.tenant_id, source.source_id),
@@ -490,7 +495,7 @@ class SqliteContinuousIngestionRepository:
     def commit_failure(self, run: IngestionRun) -> IngestionRun:
         if run.status != "failed":
             raise ContinuousIngestionError("commit_failure requires a failed run")
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT payload FROM ingestion_runs WHERE run_id=?", (run.run_id,)
             ).fetchone()
@@ -514,7 +519,7 @@ class SqliteContinuousIngestionRepository:
         return run
 
     def list_sources(self, *, tenant_id: str) -> list[KnowledgeSource]:
-        with self._connect() as db:
+        with self._connection() as db:
             rows = db.execute(
                 "SELECT payload FROM knowledge_sources WHERE tenant_id=? ORDER BY source_id",
                 (tenant_id,),
@@ -530,14 +535,14 @@ class SqliteContinuousIngestionRepository:
             query += " AND source_id=?"
             params.append(source_id)
         query += " ORDER BY rowid DESC"
-        with self._connect() as db:
+        with self._connection() as db:
             rows = db.execute(query, params).fetchall()
         return [IngestionRun.from_dict(json.loads(row[0])) for row in rows]
 
     def latest_succeeded(
         self, source_id: str, *, tenant_id: str
     ) -> IngestionRun | None:
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT payload FROM ingestion_runs WHERE tenant_id=? AND source_id=? "
                 "AND json_extract(payload, '$.status')='succeeded' ORDER BY rowid DESC LIMIT 1",
@@ -546,7 +551,7 @@ class SqliteContinuousIngestionRepository:
         return IngestionRun.from_dict(json.loads(row[0])) if row else None
 
     def get_run(self, run_id: str, *, tenant_id: str) -> IngestionRun:
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT payload FROM ingestion_runs WHERE run_id=? AND tenant_id=?",
                 (run_id, tenant_id),
@@ -556,7 +561,7 @@ class SqliteContinuousIngestionRepository:
         return IngestionRun.from_dict(json.loads(row[0]))
 
     def get_change_set(self, run_id: str, *, tenant_id: str) -> KnowledgeChangeSet:
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT payload FROM knowledge_change_sets WHERE run_id=? AND tenant_id=?",
                 (run_id, tenant_id),
@@ -567,7 +572,7 @@ class SqliteContinuousIngestionRepository:
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
-        with self._connect() as db:
+        with self._connection() as db:
             sources = db.execute("SELECT payload FROM knowledge_sources").fetchall()
             runs = db.execute(
                 "SELECT run_digest, payload FROM ingestion_runs"

@@ -1,6 +1,7 @@
 """Transactional, approval-gated ActionRun execution and reconciliation."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import sqlite3
@@ -268,7 +269,7 @@ class SqliteActionRunRepository:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute(
                 """
@@ -285,9 +286,13 @@ class SqliteActionRunRepository:
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=30)
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def get(self, run_id: str) -> ActionRun | None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT run_digest, payload FROM action_runs WHERE run_id = ?", (run_id,)
             ).fetchone()
@@ -299,7 +304,7 @@ class SqliteActionRunRepository:
         return run
 
     def get_by_identity(self, identity: str) -> ActionRun | None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT run_id FROM action_runs WHERE idempotency_identity = ?",
                 (identity,),
@@ -366,7 +371,7 @@ class SqliteActionRunRepository:
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT run_id, tenant_id, idempotency_identity, run_digest, payload "
                 "FROM action_runs"
@@ -389,7 +394,7 @@ class SqliteActionRunRepository:
         return {"valid": not errors, "action_run_count": len(rows), "errors": errors}
 
     def schema_version(self) -> int:
-        with self._connect() as connection:
+        with self._connection() as connection:
             return int(connection.execute("PRAGMA user_version").fetchone()[0])
 
     def backup_to(self, destination: str | Path) -> Path:

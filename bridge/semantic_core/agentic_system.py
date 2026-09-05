@@ -6,6 +6,7 @@ auditable explanation surface.
 """
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import sqlite3
@@ -414,7 +415,7 @@ class SqliteAgenticRunRepository:
     def __init__(self, database: str | Path) -> None:
         self.database = Path(database)
         self.database.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 "CREATE TABLE IF NOT EXISTS agentic_runs "
                 "(run_id TEXT NOT NULL, tenant_id TEXT NOT NULL, payload TEXT NOT NULL, digest TEXT NOT NULL, PRIMARY KEY(tenant_id, run_id))"
@@ -429,7 +430,7 @@ class SqliteAgenticRunRepository:
         payload = canonical_data(run)
         digest = content_digest(payload)
         try:
-            with self._connect() as connection:
+            with self._connection() as connection:
                 connection.execute(
                     "INSERT INTO agentic_runs(run_id, tenant_id, payload, digest) VALUES (?, ?, ?, ?)",
                     (
@@ -457,7 +458,7 @@ class SqliteAgenticRunRepository:
 
     def finish(self, run, memory=()):
         payload = canonical_data(run)
-        with self._connect() as connection:
+        with self._connection() as connection:
             cursor = connection.execute(
                 "UPDATE agentic_runs SET payload = ?, digest = ? WHERE run_id = ? AND tenant_id = ?",
                 (
@@ -490,7 +491,7 @@ class SqliteAgenticRunRepository:
                 )
 
     def get(self, run_id: str, *, tenant_id: str) -> dict[str, Any]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT payload, digest FROM agentic_runs WHERE run_id = ? AND tenant_id = ?",
                 (run_id, tenant_id),
@@ -516,7 +517,7 @@ class SqliteAgenticRunRepository:
                 "content": payload,
             }
         )
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 "INSERT INTO agentic_memory(tenant_id, session_id, role, content, digest) "
                 "VALUES (?, ?, ?, ?, ?)",
@@ -530,7 +531,7 @@ class SqliteAgenticRunRepository:
             )
 
     def memory(self, *, tenant_id: str, session_id: str) -> list[dict[str, Any]]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT role, content, digest FROM agentic_memory "
                 "WHERE tenant_id = ? AND session_id = ? ORDER BY sequence DESC LIMIT 20",
@@ -558,13 +559,17 @@ class SqliteAgenticRunRepository:
         connection = sqlite3.connect(self.database)
         connection.execute("PRAGMA journal_mode=WAL")
         return connection
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def backup_to(self, destination: str | Path) -> None:
         destination = Path(destination)
         if destination.exists():
             raise AgenticSystemError("backup destination already exists")
         destination.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as source, sqlite3.connect(destination) as target:
+        with self._connection() as source, sqlite3.connect(destination) as target:
             source.backup(target)
 
 

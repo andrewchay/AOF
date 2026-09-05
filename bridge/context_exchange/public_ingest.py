@@ -1,6 +1,7 @@
 """Replayable, rights-aware ingestion of public source records."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import sqlite3
@@ -79,7 +80,7 @@ class SqlitePublicSourceRepository:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS public_source_records (
@@ -108,7 +109,7 @@ class SqlitePublicSourceRepository:
         source_key = _required(batch.source_key, "source_key")
         fetched_at = _required(batch.fetched_at, "fetched_at")
         inserted = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             for record in batch.records:
                 payload = canonical_json(record.to_dict())
                 current = connection.execute(
@@ -131,7 +132,7 @@ class SqlitePublicSourceRepository:
         return tuple(inserted)
 
     def replay(self, *, source_key: str, source_id: str) -> tuple[PublicSourceRecord, ...]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT payload FROM public_source_records WHERE source_key = ? AND source_id = ? ORDER BY fetched_at, content_hash",
                 (source_key, source_id),
@@ -139,7 +140,7 @@ class SqlitePublicSourceRepository:
         return tuple(self._record_from_payload(row[0]) for row in rows)
 
     def watermark(self, source_key: str) -> Mapping[str, Any] | None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT cursor, watermark, status, updated_at FROM public_source_watermarks WHERE source_key = ?", (source_key,)
             ).fetchone()
@@ -149,6 +150,10 @@ class SqlitePublicSourceRepository:
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path)
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     @staticmethod
     def _existing_watermark(connection: sqlite3.Connection, source_key: str) -> str:

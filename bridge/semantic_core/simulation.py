@@ -1,6 +1,7 @@
 """Side-effect-free counterfactual reasoning over bitemporal object snapshots."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import re
@@ -272,7 +273,7 @@ class SqliteBitemporalSimulationService:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.objects = objects
         self.decisions = decision_store
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.executescript(
                 """
@@ -291,9 +292,13 @@ class SqliteBitemporalSimulationService:
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=30)
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def simulate(self, request: SimulationRequest, *, actor: str) -> SimulationRun:
-        with self._connect() as connection:
+        with self._connection() as connection:
             existing = connection.execute(
                 "SELECT request_digest, payload FROM simulation_runs "
                 "WHERE tenant_id=? AND simulation_id=?",
@@ -385,7 +390,7 @@ class SqliteBitemporalSimulationService:
             "audit_decision_id": decision_id,
         }
         run = SimulationRun(**payload, run_digest=content_digest(payload))
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 "INSERT INTO simulation_runs VALUES (?, ?, ?, ?, ?, ?)",
                 (
@@ -420,7 +425,7 @@ class SqliteBitemporalSimulationService:
         }
 
     def get(self, run_id: str, *, tenant_id: str) -> SimulationRun:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT payload FROM simulation_runs WHERE run_id=? AND tenant_id=?",
                 (run_id, tenant_id),
@@ -430,7 +435,7 @@ class SqliteBitemporalSimulationService:
         return SimulationRun.from_dict(json.loads(row[0]))
 
     def list_runs(self, *, tenant_id: str) -> list[SimulationRun]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT payload FROM simulation_runs WHERE tenant_id=? ORDER BY rowid DESC",
                 (tenant_id,),
@@ -439,7 +444,7 @@ class SqliteBitemporalSimulationService:
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT run_id, run_digest, payload FROM simulation_runs"
             ).fetchall()

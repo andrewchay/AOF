@@ -1,6 +1,7 @@
 """Persistent truth-maintained Datalog runs with assertion and retraction deltas."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import sqlite3
@@ -194,7 +195,7 @@ class SqliteIncrementalReasoningRuntime:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.decisions = decision_store
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.executescript(
                 """
@@ -231,6 +232,10 @@ class SqliteIncrementalReasoningRuntime:
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=30)
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def apply(
         self,
@@ -413,7 +418,7 @@ class SqliteIncrementalReasoningRuntime:
         return matches[0]
 
     def replay(self, run_id: str, *, tenant_id: str) -> dict[str, Any]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT payload FROM reasoning_runs WHERE run_id=? AND tenant_id=?",
                 (run_id, tenant_id),
@@ -440,7 +445,7 @@ class SqliteIncrementalReasoningRuntime:
         }
 
     def get_run(self, run_id: str, *, tenant_id: str) -> IncrementalReasoningRun:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT payload FROM reasoning_runs WHERE run_id=? AND tenant_id=?",
                 (run_id, tenant_id),
@@ -450,7 +455,7 @@ class SqliteIncrementalReasoningRuntime:
         return IncrementalReasoningRun.from_dict(json.loads(row[0]))
 
     def list_runs(self, *, tenant_id: str) -> list[IncrementalReasoningRun]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT payload FROM reasoning_runs WHERE tenant_id=? ORDER BY rowid DESC",
                 (tenant_id,),
@@ -459,7 +464,7 @@ class SqliteIncrementalReasoningRuntime:
 
     def verify_all(self) -> dict[str, Any]:
         errors: list[str] = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             states = connection.execute(
                 "SELECT tenant_id, ruleset_id, state_digest, payload FROM reasoning_state"
             ).fetchall()
@@ -499,7 +504,7 @@ class SqliteIncrementalReasoningRuntime:
         }
 
     def _state(self, *, tenant_id: str, ruleset_id: str) -> dict[str, Any]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT state_digest, payload FROM reasoning_state "
                 "WHERE tenant_id=? AND ruleset_id=?",

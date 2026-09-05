@@ -1,6 +1,7 @@
 """Evidence-bound public assertions and their governed public release path."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import sqlite3
@@ -76,7 +77,7 @@ class SqlitePublicAssertionRepository:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS public_assertion_candidates (
@@ -92,7 +93,7 @@ class SqlitePublicAssertionRepository:
 
     def put(self, candidate: PublicAssertionCandidate, *, intake_decision_id: str) -> PublicAssertionCandidate:
         payload = canonical_json(candidate.to_dict())
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT candidate_digest FROM public_assertion_candidates WHERE tenant_id = ? AND candidate_id = ?",
                 (candidate.tenant_id, candidate.candidate_id),
@@ -108,7 +109,7 @@ class SqlitePublicAssertionRepository:
         return candidate
 
     def get(self, candidate_id: str, *, tenant_id: str) -> tuple[PublicAssertionCandidate, str] | None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT candidate_digest, payload, intake_decision_id FROM public_assertion_candidates WHERE tenant_id = ? AND candidate_id = ?",
                 (tenant_id, candidate_id),
@@ -122,6 +123,10 @@ class SqlitePublicAssertionRepository:
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path)
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
 
 @dataclass(frozen=True)
@@ -161,7 +166,7 @@ class SqlitePublicKnowledgeRepository:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS published_public_assertions (
@@ -190,7 +195,7 @@ class SqlitePublicKnowledgeRepository:
 
     def put(self, value: PublishedPublicAssertion) -> PublishedPublicAssertion:
         payload = canonical_json(value.to_dict())
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT payload FROM published_public_assertions WHERE tenant_id = ? AND candidate_id = ?",
                 (value.tenant_id, value.candidate_id),
@@ -207,7 +212,7 @@ class SqlitePublicKnowledgeRepository:
         return value
 
     def conflicts(self, *, tenant_id: str, subject_key: str, statement: str) -> tuple[PublishedPublicAssertion, ...]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT item.payload FROM published_public_assertions item WHERE item.tenant_id = ? AND item.subject_key = ? "
                 "AND item.statement != ? AND NOT EXISTS (SELECT 1 FROM public_assertion_revocations rev "
@@ -217,7 +222,7 @@ class SqlitePublicKnowledgeRepository:
         return tuple(self._from_payload(row[0]) for row in rows)
 
     def revoke(self, value: PublicAssertionRevocation) -> PublicAssertionRevocation:
-        with self._connect() as connection:
+        with self._connection() as connection:
             exists = connection.execute(
                 "SELECT 1 FROM published_public_assertions WHERE tenant_id = ? AND candidate_id = ?",
                 (value.tenant_id, value.candidate_id),
@@ -241,7 +246,7 @@ class SqlitePublicKnowledgeRepository:
 
     def search(self, *, tenant_id: str, text: str) -> tuple[PublishedPublicAssertion, ...]:
         terms = [item.casefold() for item in text.split() if item.strip()]
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT item.payload FROM published_public_assertions item WHERE item.tenant_id = ? "
                 "AND NOT EXISTS (SELECT 1 FROM public_assertion_revocations rev "

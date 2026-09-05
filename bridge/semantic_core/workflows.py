@@ -1,6 +1,7 @@
 """Persistent release-pinned WorkflowRun DAG orchestration."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import sqlite3
@@ -366,7 +367,7 @@ class SqliteWorkflowRunRepository:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.executescript(
                 """
@@ -383,6 +384,10 @@ class SqliteWorkflowRunRepository:
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=30)
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def get(self, run_id: str, *, tenant_id: str | None = None) -> WorkflowRun | None:
         query = "SELECT payload FROM workflow_runs WHERE run_id=?"
@@ -390,19 +395,19 @@ class SqliteWorkflowRunRepository:
         if tenant_id is not None:
             query += " AND tenant_id=?"
             params.append(tenant_id)
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(query, params).fetchone()
         return WorkflowRun.from_dict(json.loads(row[0])) if row else None
 
     def get_by_identity(self, identity: str) -> WorkflowRun | None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT payload FROM workflow_runs WHERE identity=?", (identity,)
             ).fetchone()
         return WorkflowRun.from_dict(json.loads(row[0])) if row else None
 
     def list_runs(self, *, tenant_id: str) -> list[WorkflowRun]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT payload FROM workflow_runs WHERE tenant_id=? ORDER BY rowid DESC",
                 (tenant_id,),
@@ -410,7 +415,7 @@ class SqliteWorkflowRunRepository:
         return [WorkflowRun.from_dict(json.loads(row[0])) for row in rows]
 
     def put_new(self, run: WorkflowRun) -> WorkflowRun:
-        with self._connect() as connection:
+        with self._connection() as connection:
             try:
                 connection.execute(
                     "INSERT INTO workflow_runs VALUES (?, ?, ?, ?, ?)",
@@ -434,7 +439,7 @@ class SqliteWorkflowRunRepository:
         return run
 
     def update(self, run: WorkflowRun, *, expected_digest: str) -> WorkflowRun:
-        with self._connect() as connection:
+        with self._connection() as connection:
             changed = connection.execute(
                 "UPDATE workflow_runs SET run_digest=?, payload=? "
                 "WHERE run_id=? AND run_digest=?",
@@ -451,7 +456,7 @@ class SqliteWorkflowRunRepository:
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT run_id, run_digest, payload FROM workflow_runs"
             ).fetchall()

@@ -1,6 +1,7 @@
 """Immutable compilation runs, reproducibility checks, and channel pointers."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import hashlib
 import json
@@ -262,7 +263,7 @@ class SqliteCompilationRunRepository:
         self.root.mkdir(parents=True, exist_ok=True)
         self.database = Path(database) if database is not None else self.root / "state.sqlite3"
         self.database.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute(
                 """
@@ -288,6 +289,10 @@ class SqliteCompilationRunRepository:
         connection = sqlite3.connect(self.database, timeout=30)
         connection.execute("PRAGMA foreign_keys=ON")
         return connection
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def put(self, run: CompilationRun) -> CompilationRun:
         payload = canonical_json(run.to_dict())
@@ -320,7 +325,7 @@ class SqliteCompilationRunRepository:
 
     def get(self, run_id: str) -> CompilationRun | None:
         _validate_id(run_id, "run_id")
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT run_digest, payload FROM compilation_runs WHERE run_id = ?",
                 (run_id,),
@@ -334,7 +339,7 @@ class SqliteCompilationRunRepository:
 
     def get_channel(self, channel: str) -> dict[str, Any] | None:
         _validate_id(channel, "channel")
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT pointer_digest, payload FROM compilation_channels WHERE channel = ?",
                 (channel,),
@@ -398,12 +403,12 @@ class SqliteCompilationRunRepository:
             connection.close()
 
     def schema_version(self) -> int:
-        with self._connect() as connection:
+        with self._connection() as connection:
             return int(connection.execute("PRAGMA user_version").fetchone()[0])
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             run_rows = connection.execute(
                 "SELECT run_id, run_digest, payload FROM compilation_runs"
             ).fetchall()

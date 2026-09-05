@@ -1,6 +1,7 @@
 """Persistent domain events and deterministic incremental action-rule subscriptions."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import hashlib
@@ -292,7 +293,7 @@ class IncrementalActionRuleRuntime:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.decision_store = decision_store
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.executescript(
                 """
@@ -328,6 +329,10 @@ class IncrementalActionRuleRuntime:
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=30)
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def process(
         self, subscription: EventRuleSubscription, event: DomainEvent
@@ -497,7 +502,7 @@ class IncrementalActionRuleRuntime:
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             events = connection.execute(
                 "SELECT event_id, event_digest, payload FROM domain_events"
             ).fetchall()
