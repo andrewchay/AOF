@@ -113,6 +113,41 @@ class SqliteSessionRepository:
             )
         return updated
 
+    def set_visibility(
+        self,
+        tenant_id: str,
+        session_id: str,
+        visibility: "SessionVisibility",
+        business_object_id: str | None = None,
+    ) -> Session:
+        """Update visibility and bump acl_version atomically."""
+        from bridge.access.session_acl import SessionVisibility as _V  # noqa: F401
+        with managed_sqlite_connection(self._connect) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT payload, acl_version FROM agentic_sessions WHERE tenant_id = ? AND session_id = ?",
+                (tenant_id, session_id),
+            ).fetchone()
+            if not row:
+                raise SessionAclError(f"session not found: {tenant_id}/{session_id}")
+            session = Session.from_dict(json.loads(row[0]))
+            updated = dataclasses.replace(
+                session,
+                visibility=visibility,
+                business_object_id=business_object_id,
+                acl_version=session.acl_version + 1,
+            )
+            connection.execute(
+                "UPDATE agentic_sessions SET acl_version = ?, payload = ? WHERE tenant_id = ? AND session_id = ?",
+                (
+                    updated.acl_version,
+                    json.dumps(updated.to_dict(), sort_keys=True),
+                    tenant_id,
+                    session_id,
+                ),
+            )
+        return updated
+
     # -- ACL entries --------------------------------------------------------
 
     def list_acl(self, tenant_id: str, session_id: str) -> list[SessionAclEntry]:

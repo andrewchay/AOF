@@ -1585,6 +1585,30 @@
       "classification": "legacy",
       "public": false,
       "auth": "signed-principal"
+    },
+    {
+      "operation_id": "put:/v1/agentic/sessions/{session_id}/visibility",
+      "method": "PUT",
+      "path": "/v1/agentic/sessions/{session_id}/visibility",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal"
+    },
+    {
+      "operation_id": "put:/v1/agentic/sessions/{session_id}/acl",
+      "method": "PUT",
+      "path": "/v1/agentic/sessions/{session_id}/acl",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal"
+    },
+    {
+      "operation_id": "delete:/v1/agentic/sessions/{session_id}/acl/{subject_kind}/{subject_id}",
+      "method": "DELETE",
+      "path": "/v1/agentic/sessions/{session_id}/acl/{subject_kind}/{subject_id}",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal"
     }
   ]
 }

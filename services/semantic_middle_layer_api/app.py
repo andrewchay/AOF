@@ -4488,6 +4488,8 @@ class RuntimeSimulationReq(BaseModel):
 class AgenticRunReq(BaseModel):
     run_id: str = Field(min_length=1)
     session_id: str = Field(min_length=1)
+    visibility: str = Field(default='private', pattern='^(private|team|business-object)$')
+    business_object_id: Optional[str] = None
     query: str = Field(min_length=1)
     purpose: str = Field(min_length=1)
     channel: str = Field(min_length=1)
@@ -5606,7 +5608,76 @@ async def replay_enterprise_simulation(
 def _agentic_request(req: AgenticRunReq, tenant_id: str):
     from bridge.semantic_core import AgenticRequest
 
-    return AgenticRequest.create(tenant_id=tenant_id, **req.model_dump())
+    return AgenticRequest.create(
+        tenant_id=tenant_id,
+        **req.model_dump(exclude={'visibility', 'business_object_id'}),
+    )
+
+
+def _agentic_session_repo():
+    """W06.02: Session ACL repository colocated with the agentic run DB."""
+    from bridge.persistence.sqlite_session_store import SqliteSessionRepository
+
+    database = os.environ.get(
+        'AOF_AGENTIC_RUN_DATABASE',
+        str(AOF_ROOT / 'data' / 'agentic' / 'runs.sqlite3'),
+    )
+    return SqliteSessionRepository(database)
+
+
+def _register_agentic_session(req: AgenticRunReq, principal) -> None:
+    """W06.02: register the session on run creation (idempotent).
+
+    New sessions default to private with the caller as owner. Existing
+    sessions require write authorization from the caller.
+    """
+    from bridge.access.session_acl import (
+        Session,
+        SessionAction,
+        SessionVisibility,
+        authorize,
+    )
+
+    repo = _agentic_session_repo()
+    existing = repo.get(principal.tenant_id, req.session_id)
+    if existing is None:
+        repo.create(
+            Session(
+                tenant_id=principal.tenant_id,
+                session_id=req.session_id,
+                owner_subject=principal.subject,
+                visibility=SessionVisibility(req.visibility),
+                business_object_id=req.business_object_id,
+            )
+        )
+        return
+    authorize(
+        existing,
+        repo.list_acl(principal.tenant_id, req.session_id),
+        subject_id=principal.subject,
+        action=SessionAction.WRITE,
+    )
+
+
+def _authorize_agentic_session_read(tenant_id: str, session_id: str, subject: str) -> None:
+    """W06.02: authorize a session read; unknown sessions fail closed (404)."""
+    from bridge.access.session_acl import SessionAction, authorize
+
+    repo = _agentic_session_repo()
+    session = repo.get(tenant_id, session_id)
+    if session is None:
+        # Unknown/legacy session: restricted migration queue semantics (W06.01)
+        raise HTTPException(status_code=404, detail=f'session not found: {session_id}')
+    try:
+        authorize(
+            session,
+            repo.list_acl(tenant_id, session_id),
+            subject_id=subject,
+            action=SessionAction.READ,
+        )
+    except Exception:
+        # 404 (not 403) to avoid leaking session existence across subjects
+        raise HTTPException(status_code=404, detail=f'session not found: {session_id}')
 
 
 @app.post('/v1/agentic/route')
@@ -5630,6 +5701,7 @@ async def route_agentic_query(req: AgenticRunReq, request: Request) -> dict[str,
 async def run_agentic_query(req: AgenticRunReq, request: Request) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'agentic_run')
+        _register_agentic_session(req, principal)
         with trusted_runtime_telemetry().operation(
             'agentic.run', {'tenant_id': principal.tenant_id}
         ) as correlation:
@@ -5649,9 +5721,13 @@ async def run_agentic_query(req: AgenticRunReq, request: Request) -> dict[str, A
 async def get_agentic_run(run_id: str, request: Request) -> dict[str, Any]:
     try:
         principal, _ = _semantic_principal(request, 'read')
-        return _agentic_system(request.headers).repository.get(
+        run = _agentic_system(request.headers).repository.get(
             run_id, tenant_id=principal.tenant_id
         )
+        _authorize_agentic_session_read(
+            principal.tenant_id, run.get('session_id', ''), principal.subject
+        )
+        return run
     except Exception as exc:
         raise _agentic_error(exc) from exc
 
@@ -5662,6 +5738,12 @@ async def replay_agentic_run(
 ) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'agentic_replay')
+        source = _agentic_system(request.headers).repository.get(
+            source_run_id, tenant_id=principal.tenant_id
+        )
+        _authorize_agentic_session_read(
+            principal.tenant_id, source.get('session_id', ''), principal.subject
+        )
         return _agentic_system(request.headers).replay(
             source_run_id,
             run_id=req.run_id,
@@ -5676,6 +5758,12 @@ async def replay_agentic_run(
 async def evaluate_agentic_run(run_id: str, request: Request) -> dict[str, Any]:
     try:
         principal, _ = _semantic_principal(request, 'read')
+        run = _agentic_system(request.headers).repository.get(
+            run_id, tenant_id=principal.tenant_id
+        )
+        _authorize_agentic_session_read(
+            principal.tenant_id, run.get('session_id', ''), principal.subject
+        )
         return _agentic_system(request.headers).evaluate(
             run_id, tenant_id=principal.tenant_id
         )
@@ -5687,10 +5775,108 @@ async def evaluate_agentic_run(run_id: str, request: Request) -> dict[str, Any]:
 async def get_agentic_memory(session_id: str, request: Request) -> dict[str, Any]:
     try:
         principal, _ = _semantic_principal(request, 'read')
+        _authorize_agentic_session_read(principal.tenant_id, session_id, principal.subject)
         values = _agentic_system(request.headers).repository.memory(
             tenant_id=principal.tenant_id, session_id=session_id
         )
         return {'items': values, 'count': len(values)}
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+# ---- W06.02: Session ACL management (owner / share-granted subjects) ----
+
+class SessionVisibilityReq(BaseModel):
+    visibility: str = Field(pattern='^(private|team|business-object)$')
+    business_object_id: Optional[str] = None
+
+
+class SessionAclGrantReq(BaseModel):
+    subject_kind: str = Field(pattern='^(subject|group)$')
+    subject_id: str = Field(min_length=1)
+    can_read: bool = True
+    can_write: bool = False
+    can_share: bool = False
+
+
+def _authorize_agentic_session_share(tenant_id: str, session_id: str, subject: str):
+    """Return (repo, session) if subject may manage the session ACL."""
+    from bridge.access.session_acl import SessionAction, authorize
+
+    repo = _agentic_session_repo()
+    session = repo.get(tenant_id, session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f'session not found: {session_id}')
+    try:
+        authorize(
+            session,
+            repo.list_acl(tenant_id, session_id),
+            subject_id=subject,
+            action=SessionAction.SHARE,
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail=f'session not found: {session_id}')
+    return repo, session
+
+
+@app.put('/v1/agentic/sessions/{session_id}/visibility')
+async def set_agentic_session_visibility(
+    session_id: str, req: SessionVisibilityReq, request: Request
+) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        repo, session = _authorize_agentic_session_share(
+            principal.tenant_id, session_id, principal.subject
+        )
+        from bridge.access.session_acl import SessionVisibility
+        updated = repo.set_visibility(
+            principal.tenant_id,
+            session_id,
+            SessionVisibility(req.visibility),
+            business_object_id=req.business_object_id,
+        )
+        return updated.to_dict()
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.put('/v1/agentic/sessions/{session_id}/acl')
+async def grant_agentic_session_acl(
+    session_id: str, req: SessionAclGrantReq, request: Request
+) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        repo, _session = _authorize_agentic_session_share(
+            principal.tenant_id, session_id, principal.subject
+        )
+        from bridge.access.session_acl import SessionAclEntry
+        updated = repo.upsert_acl(
+            principal.tenant_id,
+            session_id,
+            SessionAclEntry(
+                subject_kind=req.subject_kind,
+                subject_id=req.subject_id,
+                can_read=req.can_read,
+                can_write=req.can_write,
+                can_share=req.can_share,
+            ),
+        )
+        return {'acl_version': updated.acl_version, 'granted': req.model_dump()}
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.delete('/v1/agentic/sessions/{session_id}/acl/{subject_kind}/{subject_id}')
+async def revoke_agentic_session_acl(
+    session_id: str, subject_kind: str, subject_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        repo, _session = _authorize_agentic_session_share(
+            principal.tenant_id, session_id, principal.subject
+        )
+        updated = repo.delete_acl(principal.tenant_id, session_id, subject_kind, subject_id)
+        return {'acl_version': updated.acl_version, 'revoked': subject_id}
     except Exception as exc:
         raise _agentic_error(exc) from exc
 
