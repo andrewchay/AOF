@@ -9,6 +9,12 @@ from typing import Optional, Dict, Any, List
 import uuid
 
 
+class TaskAuthorizationError(RuntimeError):
+    """W06.03: raised by the queue authorizer when a queued task may no
+    longer run (subject revoked, session frozen/deleted, tenant suspended).
+    The executor is never invoked; the task fails with this error."""
+
+
 class TaskStatus(str, Enum):
     """任务状态"""
     PENDING = "pending"           # 等待中

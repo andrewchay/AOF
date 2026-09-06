@@ -387,8 +387,25 @@ def _get_parse_queue():
     global _parse_queue_singleton
     if _parse_queue_singleton is None:
         from bridge.document_parser import DocumentParseQueue, ParserConfig
+        from bridge.tasks.models import TaskAuthorizationError
 
         _parse_queue_singleton = DocumentParseQueue(parser_config=ParserConfig())
+
+        async def _reauthorize_queued_task(task) -> None:
+            """W06.03: worker 执行前重授权——撤销注册表当前状态决定去留。"""
+            from bridge.access.revocations import RevocationRegistry
+
+            registry = RevocationRegistry()
+            if task.user_id and registry.is_revoked('subject', task.user_id):
+                raise TaskAuthorizationError(
+                    f'subject revoked since submission: {task.user_id}'
+                )
+            if task.tenant_id and registry.is_revoked('tenant', task.tenant_id):
+                raise TaskAuthorizationError(
+                    f'tenant suspended since submission: {task.tenant_id}'
+                )
+
+        _parse_queue_singleton.set_authorizer(_reauthorize_queued_task)
     return _parse_queue_singleton
 
 
@@ -571,7 +588,7 @@ def ingest_docs(req: IngestDocsReq) -> dict[str, Any]:
 
 
 @app.post('/v1/documents/parse')
-async def document_parse(req: ParseDocReq) -> dict[str, Any]:
+async def document_parse(req: ParseDocReq, request: Request) -> dict[str, Any]:
     """解析单个文件为干净 Markdown + 元数据（document_parser 阶段 3 对外能力）。
 
     同步模式：返回 ParsedDoc（content + metadata）。
@@ -591,8 +608,17 @@ async def document_parse(req: ParseDocReq) -> dict[str, Any]:
     from bridge.document_parser import ParserConfig, parse_document
 
     if req.async_:
+        # W06.03: 记录提交者身份（若提供签名 principal），worker 执行前重授权
+        principal_pair = None
+        try:
+            principal, _actor = _semantic_principal(request, 'ingest')
+            principal_pair = (principal.subject, principal.tenant_id)
+        except HTTPException:
+            principal_pair = None  # 匿名/默认模式：任务不带主体，authorizer 按现状放行
         queue = _get_parse_queue()
-        task_id = await queue.submit_parse(str(path), name=f"api-parse:{path.name}")
+        task_id = await queue.submit_parse(
+            str(path), name=f"api-parse:{path.name}", principal=principal_pair
+        )
         return {'status': 'accepted', 'task_id': task_id, 'path': str(path)}
 
     config = ParserConfig(lang=req.lang)
@@ -5782,6 +5808,42 @@ async def get_agentic_memory(session_id: str, request: Request) -> dict[str, Any
         return {'items': values, 'count': len(values)}
     except Exception as exc:
         raise _agentic_error(exc) from exc
+
+
+# ---- W06.03/W04.04: revocation registry admin (governed) ----
+
+class RevocationReq(BaseModel):
+    kind: str = Field(pattern='^(subject|session|tenant)$')
+    identity: str = Field(min_length=1)
+    reason: Optional[str] = None
+
+
+@app.post('/v1/access/revocations', status_code=201)
+async def revoke_identity(req: RevocationReq, request: Request) -> dict[str, Any]:
+    """Revoke a subject/session/tenant. Admin role required."""
+    principal, _actor = _semantic_principal(request, 'read')
+    if 'admin' not in principal.roles:
+        raise HTTPException(status_code=403, detail='admin role required to revoke')
+    from bridge.access.revocations import RevocationRegistry
+
+    RevocationRegistry().revoke(req.kind, req.identity, reason=req.reason)
+    return {'revoked': True, 'kind': req.kind, 'identity': req.identity}
+
+
+@app.get('/v1/access/revocations/{kind}/{identity}')
+async def check_revocation(kind: str, identity: str, request: Request) -> dict[str, Any]:
+    """Check whether an identity is currently revoked."""
+    _semantic_principal(request, 'read')
+    from bridge.access.revocations import RevocationError, RevocationRegistry
+
+    try:
+        return {
+            'kind': kind,
+            'identity': identity,
+            'revoked': RevocationRegistry().is_revoked(kind, identity),
+        }
+    except RevocationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 # ---- W06.02: Session ACL management (owner / share-granted subjects) ----

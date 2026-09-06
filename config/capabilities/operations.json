@@ -1609,6 +1609,22 @@
       "classification": "governed",
       "public": false,
       "auth": "signed-principal"
+    },
+    {
+      "operation_id": "post:/v1/access/revocations",
+      "method": "POST",
+      "path": "/v1/access/revocations",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal"
+    },
+    {
+      "operation_id": "get:/v1/access/revocations/{kind}/{identity}",
+      "method": "GET",
+      "path": "/v1/access/revocations/{kind}/{identity}",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal"
     }
   ]
 }
