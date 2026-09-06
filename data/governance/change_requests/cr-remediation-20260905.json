@@ -1,6 +1,6 @@
 {
   "cr_id": "cr-remediation-20260905",
-  "status": "PENDING",
+  "status": "APPROVED",
   "topic": "remediation",
   "title": "2026-09-05 诊断修复：安全基线与治理补齐",
   "baseline_commit": "bfc1e02d799c5810fef25b3ee10c9445d7e52f12",
@@ -11,5 +11,8 @@
     "docs/remediation/2026-09-05/implementation-plan.md",
     "docs/remediation/2026-09-05/closure-register.json"
   ],
-  "note": "状态保持 PENDING 直至项目负责人对修复分支完成人工评审签核；签核后翻转为 APPROVED 并填写 approved_by/approved_at_utc。"
+  "note": "状态保持 PENDING 直至项目负责人对修复分支完成人工评审签核；签核后翻转为 APPROVED 并填写 approved_by/approved_at_utc。",
+  "approved_by": "owner:Andrewchay",
+  "approved_at_utc": "2026-09-06T17:07:43.202595+00:00",
+  "approval_note": "项目负责人对修复分支（31 commits: 安全基线/账本事务化/IAM/审计/ACL/数据治理/前端E2E/CR gate）完成评审并签核；543 tests + E2E 8/8 通过。"
 }

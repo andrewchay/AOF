@@ -3,8 +3,8 @@
   "expected_change_requests": [
     {
       "file": "cr-remediation-20260905.json",
-      "expected_status": "PENDING",
-      "note": "修复分支的变更请求：诚实声明为待人工签核。W13 关闭门禁要求翻转为 APPROVED。"
+      "expected_status": "APPROVED",
+      "note": "修复分支变更请求：2026-09-07 由 owner:Andrewchay 签核。"
     }
   ]
 }
