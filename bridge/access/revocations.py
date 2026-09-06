@@ -17,6 +17,7 @@ SQLite file (WAL, managed connections per W09.01).
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from bridge.persistence.sqlite_support import managed_sqlite_connection
@@ -58,10 +59,16 @@ class RevocationRegistry:
             raise RevocationError("identity must be a non-empty string")
         with managed_sqlite_connection(self._connect) as connection:
             connection.execute(
-                "INSERT INTO access_revocations(kind, identity, reason) VALUES (?, ?, ?) "
+                "INSERT INTO access_revocations(kind, identity, reason, revoked_at) "
+                "VALUES (?, ?, ?, ?) "
                 "ON CONFLICT(kind, identity) DO UPDATE SET "
                 "reason = excluded.reason, revoked_at = excluded.revoked_at",
-                (kind, identity.strip(), reason),
+                (
+                    kind,
+                    identity.strip(),
+                    reason,
+                    datetime.now(timezone.utc).isoformat(),
+                ),
             )
 
     def unrevoke(self, kind: str, identity: str) -> bool:

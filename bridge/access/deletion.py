@@ -302,7 +302,8 @@ class DeletionCoordinator:
             connection.execute(
                 "INSERT INTO deletion_tombstones"
                 "(tombstone_id, data_key, tenant_id, reason, requested_by, policy_id, "
-                "policy_revision, status, vault_proof) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "policy_revision, status, vault_proof, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     tombstone.tombstone_id,
                     tombstone.data_key,
@@ -313,6 +314,10 @@ class DeletionCoordinator:
                     tombstone.policy_revision,
                     tombstone.status,
                     tombstone.vault_proof,
+                    # W06.06: explicit isoformat timestamp - SQLite's
+                    # datetime('now') uses ' ' separator and would never
+                    # compare correctly against isoformat cutoffs
+                    tombstone.created_at,
                 ),
             )
 
