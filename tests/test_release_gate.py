@@ -188,8 +188,10 @@ def test_missing_declared_file_fails(tmp_path):
 
 
 def test_repo_baseline_manifest_is_consistent():
-    """仓库基线：修复分支的 CR 诚实声明为 PENDING 且与文件一致。"""
+    """仓库基线：修复分支的 CR 已由 owner:Andrewchay 签核（APPROVED），
+    声明（expected_status=APPROVED）与文件状态一致。"""
     repo_root = Path(__file__).resolve().parents[1]
     code, out = _run('--root', str(repo_root / 'data' / 'governance'))
     assert code == 0
-    assert 'openly-pending=1' in out
+    assert 'satisfied=1' in out
+    assert 'openly-pending=0' in out
