@@ -4366,6 +4366,14 @@
           "worker"
         ]
       }
+    },
+    {
+      "operation_id": "get:/{full_path:path}",
+      "method": "GET",
+      "path": "/{full_path:path}",
+      "classification": "static-hosting",
+      "public": true,
+      "auth": "anonymous"
     }
   ]
 }

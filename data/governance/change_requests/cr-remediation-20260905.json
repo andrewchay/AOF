@@ -1,0 +1,15 @@
+{
+  "cr_id": "cr-remediation-20260905",
+  "status": "PENDING",
+  "topic": "remediation",
+  "title": "2026-09-05 诊断修复：安全基线与治理补齐",
+  "baseline_commit": "bfc1e02d799c5810fef25b3ee10c9445d7e52f12",
+  "branch": "codex/remediation-b0-security-baseline",
+  "summary": "落地诊断报告 D01-D08/K01 的修复与 W00/W01/W02/W03/W04/W06/W09/W11 部分实施：决策 API 认证与租户隔离、账本事务化与恢复、缺失模块归并、IAM/审计实现、操作注册表与策略矩阵、Session ACL 全链路、数据治理与恢复安全、前端归并与 E2E。",
+  "evidence_refs": [
+    "docs/diagnostics/2026-09-05/README.md",
+    "docs/remediation/2026-09-05/implementation-plan.md",
+    "docs/remediation/2026-09-05/closure-register.json"
+  ],
+  "note": "状态保持 PENDING 直至项目负责人对修复分支完成人工评审签核；签核后翻转为 APPROVED 并填写 approved_by/approved_at_utc。"
+}

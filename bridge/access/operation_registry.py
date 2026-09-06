@@ -24,6 +24,7 @@ VALID_CLASSIFICATIONS = {
     "governed",
     "legacy",
     "retired-410",
+    "static-hosting",
 }
 
 DEFAULT_REGISTRY_PATH = (

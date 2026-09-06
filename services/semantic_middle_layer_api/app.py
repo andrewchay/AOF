@@ -143,6 +143,10 @@ def _metric_route_label(request_path: str) -> str:
     label = _METRIC_UNMATCHED_LABEL
     scope = {'type': 'http', 'path': request_path, 'method': 'GET'}
     for route in app.routes:
+        # W03.05: the SPA static-hosting catch-all is not an API operation;
+        # unknown paths must keep collapsing into the 'unmatched' bucket.
+        if getattr(route, 'name', '') == '_spa_fallback':
+            continue
         try:
             match, _child_scope = route.matches(scope)
         except Exception:
