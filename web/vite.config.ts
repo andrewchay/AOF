@@ -20,4 +20,14 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    // 生产构建预览（vite preview）同样代理 /v1，供部署冒烟与 E2E 使用
+    port: 5199,
+    proxy: {
+      '/v1': {
+        target: 'http://localhost:8787',
+        changeOrigin: true,
+      },
+    },
+  },
 })
