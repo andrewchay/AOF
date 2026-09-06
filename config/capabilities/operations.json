@@ -4299,6 +4299,73 @@
           "admin"
         ]
       }
+    },
+    {
+      "operation_id": "put:/v1/context/tenant-policy",
+      "method": "PUT",
+      "path": "/v1/context/tenant-policy",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "write",
+        "allowed_roles": [
+          "admin",
+          "analyst",
+          "editor",
+          "ingestor",
+          "operator",
+          "owner",
+          "worker"
+        ]
+      }
+    },
+    {
+      "operation_id": "get:/v1/context/tenant-policy/{tenant_id}",
+      "method": "GET",
+      "path": "/v1/context/tenant-policy/{tenant_id}",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "read",
+        "allowed_roles": [
+          "admin",
+          "analyst",
+          "compiler",
+          "editor",
+          "ingestor",
+          "operator",
+          "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
+          "worker"
+        ]
+      }
+    },
+    {
+      "operation_id": "post:/v1/context/packets/{packet_id}/withdraw",
+      "method": "POST",
+      "path": "/v1/context/packets/{packet_id}/withdraw",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "write",
+        "allowed_roles": [
+          "admin",
+          "analyst",
+          "editor",
+          "ingestor",
+          "operator",
+          "owner",
+          "worker"
+        ]
+      }
     }
   ]
 }

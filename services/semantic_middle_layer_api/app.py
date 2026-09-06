@@ -5833,6 +5833,140 @@ async def get_agentic_memory(session_id: str, request: Request) -> dict[str, Any
         raise _agentic_error(exc) from exc
 
 
+# ---- W03.04: Context Exchange management (versioned policy + withdrawal) ----
+
+class ContextPolicyReq(BaseModel):
+    tenant_id: str = Field(min_length=1)
+    policy: dict[str, Any]  # TenantContextPolicy v1 contract
+
+
+@app.put('/v1/context/tenant-policy')
+async def put_context_tenant_policy(req: ContextPolicyReq, request: Request) -> dict[str, Any]:
+    """Save a new tenant context-policy revision. Admin role required."""
+    principal, _actor = _semantic_principal(request, 'read')
+    if 'admin' not in principal.roles:
+        raise HTTPException(status_code=403, detail='admin role required for context policy')
+    if req.tenant_id != principal.tenant_id:
+        raise HTTPException(status_code=403, detail='cannot set policy for another tenant')
+
+    from bridge.context_exchange.policy_store import SqliteTenantPolicyStore
+    from bridge.context_exchange.tenant_policy import TenantContextPolicy
+
+    try:
+        policy = TenantContextPolicy.from_dict(req.policy)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f'invalid tenant policy: {exc}') from exc
+    if policy.tenant_id != req.tenant_id:
+        raise HTTPException(status_code=422, detail='policy tenant_id must match path tenant')
+
+    store = SqliteTenantPolicyStore(AOF_ROOT / 'data' / 'context' / 'policies.sqlite3')
+    stored = store.save(policy, saved_by=principal.subject)
+    return {
+        'tenant_id': stored.tenant_id,
+        'revision': stored.revision,
+        'saved_by': stored.saved_by,
+        'saved_at': stored.saved_at,
+    }
+
+
+@app.get('/v1/context/tenant-policy/{tenant_id}')
+async def get_context_tenant_policy(
+    tenant_id: str, request: Request, revision: Optional[int] = Query(None)
+) -> dict[str, Any]:
+    """Pull the current (or a specific) policy revision.
+
+    Clients pass their cached revision as ``revision``: when it is still
+    current the response carries ``current: true`` so the client keeps its
+    cache; otherwise the new revision and policy are returned. On policy
+    mismatch the client must re-evaluate share eligibility conservatively
+    (deny unknown sources) before the next successful pull.
+    """
+    principal, _actor = _semantic_principal(request, 'read')
+    if tenant_id != principal.tenant_id:
+        # hide cross-tenant policy existence
+        raise HTTPException(status_code=404, detail=f'context policy not found: {tenant_id}')
+
+    from bridge.context_exchange.policy_store import SqliteTenantPolicyStore
+
+    store = SqliteTenantPolicyStore(AOF_ROOT / 'data' / 'context' / 'policies.sqlite3')
+    stored = (
+        store.revision(tenant_id, revision)
+        if revision is not None
+        else store.current(tenant_id)
+    )
+    if stored is None:
+        raise HTTPException(status_code=404, detail=f'context policy not found: {tenant_id}')
+    current = store.current(tenant_id)
+    return {
+        'tenant_id': stored.tenant_id,
+        'revision': stored.revision,
+        'is_current': stored.revision == current.revision,
+        'saved_at': stored.saved_at,
+        'policy': _context_policy_to_dict(stored.policy),
+    }
+
+
+def _context_policy_to_dict(policy) -> dict[str, Any]:
+    return {
+        "tenant_id": policy.tenant_id,
+        "spaces": {
+            name: {"draft_space_id": space.draft_space_id, "allowed_purposes": list(space.allowed_purposes)}
+            for name, space in policy.spaces.items()
+        },
+        "source_routes": [
+            {
+                "source_prefix": route.source_prefix,
+                "disposition": route.disposition.value,
+                "draft_space": route.draft_space_id,
+                "allowed_purposes": list(route.allowed_purposes),
+                "sensitivity_labels": list(route.sensitivity_labels),
+            }
+            for route in policy.source_routes
+        ],
+    }
+
+
+class ContextWithdrawReq(BaseModel):
+    visibility: str = Field(pattern='^(tenant-governed|public-governed)$')
+    reason: str = Field(min_length=1)
+
+
+@app.post('/v1/context/packets/{packet_id}/withdraw', status_code=200)
+async def withdraw_context_packet(
+    packet_id: str, req: ContextWithdrawReq, request: Request
+) -> dict[str, Any]:
+    """Withdraw a published context packet (W03.04 withdrawal protocol).
+
+    Withdrawal stops future query/training use of the packet while the
+    audit publication record is preserved. Admin role required.
+    """
+    principal, _actor = _semantic_principal(request, 'read')
+    if 'admin' not in principal.roles:
+        raise HTTPException(status_code=403, detail='admin role required to withdraw context')
+
+    from bridge.context_exchange.gateway import SqliteContextPacketRepository
+    from bridge.context_exchange.policy_store import SqliteTenantPolicyStore
+
+    repository = SqliteContextPacketRepository(
+        AOF_ROOT / 'data' / 'context' / 'packets.sqlite3'
+    )
+    store = SqliteTenantPolicyStore(AOF_ROOT / 'data' / 'context' / 'policies.sqlite3')
+    try:
+        return store.withdraw_publication(
+            repository,
+            packet_id=packet_id,
+            tenant_id=principal.tenant_id,
+            visibility=req.visibility,
+            changed_by=principal.subject,
+            reason=req.reason,
+        )
+    except Exception as exc:
+        message = str(exc)
+        if 'not found' in message:
+            raise HTTPException(status_code=404, detail=message) from exc
+        raise HTTPException(status_code=422, detail=message) from exc
+
+
 # ---- W06.03/W04.04: revocation registry admin (governed) ----
 
 class RevocationReq(BaseModel):
