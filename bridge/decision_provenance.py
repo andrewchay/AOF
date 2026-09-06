@@ -3,6 +3,13 @@
 The module deliberately keeps decision provenance separate from request audit logs:
 an audit log answers *what endpoint was called*, while this ledger answers *why an
 agent reached a conclusion, what it used, and what later work it influenced*.
+
+W02.01: the store is now a compatibility layer over
+:class:`bridge.persistence.decision_ledger_repository.DecisionLedgerRepository`.
+The default backend is SQLite (``reference-local`` profile); set
+``AOF_DECISION_LEDGER_BACKEND=jsonl`` to force the legacy file-based ledger.
+When the store path ends with ``.jsonl`` the legacy backend is selected
+automatically so that existing file-based callers keep working unchanged.
 """
 
 from __future__ import annotations
@@ -17,6 +24,15 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
+
+from bridge.persistence.decision_ledger_repository import (
+    DecisionLedgerError,
+    DecisionLedgerRepository,
+    LedgerConflictError,
+    LedgerEntry,
+    LedgerIntegrityError as RepositoryLedgerIntegrityError,
+    SQLiteDecisionLedgerRepository,
+)
 
 
 PROV_CONTEXT = {
@@ -91,24 +107,43 @@ class DecisionRecord:
         return data
 
 
-class DecisionProvenanceStore:
-    """JSONL ledger with a per-record hash chain and deterministic local queries.
+# ---------------------------------------------------------------------------
+# Backend selection
+# ---------------------------------------------------------------------------
 
-    Thread-safety and process-safety are provided via fcntl file locking
-    on a companion lock file. All reads that return decision data verify
-    chain integrity before returning results.
+_BACKEND_ENV = "AOF_DECISION_LEDGER_BACKEND"
+_DEFAULT_BACKEND = "sqlite"
+
+
+def _select_backend(path: Path) -> str:
+    """Select ledger backend.
+
+    Precedence:
+    1. ``AOF_DECISION_LEDGER_BACKEND`` environment variable
+    2. ``.jsonl`` suffix → legacy JSONL backend (backward compatibility)
+    3. default → ``sqlite``
     """
+    env = os.environ.get(_BACKEND_ENV, "").strip().lower()
+    if env in {"jsonl", "sqlite"}:
+        return env
+    if path.suffix == ".jsonl":
+        return "jsonl"
+    return _DEFAULT_BACKEND
 
-    def __init__(self, path: str | Path | None = None) -> None:
-        configured = os.environ.get("AOF_DECISION_PROVENANCE_FILE")
-        self.path = Path(path or configured or "data/audit/decision_provenance.jsonl")
-        self._lock_path = self.path.with_suffix(".lock")
-        # Sidecar checkpoint records entry_count + head_hash so that tail
-        # truncation (lost lines) is detectable, not just internal corruption.
-        self._checkpoint_path = self.path.with_suffix(".checkpoint")
+
+# ---------------------------------------------------------------------------
+# JSONL legacy implementation (kept for migration and opt-in)
+# ---------------------------------------------------------------------------
+
+class _JSONLLedgerBackend:
+    """Legacy JSONL file ledger with fcntl locking and sidecar checkpoint."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self._lock_path = path.with_suffix(".lock")
+        self._checkpoint_path = path.with_suffix(".checkpoint")
 
     def _acquire_lock(self):
-        """Acquire an exclusive advisory lock on the ledger lock file."""
         self._lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_fd = open(self._lock_path, "w")
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
@@ -118,6 +153,217 @@ class DecisionProvenanceStore:
     def _release_lock(lock_fd) -> None:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
         lock_fd.close()
+
+    def _read_checkpoint(self) -> tuple[int, str] | None:
+        try:
+            data = json.loads(self._checkpoint_path.read_text(encoding="utf-8"))
+            return int(data["entry_count"]), str(data["head_hash"])
+        except (OSError, json.JSONDecodeError, KeyError, TypeError):
+            return None
+
+    def _write_checkpoint(self, entry_count: int, head_hash: str) -> None:
+        self._checkpoint_path.write_text(
+            _canonical_json({"entry_count": entry_count, "head_hash": head_hash}),
+            encoding="utf-8",
+        )
+
+    def _entries_unlocked(self) -> list[dict[str, Any]]:
+        if not self.path.exists():
+            return []
+        entries = []
+        for line_number, line in enumerate(
+            self.path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if not line.strip():
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                raise DecisionProvenanceError(
+                    f"invalid provenance ledger at line {line_number}"
+                ) from exc
+        return entries
+
+    def _entries_verified_locked(self) -> list[dict[str, Any]]:
+        entries = self._entries_unlocked()
+        if not entries:
+            return entries
+        checkpoint = self._read_checkpoint()
+        if checkpoint is not None and checkpoint[0] != len(entries):
+            raise LedgerIntegrityError(
+                f"ledger length mismatch: checkpoint records "
+                f"{checkpoint[0]} entries but file contains {len(entries)}"
+            )
+        previous_hash = None
+        for index, entry in enumerate(entries, start=1):
+            payload = {
+                "decision": entry.get("decision"),
+                "previous_hash": entry.get("previous_hash"),
+            }
+            if entry.get("previous_hash") != previous_hash or entry.get(
+                "integrity", {}
+            ).get("hash") != _hash(payload):
+                raise LedgerIntegrityError(
+                    f"ledger integrity check failed at entry {index} "
+                    f"(decision: {entry.get('decision', {}).get('id', 'unknown')})"
+                )
+            previous_hash = entry["integrity"]["hash"]
+        return entries
+
+    def record(self, decision: DecisionRecord) -> dict[str, Any]:
+        lock_fd = self._acquire_lock()
+        try:
+            entries = self._entries_unlocked()
+            existing = {item["decision"]["id"] for item in entries}
+            if decision.id in existing:
+                raise DecisionProvenanceError(f"decision already exists: {decision.id}")
+            unknown = sorted(set(decision.parent_decision_ids) - existing)
+            if unknown:
+                raise DecisionProvenanceError(
+                    f"unknown parent decision(s): {', '.join(unknown)}"
+                )
+            previous_hash = entries[-1]["integrity"]["hash"] if entries else None
+            payload = {"decision": decision.to_dict(), "previous_hash": previous_hash}
+            entry = {
+                **payload,
+                "integrity": {"algorithm": "sha256", "hash": _hash(payload)},
+            }
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(_canonical_json(entry) + "\n")
+            self._write_checkpoint(len(entries) + 1, entry["integrity"]["hash"])
+            return entry
+        finally:
+            self._release_lock(lock_fd)
+
+    def entries_verified(self) -> list[dict[str, Any]]:
+        lock_fd = self._acquire_lock()
+        try:
+            return self._entries_verified_locked()
+        finally:
+            self._release_lock(lock_fd)
+
+    def verify_integrity(self) -> dict[str, Any]:
+        lock_fd = self._acquire_lock()
+        try:
+            previous_hash = None
+            for index, entry in enumerate(self._entries_unlocked(), start=1):
+                payload = {
+                    "decision": entry.get("decision"),
+                    "previous_hash": entry.get("previous_hash"),
+                }
+                if entry.get("previous_hash") != previous_hash or entry.get(
+                    "integrity", {}
+                ).get("hash") != _hash(payload):
+                    return {
+                        "valid": False,
+                        "entries_checked": index,
+                        "failed_decision_id": entry.get("decision", {}).get("id"),
+                    }
+                previous_hash = entry["integrity"]["hash"]
+            return {
+                "valid": True,
+                "entries_checked": index if "index" in locals() else 0,
+                "head_hash": previous_hash,
+            }
+        finally:
+            self._release_lock(lock_fd)
+
+
+# ---------------------------------------------------------------------------
+# SQLite backend adapter
+# ---------------------------------------------------------------------------
+
+class _SQLiteLedgerBackend:
+    """Adapter from DecisionProvenanceStore semantics to the Repository SPI."""
+
+    def __init__(self, path: Path) -> None:
+        # Map legacy JSONL path to SQLite path: same directory, .sqlite suffix
+        sqlite_path = path.with_suffix(".sqlite")
+        self._repo = SQLiteDecisionLedgerRepository(sqlite_path)
+        self._legacy_path = path  # kept for migrate_from_jsonl
+
+    # -- helpers --------------------------------------------------------
+
+    @staticmethod
+    def _entry_to_dict(entry: LedgerEntry) -> dict[str, Any]:
+        return entry.to_dict()
+
+    def _all_entries(self) -> list[dict[str, Any]]:
+        return [self._entry_to_dict(e) for e in self._repo.all_entries()]
+
+    # -- public API mirroring DecisionProvenanceStore -------------------
+
+    def record(self, decision: DecisionRecord) -> dict[str, Any]:
+        tenant_id = decision.tenant_id or "__default__"
+        head = self._repo.head(tenant_id)
+        sequence = (head[0] + 1) if head else 1
+        previous_hash = head[1] if head else None
+
+        payload = {"decision": decision.to_dict(), "previous_hash": previous_hash}
+        entry_hash = _hash(payload)
+        entry = LedgerEntry(
+            tenant_id=tenant_id,
+            sequence=sequence,
+            decision_id=decision.id,
+            payload_digest=_hash(decision.to_dict()),
+            previous_hash=previous_hash,
+            entry_hash=entry_hash,
+            payload=payload,
+            recorded_at=decision.recorded_at,
+        )
+        try:
+            appended = self._repo.append(entry)
+        except LedgerConflictError as exc:
+            raise DecisionProvenanceError(str(exc)) from exc
+        return self._entry_to_dict(appended)
+
+    def entries_verified(self) -> list[dict[str, Any]]:
+        result = self._repo.verify_chain()
+        if not result["valid"]:
+            raise LedgerIntegrityError(
+                f"ledger integrity check failed at entry {result['entries_checked']} "
+                f"(decision: {result.get('failed_decision_id', 'unknown')})"
+            )
+        return self._all_entries()
+
+    def verify_integrity(self) -> dict[str, Any]:
+        return self._repo.verify_chain()
+
+    def migrate_from_jsonl(self, path: str | Path | None = None) -> dict[str, Any]:
+        source = Path(path) if path else self._legacy_path
+        return self._repo.migrate_from_jsonl(source)
+
+
+# ---------------------------------------------------------------------------
+# Public store — compatibility layer
+# ---------------------------------------------------------------------------
+
+class DecisionProvenanceStore:
+    """Append-only decision ledger with deterministic local queries.
+
+    The public API is unchanged from the JSONL implementation. Internally
+    the store delegates to a backend selected by
+    ``AOF_DECISION_LEDGER_BACKEND`` (``sqlite`` by default, ``jsonl`` for
+    legacy behaviour). When the store path ends with ``.jsonl`` the legacy
+    backend is selected automatically so that existing file-based callers
+    keep working unchanged.
+    """
+
+    def __init__(self, path: str | Path | None = None) -> None:
+        configured = os.environ.get("AOF_DECISION_PROVENANCE_FILE")
+        self.path = Path(path or configured or "data/audit/decision_provenance.jsonl")
+        backend = _select_backend(self.path)
+        if backend == "jsonl":
+            self._backend: _JSONLLedgerBackend | _SQLiteLedgerBackend = (
+                _JSONLLedgerBackend(self.path)
+            )
+        else:
+            self._backend = _SQLiteLedgerBackend(self.path)
+
+    # ------------------------------------------------------------------
+    # public API (unchanged signatures)
+    # ------------------------------------------------------------------
 
     def record(
         self,
@@ -149,60 +395,33 @@ class DecisionProvenanceStore:
         if record_id in parents:
             raise DecisionProvenanceError("a decision cannot be its own parent")
 
-        lock_fd = self._acquire_lock()
-        try:
-            entries = self._entries_unlocked()
-            existing = {item["decision"]["id"] for item in entries}
-            if record_id in existing:
-                raise DecisionProvenanceError(f"decision already exists: {record_id}")
-            unknown = sorted(set(parents) - existing)
-            if unknown:
-                raise DecisionProvenanceError(
-                    f"unknown parent decision(s): {', '.join(unknown)}"
-                )
-            refs = [
-                item if isinstance(item, EvidenceRef) else EvidenceRef(**item)
-                for item in (evidence or [])
-            ]
-            decision = DecisionRecord(
-                id=record_id,
-                recorded_at=_now(),
-                agent_id=agent_id,
-                decision_type=decision_type,
-                conclusion=conclusion,
-                rationale=rationale,
-                status=status,
-                tenant_id=tenant_id,
-                session_id=session_id,
-                evidence=refs,
-                parent_decision_ids=parents,
-                output_entities=list(output_entities or []),
-                tags=sorted(set(tags or [])),
-                policies=sorted(set(policies or [])),
-                metadata=metadata or {},
-            )
-            previous_hash = entries[-1]["integrity"]["hash"] if entries else None
-            payload = {"decision": decision.to_dict(), "previous_hash": previous_hash}
-            entry = {
-                **payload,
-                "integrity": {"algorithm": "sha256", "hash": _hash(payload)},
-            }
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            with self.path.open("a", encoding="utf-8") as handle:
-                handle.write(_canonical_json(entry) + "\n")
-            self._write_checkpoint(len(entries) + 1, entry["integrity"]["hash"])
-            return entry
-        finally:
-            self._release_lock(lock_fd)
+        refs = [
+            item if isinstance(item, EvidenceRef) else EvidenceRef(**item)
+            for item in (evidence or [])
+        ]
+        decision = DecisionRecord(
+            id=record_id,
+            recorded_at=_now(),
+            agent_id=agent_id,
+            decision_type=decision_type,
+            conclusion=conclusion,
+            rationale=rationale,
+            status=status,
+            tenant_id=tenant_id,
+            session_id=session_id,
+            evidence=refs,
+            parent_decision_ids=parents,
+            output_entities=list(output_entities or []),
+            tags=sorted(set(tags or [])),
+            policies=sorted(set(policies or [])),
+            metadata=metadata or {},
+        )
+        return self._backend.record(decision)
 
     def get(self, decision_id: str) -> dict[str, Any] | None:
         entries = self._entries_verified()
         return next(
-            (
-                entry
-                for entry in entries
-                if entry["decision"]["id"] == decision_id
-            ),
+            (entry for entry in entries if entry["decision"]["id"] == decision_id),
             None,
         )
 
@@ -328,104 +547,30 @@ class DecisionProvenanceStore:
             },
         }
 
-    def _read_checkpoint(self) -> tuple[int, str] | None:
-        try:
-            data = json.loads(self._checkpoint_path.read_text(encoding="utf-8"))
-            return int(data["entry_count"]), str(data["head_hash"])
-        except (OSError, json.JSONDecodeError, KeyError, TypeError):
-            return None
+    def verify_integrity(self) -> dict[str, Any]:
+        return self._backend.verify_integrity()
 
-    def _write_checkpoint(self, entry_count: int, head_hash: str) -> None:
-        self._checkpoint_path.write_text(
-            _canonical_json({"entry_count": entry_count, "head_hash": head_hash}),
-            encoding="utf-8",
+    # ------------------------------------------------------------------
+    # migration helper
+    # ------------------------------------------------------------------
+
+    def migrate_from_jsonl(self, path: str | Path | None = None) -> dict[str, Any]:
+        """Import a JSONL ledger into the current backend.
+
+        Only available on the SQLite backend; raises on JSONL backend.
+        """
+        if isinstance(self._backend, _SQLiteLedgerBackend):
+            return self._backend.migrate_from_jsonl(path)
+        raise DecisionProvenanceError(
+            "migrate_from_jsonl is only supported on the sqlite backend"
         )
 
-    def verify_integrity(self) -> dict[str, Any]:
-        lock_fd = self._acquire_lock()
-        try:
-            return self._verify_integrity_locked()
-        finally:
-            self._release_lock(lock_fd)
-
-    def _verify_integrity_locked(self) -> dict[str, Any]:
-        previous_hash = None
-        for index, entry in enumerate(self._entries_unlocked(), start=1):
-            payload = {
-                "decision": entry.get("decision"),
-                "previous_hash": entry.get("previous_hash"),
-            }
-            if entry.get("previous_hash") != previous_hash or entry.get(
-                "integrity", {}
-            ).get("hash") != _hash(payload):
-                return {
-                    "valid": False,
-                    "entries_checked": index,
-                    "failed_decision_id": entry.get("decision", {}).get("id"),
-                }
-            previous_hash = entry["integrity"]["hash"]
-        return {
-            "valid": True,
-            "entries_checked": index if "index" in locals() else 0,
-            "head_hash": previous_hash,
-        }
+    # ------------------------------------------------------------------
+    # internals
+    # ------------------------------------------------------------------
 
     def _entries_verified(self) -> list[dict[str, Any]]:
-        """Read all entries and verify chain integrity. Raises on corruption.
-
-        Tail truncation is detected against the sidecar checkpoint: when the
-        checkpoint records more entries than the ledger file contains, the
-        tail was lost and reads must fail closed.
-        """
-        lock_fd = self._acquire_lock()
-        try:
-            return self._entries_verified_locked()
-        finally:
-            self._release_lock(lock_fd)
-
-    def _entries_verified_locked(self) -> list[dict[str, Any]]:
-        entries = self._entries_unlocked()
-        if not entries:
-            return entries
-        checkpoint = self._read_checkpoint()
-        if checkpoint is not None and checkpoint[0] != len(entries):
-            raise LedgerIntegrityError(
-                f"ledger length mismatch: checkpoint records "
-                f"{checkpoint[0]} entries but file contains {len(entries)}"
-            )
-        previous_hash = None
-        for index, entry in enumerate(entries, start=1):
-            payload = {
-                "decision": entry.get("decision"),
-                "previous_hash": entry.get("previous_hash"),
-            }
-            if entry.get("previous_hash") != previous_hash or entry.get(
-                "integrity", {}
-            ).get("hash") != _hash(payload):
-                raise LedgerIntegrityError(
-                    f"ledger integrity check failed at entry {index} "
-                    f"(decision: {entry.get('decision', {}).get('id', 'unknown')})"
-                )
-            previous_hash = entry["integrity"]["hash"]
-        return entries
-
-    def _entries_unlocked(self) -> list[dict[str, Any]]:
-        """Read all entries without integrity verification (internal use only)."""
-        if not self.path.exists():
-            return []
-        entries = []
-        for line_number, line in enumerate(
-            self.path.read_text(encoding="utf-8").splitlines(), start=1
-        ):
-            if not line.strip():
-                continue
-            try:
-                entries.append(json.loads(line))
-            except json.JSONDecodeError as exc:
-                raise DecisionProvenanceError(
-                    f"invalid provenance ledger at line {line_number}"
-                ) from exc
-        return entries
+        return self._backend.entries_verified()
 
     # Keep backward-compatible alias
     _entries = _entries_verified
