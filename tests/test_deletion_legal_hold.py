@@ -23,7 +23,10 @@ from bridge.access.deletion import (
 from bridge.decision_provenance import DecisionProvenanceStore
 
 
-def _coordinator(tmp_path, shared_secret: bytes = b"vault-test-key"):
+def _coordinator(tmp_path, monkeypatch, shared_secret: bytes = b"vault-test-key"):
+    # jsonl backend is required for the "chain untouched" assertion (line-level
+    # ledger inspection); monkeypatch restores the env after each test.
+    monkeypatch.setenv("AOF_DECISION_LEDGER_BACKEND", "jsonl")
     vault = PayloadVault(tmp_path / "vault.sqlite", master_key=shared_secret)
     coordinator = DeletionCoordinator(vault, path=tmp_path / "deletion.sqlite")
     return coordinator, vault
@@ -34,8 +37,8 @@ def _coordinator(tmp_path, shared_secret: bytes = b"vault-test-key"):
 # ---------------------------------------------------------------------------
 
 
-def test_vault_roundtrip(tmp_path):
-    coordinator, vault = _coordinator(tmp_path)
+def test_vault_roundtrip(tmp_path, monkeypatch):
+    coordinator, vault = _coordinator(tmp_path, monkeypatch)
     digest = vault.put(
         data_key="decision:1:question",
         tenant_id="tenant-a",
@@ -46,8 +49,8 @@ def test_vault_roundtrip(tmp_path):
     assert vault.digest("decision:1:question") == digest
 
 
-def test_vault_destroy_makes_payload_unrecoverable(tmp_path):
-    coordinator, vault = _coordinator(tmp_path)
+def test_vault_destroy_makes_payload_unrecoverable(tmp_path, monkeypatch):
+    coordinator, vault = _coordinator(tmp_path, monkeypatch)
     vault.put(data_key="k-1", tenant_id="t1", payload={"secret": "sensitive-value"})
 
     proof = vault.destroy("k-1")
@@ -67,7 +70,7 @@ def test_vault_destroy_makes_payload_unrecoverable(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_deletion_leaves_audit_chain_untouched(tmp_path):
+def test_deletion_leaves_audit_chain_untouched(tmp_path, monkeypatch):
     """核心负例：不修改既有链 hash 来假装删除。"""
     import os
 
@@ -86,7 +89,7 @@ def test_deletion_leaves_audit_chain_untouched(tmp_path):
     assert before["valid"] is True
     head_before = before["head_hash"]
 
-    coordinator, vault = _coordinator(tmp_path)
+    coordinator, vault = _coordinator(tmp_path, monkeypatch)
     vault.put(
         data_key="decision:1:question",
         tenant_id="tenant-a",
@@ -109,8 +112,8 @@ def test_deletion_leaves_audit_chain_untouched(tmp_path):
     assert after["entries_checked"] == before["entries_checked"]
 
 
-def test_deletion_receipt_binds_tombstone_and_policy(tmp_path):
-    coordinator, vault = _coordinator(tmp_path)
+def test_deletion_receipt_binds_tombstone_and_policy(tmp_path, monkeypatch):
+    coordinator, vault = _coordinator(tmp_path, monkeypatch)
     vault.put(data_key="k-2", tenant_id="t1", payload={"secret": "x"})
 
     tombstone = coordinator.request_deletion(
@@ -134,8 +137,8 @@ def test_deletion_receipt_binds_tombstone_and_policy(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_legal_hold_blocks_deletion_as_pending_review(tmp_path):
-    coordinator, vault = _coordinator(tmp_path)
+def test_legal_hold_blocks_deletion_as_pending_review(tmp_path, monkeypatch):
+    coordinator, vault = _coordinator(tmp_path, monkeypatch)
     vault.put(data_key="k-3", tenant_id="t1", payload={"secret": "held-value"})
 
     coordinator.place_legal_hold(data_key="k-3", tenant_id="t1", reason="litigation 2026-09")
@@ -152,8 +155,8 @@ def test_legal_hold_blocks_deletion_as_pending_review(tmp_path):
     assert coordinator.pending_legal_reviews(tenant_id="t1")[0].data_key == "k-3"
 
 
-def test_delete_after_hold_release_succeeds(tmp_path):
-    coordinator, vault = _coordinator(tmp_path)
+def test_delete_after_hold_release_succeeds(tmp_path, monkeypatch):
+    coordinator, vault = _coordinator(tmp_path, monkeypatch)
     vault.put(data_key="k-4", tenant_id="t1", payload={"secret": "value"})
 
     coordinator.place_legal_hold(data_key="k-4", tenant_id="t1", reason="hold")
@@ -171,8 +174,8 @@ def test_delete_after_hold_release_succeeds(tmp_path):
     assert vault.get("k-4") is None
 
 
-def test_duplicate_active_hold_rejected(tmp_path):
-    coordinator, _vault = _coordinator(tmp_path)
+def test_duplicate_active_hold_rejected(tmp_path, monkeypatch):
+    coordinator, _vault = _coordinator(tmp_path, monkeypatch)
     coordinator.place_legal_hold(data_key="k-5", tenant_id="t1", reason="first")
     with pytest.raises(DeletionError, match="already active"):
         coordinator.place_legal_hold(data_key="k-5", tenant_id="t1", reason="second")
