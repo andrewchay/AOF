@@ -32,6 +32,12 @@ class ActionConnector(Protocol):
 
     def compensate(self, request: Mapping[str, Any]) -> Mapping[str, Any]: ...
 
+    # Optional (W02.05): query the receipt of a previously attempted execution
+    # WITHOUT re-invoking it. Used to settle interrupted runs. Connectors that
+    # cannot query receipts simply omit this method; the service then moves the
+    # run to reconciliation_required instead of blindly retrying.
+    # def query_receipt(self, request: Mapping[str, Any]) -> Mapping[str, Any] | None: ...
+
 
 class ActionConnectorRegistry:
     """Deployment-time connector registry; credentials remain inside providers."""
@@ -562,22 +568,7 @@ class ActionRunService:
         if run.status in self._TERMINAL:
             return run
         if run.status == "executing":
-            decision = self._decision(
-                actor=actor,
-                decision_type="action_reconciliation_required",
-                conclusion="reconciliation_required",
-                rationale="Execution outcome is unknown after an interrupted worker.",
-                plan=run.plan,
-            )
-            blocked = run.transition(
-                status="reconciliation_required",
-                action="reconcile",
-                actor=actor,
-                rationale="Execution outcome is unknown after an interrupted worker.",
-                decision_id=decision,
-                result={"outcome": "unknown", "reason": "interrupted_execution"},
-            )
-            return self.repository.update(blocked, expected_digest=run.run_digest)
+            return self._reconcile_interrupted(run, actor=actor)
         if run.status != "approved":
             raise ActionRunError(f"action run cannot execute from status: {run.status}")
         attempt_decision = self._decision(
@@ -613,6 +604,76 @@ class ActionRunService:
                 "error": {"type": type(exc).__name__, "message": str(exc)},
                 "receipt": {},
             }
+        return self._complete_execution(
+            run,
+            executing,
+            actor=actor,
+            connector=connector,
+            result=result,
+        )
+
+    def _reconcile_interrupted(self, run: ActionRun, *, actor: str) -> ActionRun:
+        """W02.05: settle an interrupted execution by querying the connector
+        receipt BEFORE deciding. Never blindly re-invoke: a duplicate business
+        write is worse than a reconciliation task.
+
+        - receipt with a definitive outcome -> settle without re-invoking
+        - receipt unknown/missing/query failed/unsupported -> reconciliation_required
+        """
+        connector = self.connectors.get(str(run.plan["connector"]))
+        request = {
+            "execution_id": run.run_id,
+            "idempotency_key": run.plan["idempotency_key"],
+            "operation": run.plan["operation"],
+            "object_ids": canonical_data(run.plan["object_ids"]),
+            "inputs": canonical_data(run.plan["inputs"]),
+        }
+        receipt: dict[str, Any] | None = None
+        if callable(getattr(connector, "query_receipt", None)):
+            try:
+                raw = connector.query_receipt(request)
+                receipt = self._result(raw) if raw is not None else None
+            except Exception:
+                receipt = None  # query failure means the outcome stays unknown
+        if receipt is not None and receipt["outcome"] in {"succeeded", "failed"}:
+            return self._complete_execution(
+                run,
+                run,
+                actor=actor,
+                connector=connector,
+                result=receipt,
+                decision_type="action_reconciled_from_receipt",
+                rationale="Settled from connector receipt without re-invocation.",
+            )
+        decision = self._decision(
+            actor=actor,
+            decision_type="action_reconciliation_required",
+            conclusion="reconciliation_required",
+            rationale="Execution outcome is unknown after an interrupted worker.",
+            plan=run.plan,
+        )
+        blocked = run.transition(
+            status="reconciliation_required",
+            action="reconcile",
+            actor=actor,
+            rationale="Execution outcome is unknown after an interrupted worker.",
+            decision_id=decision,
+            result={"outcome": "unknown", "reason": "interrupted_execution"},
+        )
+        return self.repository.update(blocked, expected_digest=run.run_digest)
+
+    def _complete_execution(
+        self,
+        run: ActionRun,
+        executing: ActionRun,
+        *,
+        actor: str,
+        connector: ActionConnector,
+        result: dict[str, Any],
+        decision_type: str = "action_execution_completed",
+        rationale: str | None = None,
+    ) -> ActionRun:
+        """Shared settle tail for live and receipt-reconciled executions."""
         status = self._status(result)
         if (
             status == "failed"
@@ -635,18 +696,40 @@ class ActionRunService:
                 if compensation["outcome"] == "succeeded"
                 else "reconciliation_required"
             )
+        rationale = rationale or f"Connector returned {result['outcome']}."
+        if self.unit_of_work is not None:
+            with self.unit_of_work.atomic() as session:
+                decision = self._decision(
+                    actor=actor,
+                    decision_type=decision_type,
+                    conclusion=status,
+                    rationale=rationale,
+                    plan=run.plan,
+                    session=session,
+                )
+                completed = executing.transition(
+                    status=status,
+                    action="complete",
+                    actor=actor,
+                    rationale=rationale,
+                    decision_id=decision,
+                    result=result,
+                )
+                return session.update_action_run(
+                    completed, expected_digest=executing.run_digest
+                )
         decision = self._decision(
             actor=actor,
-            decision_type="action_execution_completed",
+            decision_type=decision_type,
             conclusion=status,
-            rationale=f"Connector returned {result['outcome']}.",
+            rationale=rationale,
             plan=run.plan,
         )
         completed = executing.transition(
             status=status,
             action="complete",
             actor=actor,
-            rationale=f"Connector returned {result['outcome']}.",
+            rationale=rationale,
             decision_id=decision,
             result=result,
         )
