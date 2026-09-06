@@ -193,6 +193,74 @@ def _percentile(values: list[float], p: float) -> float:
 #               is an explicitly public diagnostic/health path. This is the
 #               temporary mitigation for D01 legacy endpoints (W01.04) until
 #               per-operation policies land (W01.01).
+_RATE_LIMITER: 'TenantRateLimiter | None' = None
+
+
+def _rate_limiter():
+    global _RATE_LIMITER
+    if _RATE_LIMITER is None:
+        from bridge.access.rate_limit import RateLimitConfig, TenantRateLimiter
+
+        if os.environ.get('AOF_RATE_LIMIT_ENABLED', '1').strip().lower() in {'0', 'false', 'off'}:
+            return None
+        _RATE_LIMITER = TenantRateLimiter(RateLimitConfig())
+    return _RATE_LIMITER
+
+
+@app.middleware('http')
+async def rate_limit_middleware(request: Request, call_next):
+    """W09.03: tenant-scoped rate limiting. Runs INSIDE the auth gate so
+    the bucket key is the verified tenant (anonymous traffic shares a
+    bounded per-IP bucket). 429 + Retry-After on exhaustion."""
+    limiter = _rate_limiter()
+    if limiter is None:
+        return await call_next(request)
+    path = request.url.path
+
+    # health/readiness probes and metrics must NEVER be rate limited:
+    # a throttled probe causes restart storms (W08.02)
+    if path in {'/healthz', '/readyz', '/metrics'} or path.startswith('/v1/ops/'):
+        return await call_next(request)
+
+    # derive a bounded key: verified tenant if the auth gate already ran
+    # (strict mode re-reads headers cheaply), else a coarse IP bucket
+    principal_tenant = None
+    principal_subject = None
+    try:
+        from bridge.semantic_core.identity import SignedPrincipalVerifier
+
+        secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+        if secret:
+            verifier = SignedPrincipalVerifier(
+                key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+                secret=secret,
+            )
+            principal = verifier.verify(request.headers)
+            principal_tenant = principal.tenant_id
+            principal_subject = principal.subject
+    except Exception:
+        principal_tenant = None
+
+    if principal_tenant:
+        key = f"tenant:{principal_tenant}"
+    else:
+        client_ip = request.client.host if request.client else 'unknown'
+        key = f"anon:{hash(client_ip) & 0xFFFFFFFF:08x}"
+
+    if not limiter.check(key):
+        retry_after = max(1.0, round(limiter.retry_after(key), 2))
+        return JSONResponse(
+            status_code=429,
+            headers={'Retry-After': str(int(retry_after) + 1)},
+            content={
+                'code': 'rate_limited',
+                'detail': f'request budget exhausted for {key.split(":")[0]} bucket',
+                'retry_after_seconds': retry_after,
+            },
+        )
+    return await call_next(request)
+
+
 def _auth_strict_mode() -> bool:
     """Read per-request so runtime env changes take effect (test isolation)."""
     return os.environ.get('AOF_API_AUTH_MODE', 'default').strip().lower() == 'strict'
