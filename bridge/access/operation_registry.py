@@ -39,6 +39,7 @@ class RegisteredOperation:
     classification: str
     public: bool
     auth: str
+    policy: Any = None  # OperationPolicy | None (public ops may omit)
 
 
 class OperationRegistryError(ValueError):
@@ -51,6 +52,8 @@ def load_registry(path: str | Path | None = None) -> dict[str, RegisteredOperati
         raise OperationRegistryError(f"operation registry not found: {registry_path}")
     raw = json.loads(registry_path.read_text(encoding="utf-8"))
     operations: dict[str, RegisteredOperation] = {}
+    from bridge.access.policy import OperationPolicy, derive_default_policy
+
     for item in raw.get("operations", []):
         op = RegisteredOperation(
             operation_id=item["operation_id"],
@@ -66,6 +69,23 @@ def load_registry(path: str | Path | None = None) -> dict[str, RegisteredOperati
             )
         if op.operation_id in operations:
             raise OperationRegistryError(f"duplicate operation_id: {op.operation_id}")
+        # W01.01: every non-public operation MUST declare a policy.
+        policy_raw = item.get("policy")
+        if policy_raw is not None:
+            try:
+                policy = OperationPolicy.from_dict(policy_raw)
+            except Exception as exc:
+                raise OperationRegistryError(
+                    f"invalid policy for {op.operation_id}: {exc}"
+                ) from exc
+        elif op.public:
+            policy = None  # anonymous diagnostic/retired paths need no role policy
+        else:
+            raise OperationRegistryError(
+                f"operation {op.operation_id} has no authorization policy "
+                "(W01.01: new routes cannot ship undeclared)"
+            )
+        object.__setattr__(op, "policy", policy)
         operations[op.operation_id] = op
     if not operations:
         raise OperationRegistryError("operation registry is empty")

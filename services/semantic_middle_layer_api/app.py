@@ -189,7 +189,9 @@ def _percentile(values: list[float], p: float) -> float:
 #               is an explicitly public diagnostic/health path. This is the
 #               temporary mitigation for D01 legacy endpoints (W01.04) until
 #               per-operation policies land (W01.01).
-_API_AUTH_STRICT = os.environ.get('AOF_API_AUTH_MODE', 'default').strip().lower() == 'strict'
+def _auth_strict_mode() -> bool:
+    """Read per-request so runtime env changes take effect (test isolation)."""
+    return os.environ.get('AOF_API_AUTH_MODE', 'default').strip().lower() == 'strict'
 
 # Registry-driven anonymous paths (W01.01). Fail-closed: if the registry
 # cannot be loaded, only the minimal health probes stay anonymous.
@@ -205,21 +207,42 @@ try:
 except Exception as _reg_exc:  # pragma: no cover - fail-closed fallback
     logger.warning('operation registry unavailable, failing closed: %s', _reg_exc)
 
+# W01.01: per-operation authorization policies (from the registry)
+_API_OPERATION_POLICIES: dict = {}
+try:
+    _API_OPERATION_POLICIES = dict(_load_operation_registry())
+except Exception as _pol_exc:  # pragma: no cover
+    logger.warning('operation policies unavailable: %s', _pol_exc)
+
 
 @app.middleware('http')
 async def auth_middleware(request: Request, call_next):
-    if not _API_AUTH_STRICT:
+    if not _auth_strict_mode():
         return await call_next(request)
     path = request.url.path
     if path in _API_PUBLIC_PATHS or path.startswith(_API_PUBLIC_PREFIXES):
         return await call_next(request)
+
+    # W01.01: authenticate, then authorize against the per-operation policy
     try:
-        _decision_principal(request, 'read')
+        principal = _decision_principal(request, 'read')
     except HTTPException as exc:
         return JSONResponse(
             status_code=exc.status_code,
             content={'code': 'authentication_required', 'detail': exc.detail},
         )
+
+    from bridge.access.policy import PolicyDenied, authorize
+
+    operation = _API_OPERATION_POLICIES.get(f"{request.method.lower()}:{path}")
+    if operation is not None and operation.policy is not None:
+        try:
+            authorize(operation.policy, principal.roles)
+        except PolicyDenied as exc:
+            return JSONResponse(
+                status_code=403,
+                content={'code': 'operation_not_permitted', 'detail': str(exc)},
+            )
     return await call_next(request)
 
 
