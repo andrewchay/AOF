@@ -2,3 +2,14 @@
 # docs/** 下的证据存档脚本为历史复现材料（诊断快照），保持原样不 lint。
 # 仅排除目录，不改变 CI 的默认规则集（与修复前的 CI 行为一致）。
 extend-exclude = ["docs"]
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = false
+# Third-party SDKs without stubs: locally wrapped (plan 12.1 allows typed
+# adapters per integration instead of blanket ignores)
+follow_imports = "silent"
+
+[[tool.mypy.overrides]]
+module = ["pika", "pika.*"]
+ignore_missing_imports = true
