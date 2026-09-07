@@ -57,12 +57,17 @@ services:
     image: openbao/openbao:2.2
     cap_add:
       - IPC_LOCK
+    command: ["server", "-dev", "-dev-root-token-id=aof-dev-root-token"]
     environment:
       BAO_ADDR: "http://127.0.0.1:8200"
+      BAO_TOKEN: "aof-dev-root-token"
     ports:
       - "127.0.0.1:8200:8200"
-    # dev mode: in-memory, auto-unsealed — validation only; production uses
-    # the documented server mode with sealed storage (W08.06)
+    # dev mode: in-memory, auto-unsealed, fixed dev root token — validation
+    # only; production uses the documented server mode with sealed storage
+    # and external root-token handling (W08.06)
+    # W02.03: transit engine + ed25519 anchor key are provisioned by
+    # deploy/openbao-init.sh after startup (transit keys never leave OpenBao)
 
 volumes:
   pgdata:
