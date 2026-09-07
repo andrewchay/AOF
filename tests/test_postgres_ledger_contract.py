@@ -15,12 +15,18 @@ import socket
 
 import pytest
 
-from bridge.persistence.decision_ledger_repository import (
+import pytest
+
+pytest.importorskip(
+    "psycopg", reason="psycopg not installed; PostgreSQL contract tests skipped"
+)
+
+from bridge.persistence.decision_ledger_repository import (  # noqa: E402
     LedgerConflictError,
     SQLiteDecisionLedgerRepository,
     _hash,
 )
-from bridge.persistence.postgres_ledger_repository import (
+from bridge.persistence.postgres_ledger_repository import (  # noqa: E402
     PostgresDecisionLedgerRepository,
 )
 

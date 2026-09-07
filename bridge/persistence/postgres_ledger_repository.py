@@ -75,7 +75,9 @@ class PostgresDecisionLedgerRepository:
         self._init_schema()
 
     def _connect(self) -> psycopg.Connection:
-        return psycopg.connect(self.dsn, row_factory=dict_row)
+        connection = psycopg.connect(self.dsn)
+        connection.row_factory = dict_row  # type: ignore[assignment]
+        return connection
 
     def _init_schema(self) -> None:
         with self._connect() as connection:
