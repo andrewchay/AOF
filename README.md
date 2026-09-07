@@ -459,7 +459,13 @@ kubectl scale deployment aof-api --replicas=5 -n aof
 
 ## 📄 License
 
-[Your License Here]
+AOF is licensed under the [Business Source License 1.1](LICENSE) (source-available).
+
+- **You may**: view, copy, modify, self-host, and make non-production use freely; production use is granted provided it is not offered to third parties as a competing hosted/managed service.
+- **Change Date**: four years after each version's first public distribution.
+- **Change License**: on the Change Date each version converts to [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+Third-party dependencies (vue, element-plus, fastapi, pydantic, ...) remain under their own permissive licenses (MIT / BSD / Apache-2.0). See also [NOTICE](NOTICE.md).
 
 ---
 

@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """真实对话消息 + Agent trajectory 训练样本生成器.
 
 将真实的企业对话消息和 Agent 运行轨迹（含工具调用）直接转换为 SFT 训练样本，

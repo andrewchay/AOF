@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """S3 云存储摄取模块 - 支持从 AWS S3 摄取数据。
 
 本模块提供：

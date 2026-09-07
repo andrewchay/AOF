@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """document_parser 配置：引擎路由策略、开关、运行时参数。
 
 读取优先级：显式参数 > 环境变量（``AOF_PARSER_*``）> 内置默认值。

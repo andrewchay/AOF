@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """混合文档解析器 - 提取代码、文本、标注的联合语义。
 
 支持格式：

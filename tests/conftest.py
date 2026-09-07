@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """Pytest configuration and shared fixtures for AOF tests."""
 
 from __future__ import annotations
@@ -85,3 +92,18 @@ def clean_api_state(temp_dir: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     
     monkeypatch.setenv("AOF_ROOT", str(temp_dir))
     return api_data
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter_singleton():
+    """W09.03: the rate limiter is a module-level singleton; without a
+    per-test reset, one test's burst exhausts the shared bucket and the
+    next test sees 429 instead of its expected status."""
+    try:
+        import services.semantic_middle_layer_api.app as _api
+
+        _api._RATE_LIMITER = None
+        yield
+        _api._RATE_LIMITER = None
+    except Exception:
+        yield

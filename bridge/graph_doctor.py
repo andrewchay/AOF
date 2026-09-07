@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """Graph Doctor - AOF 知识图谱健康检查模块.
 
 受 GBrain 的 `gbrain doctor` 启发，本模块提供定期的图谱健康巡检，

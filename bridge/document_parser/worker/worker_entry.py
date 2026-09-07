@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """解析引擎隔离 subprocess 入口（在独立解释器执行）。
 
 本文件**必须自包含**：只能依赖 Python 标准库 + 由隔离 venv 安装的文档解析库（docling 等），

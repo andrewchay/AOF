@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """子进程运行器：让主进程（AOF venv）调用隔离解释器执行 worker_entry。
 
 阶段 0 PoC 确认各引擎依赖不能共享 venv（transformers 4.x vs 5.x 冲突），因此文档解析

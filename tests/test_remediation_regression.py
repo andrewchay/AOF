@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """W00.03 — 诊断复现场景固化为正式回归测试（2026-09-05 诊断 D01/D02/D03/D04）。
 
 每个测试对应诊断报告中的一个已复现缺陷场景，修复后必须持续通过：
