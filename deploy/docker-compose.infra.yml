@@ -1,0 +1,68 @@
+# W00.05/W08 — AOF governance infrastructure stack (owner-approved 2026-09-07)
+# Scope: development/validation environments. Production hardening (TLS,
+# resource limits, external volumes, backups) lands with W08.01-W08.03.
+#
+# Components (owner-selected minimal stack):
+#   postgres  : control-plane state (W08.04) + pgvector for embeddings (W10.02)
+#   keycloak  : OIDC IdP for trusted identity (W01.02)
+#   rabbitmq  : broker for the W05.02 outbox transport
+#   openbao   : KMS / signing anchor for W02.03 (transit engine)
+
+name: aof-infra
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: aof
+      POSTGRES_PASSWORD: aof-dev-only        # dev/validation credential only
+      POSTGRES_DB: aof_control
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aof -d aof_control"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: kc-dev-only
+    ports:
+      - "127.0.0.1:8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: aof
+      RABBITMQ_DEFAULT_PASS: aof-dev-only
+    ports:
+      - "127.0.0.1:5673:5672"
+      - "127.0.0.1:15673:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  openbao:
+    image: openbao/openbao:2.2
+    cap_add:
+      - IPC_LOCK
+    environment:
+      BAO_ADDR: "http://127.0.0.1:8200"
+    ports:
+      - "127.0.0.1:8200:8200"
+    # dev mode: in-memory, auto-unsealed — validation only; production uses
+    # the documented server mode with sealed storage (W08.06)
+
+volumes:
+  pgdata:
