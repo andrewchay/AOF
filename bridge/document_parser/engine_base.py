@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """文档解析引擎抽象基类与统一输出模型。
 
 阶段 0 PoC 结论：各引擎（Docling / MinerU / Unstructured）依赖不能共享 venv

@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """异步解析队列：把重解析（GPU/慢引擎）从 API 请求阻塞中解耦（设计稿 §5.5）。
 
 复用现有 ``bridge/tasks.TaskQueue``（优先级队列 + 状态追踪 + 结果存储 + 回调），

@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """解析结果缓存（基于文件内容指纹 Blake2b）。
 
 复用增量加载器的 Blake2b 指纹思路：文件未变则不重复解析，避免大文档反复烧资源。

@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """Cypher 到 nGQL 转换器
 
 提供基本的 Cypher 查询到 nGQL 的转换。

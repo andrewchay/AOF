@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """混合搜索模块 - 将 GBrain 的 RRF + 4 层去重引入 AOF.
 
 本模块提供：

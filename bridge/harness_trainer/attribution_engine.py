@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """Agent Harness Trainer - 归因引擎.
 
 分析资产改动与满意度提升的因果关系，输出归因报告（含置信度）.

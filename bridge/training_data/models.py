@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """训练数据生成器 - 数据模型.
 
 定义训练样本的数据结构，包括 SFT、RAG 评估、Agent 工具调用三种类型.

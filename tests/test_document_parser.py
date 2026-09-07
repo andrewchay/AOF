@@ -1,3 +1,10 @@
+# Copyright (C) 2026 Andrewchay
+# Use of this software is governed by the Business Source License
+# included in the LICENSE file of this repository.
+#
+# As of the Change Date specified in that file, in accordance with
+# the Business Source License, use of this software will be governed
+# by the Apache License, Version 2.0.
 """document_parser 单元测试。
 
 覆盖：路由逻辑、Blake2b 缓存、parse_document 各路径（direct/fallback/docling）、
