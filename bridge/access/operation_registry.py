@@ -106,7 +106,8 @@ def validate_fastapi_app(app: Any, path: str | Path | None = None) -> None:
     for route in app.routes:
         if not isinstance(route, APIRoute):
             continue
-        for method in route.methods - {"HEAD", "OPTIONS"}:
+        route_methods = route.methods or set()
+        for method in route_methods - {"HEAD", "OPTIONS"}:
             op_id = f"{method.lower()}:{route.path}"
             if op_id not in registry:
                 unregistered.append(op_id)
@@ -127,7 +128,8 @@ def validate_retired_endpoints(app: Any, path: str | Path | None = None) -> None
 
     for route in app.routes:
         if isinstance(route, APIRoute) and route.path in retired:
-            for method in route.methods - {"HEAD", "OPTIONS"}:
+            route_methods = route.methods or set()
+            for method in route_methods - {"HEAD", "OPTIONS"}:
                 op_id = f"{method.lower()}:{route.path}"
                 op = registry.get(op_id)
                 if op is None:
