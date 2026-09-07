@@ -2271,5 +2271,5 @@
       "closed_at": null
     }
   ],
-  "progress_note": "2026-09-07 12:20: main=bad2c5c8（PR #6 已合并，CI 绿）。分支新增 W10 mock 层：确定性财务数据集（含异常注入）+ 全协议 mock ERP + holdout 评估 harness（12测试，ruff清零）。W10.03/W10.04 的 mock 机制已验证；W10.05 真实数据+签字仍开放。"
+  "progress_note": "2026-09-07 15:20: PR #7 merged (07fe964d)——诊断报告+修复文档全部入库（匿名化后），main CI 绿，文档同步缺口关闭，公开仓库自包含全部诊断与修复记录。此前: PR #6 (bad2c5c8) 合入 38 个修复提交，5 项必需检查全绿；cr-remediation-20260905 已由 owner:Andrewchay 签核。登记表状态: 1 closed / 33 in_progress / 1 mitigated / 45 not_started。"
 }
