@@ -13,6 +13,9 @@ rdflib>=7.0.0
 PyYAML>=6.0.0
 networkx>=3.0.0
 
+# W01.02: JWT verification for Keycloak OIDC
+pyjwt[crypto]>=2.8
+
 # Persistence & crypto (W02/W04/W06 remediation code)
 SQLAlchemy>=2.0.0
 cryptography>=42.0.0
