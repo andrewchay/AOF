@@ -17,7 +17,6 @@ business validation: W10.05 stays open until real data + signature.
 from __future__ import annotations
 
 import hashlib
-import json
 import sqlite3
 from dataclasses import dataclass
 from typing import Any
