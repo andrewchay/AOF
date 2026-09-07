@@ -17,6 +17,10 @@ networkx>=3.0.0
 SQLAlchemy>=2.0.0
 cryptography>=42.0.0
 
+# W08.04/W05.02: PostgreSQL ledger + RabbitMQ transport (contract tests)
+psycopg[binary]>=3.2
+pika>=1.3
+
 # Type checking (optional)
 mypy>=1.8.0
 
