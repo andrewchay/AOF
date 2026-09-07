@@ -199,6 +199,30 @@ CREATE TABLE IF NOT EXISTS data_retention_records (
 """
 
 
+DEFAULT_POLICY_FILE = (
+    Path(__file__).resolve().parents[2] / "config" / "governance" / "retention-policy.json"
+)
+
+
+def load_default_policy(path: str | Path | None = None) -> RetentionPolicy:
+    """Load the owner-decided retention policy (config/governance)."""
+    policy_path = Path(path) if path else DEFAULT_POLICY_FILE
+    raw = json.loads(policy_path.read_text(encoding="utf-8"))
+    if raw.get("schema_version") != "aof.retention-policy/v1":
+        raise DataGovernanceError(
+            f"retention policy schema mismatch: {raw.get('schema_version')!r}"
+        )
+    policy = RetentionPolicy(
+        policy_id=str(raw["policy_id"]),
+        revision=int(raw["revision"]),
+        ttl_days={k: int(v) for k, v in raw["ttl_days"].items()},
+    )
+    if raw.get("decided_by"):
+        # provenance travels with the policy object
+        object.__setattr__(policy, "decided_by", raw["decided_by"])
+    return policy
+
+
 class RetentionRecordStore:
     """Tracks every governed data item: class + the policy revision in force."""
 

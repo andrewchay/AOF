@@ -185,3 +185,25 @@ def test_ttl_lookup_helpers():
     policy = _policy({"restricted": 30})
     assert ttl_for(policy, DataClass.RESTRICTED) == 30
     assert ttl_for(policy, DataClass.CONFIDENTIAL) is None
+
+
+def test_owner_decided_default_policy_loads():
+    """owner 决策（2026-09-07）：各类数据统一保留一年——作为版本化策略 v1。"""
+    from bridge.access.data_governance import load_default_policy
+
+    policy = load_default_policy()
+    assert policy.policy_id == 'aof-default'
+    assert policy.revision == 1
+    assert policy.ttl_days == {
+        'public': 365, 'internal': 365, 'confidential': 365, 'restricted': 365,
+    }
+    # 引擎用该策略做 dry-run：一年内的数据不会被清理
+    from datetime import datetime, timedelta
+    store = RetentionRecordStore(tmp_factory := __import__('tempfile').mkdtemp() + '/r.sqlite')
+    store.register(data_key='recent', tenant_id='t1',
+                   data_class=DataClass.RESTRICTED, policy=policy)
+    engine = RetentionEngine(store)
+    plan = engine.plan(policy=policy, now=datetime.now(timezone.utc) + timedelta(days=364))
+    assert plan.items == ()
+    plan2 = engine.plan(policy=policy, now=datetime.now(timezone.utc) + timedelta(days=366))
+    assert [i.data_key for i in plan2.items] == ['recent']
