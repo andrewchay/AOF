@@ -26,11 +26,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from bridge.persistence.decision_ledger_repository import (
-    DecisionLedgerError,
-    DecisionLedgerRepository,
     LedgerConflictError,
     LedgerEntry,
-    LedgerIntegrityError as RepositoryLedgerIntegrityError,
     SQLiteDecisionLedgerRepository,
 )
 

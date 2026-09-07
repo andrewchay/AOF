@@ -16,6 +16,7 @@ import dataclasses
 import json
 import sqlite3
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from bridge.access.session_acl import (
     Session,
@@ -24,6 +25,9 @@ from bridge.access.session_acl import (
     SessionState,
 )
 from bridge.persistence.sqlite_support import managed_sqlite_connection
+
+if TYPE_CHECKING:  # pragma: no cover
+    from bridge.access.session_acl import SessionVisibility
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS agentic_sessions (
@@ -121,7 +125,6 @@ class SqliteSessionRepository:
         business_object_id: str | None = None,
     ) -> Session:
         """Update visibility and bump acl_version atomically."""
-        from bridge.access.session_acl import SessionVisibility as _V  # noqa: F401
         with managed_sqlite_connection(self._connect) as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(

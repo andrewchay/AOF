@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import pytest
 
-from bridge.access.data_governance import RetentionPolicy
 from bridge.access.deletion import (
     DeletionCoordinator,
     DeletionError,
@@ -77,7 +76,7 @@ def test_deletion_leaves_audit_chain_untouched(tmp_path, monkeypatch):
     os.environ["AOF_DECISION_LEDGER_BACKEND"] = "jsonl"
     ledger_path = tmp_path / "ledger.jsonl"
     store = DecisionProvenanceStore(ledger_path)
-    entry = store.record(
+    store.record(
         agent_id="agent",
         decision_type="finance",
         conclusion="revenue is 80",

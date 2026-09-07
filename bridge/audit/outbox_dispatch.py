@@ -19,7 +19,6 @@ The reference transport is a file-based broker (moves batches to a
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path

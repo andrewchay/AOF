@@ -18,7 +18,7 @@ import os
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from bridge.persistence.sqlite_support import managed_sqlite_connection
 
@@ -495,7 +495,7 @@ class SQLiteDecisionLedgerRepository:
                 imported += 1
 
         return {
-            "input_lines": len([l for l in lines if l.strip()]),
+            "input_lines": len([line for line in lines if line.strip()]),
             "imported": imported,
             "quarantined": quarantined,
             "duplicates": duplicates,

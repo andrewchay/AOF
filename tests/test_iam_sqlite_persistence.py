@@ -88,7 +88,7 @@ async def test_tenant_slug_unique_across_instances(tmp_path):
 async def test_username_unique_enforced_at_store_level(tmp_path):
     store = SqliteIamStore(tmp_path / 'iam.db')
     m1 = RBACManager(store_path=tmp_path / 'iam.db')
-    user = await m1.create_user('dup-name')
+    await m1.create_user('dup-name')
 
     from bridge.auth.models import User
 

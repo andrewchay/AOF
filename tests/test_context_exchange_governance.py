@@ -20,7 +20,6 @@ Flow exercised:
 
 from __future__ import annotations
 
-import os
 
 import pytest
 
@@ -31,7 +30,6 @@ from bridge.context_exchange import (
     ContextSpace,
     ContextVisibility,
     MyContextSubmissionService,
-    PublicSourceIngestor,
     SqliteContextPacketRepository,
     TenantContextPolicy,
     minimal_evidence,

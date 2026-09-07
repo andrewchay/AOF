@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 import threading
 
@@ -17,7 +16,6 @@ from bridge.persistence.decision_ledger_repository import (
     LedgerConflictError,
     LedgerEntry,
     SQLiteDecisionLedgerRepository,
-    _canonical_json,
     _hash,
 )
 

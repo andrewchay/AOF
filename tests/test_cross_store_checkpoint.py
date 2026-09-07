@@ -10,13 +10,10 @@
 
 from __future__ import annotations
 
-import json
 
-import pytest
 
 from bridge.persistence.checkpoint import (
     CheckpointCoordinator,
-    ConsistencyReport,
     WatermarkCheckpointStore,
     Watermarks,
     verify_watermarks,

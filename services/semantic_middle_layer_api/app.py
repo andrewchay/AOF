@@ -193,7 +193,7 @@ def _percentile(values: list[float], p: float) -> float:
 #               is an explicitly public diagnostic/health path. This is the
 #               temporary mitigation for D01 legacy endpoints (W01.04) until
 #               per-operation policies land (W01.01).
-_RATE_LIMITER: 'TenantRateLimiter | None' = None
+_RATE_LIMITER = None
 
 
 def _rate_limiter():
@@ -225,7 +225,6 @@ async def rate_limit_middleware(request: Request, call_next):
     # derive a bounded key: verified tenant if the auth gate already ran
     # (strict mode re-reads headers cheaply), else a coarse IP bucket
     principal_tenant = None
-    principal_subject = None
     try:
         from bridge.semantic_core.identity import SignedPrincipalVerifier
 
@@ -237,7 +236,6 @@ async def rate_limit_middleware(request: Request, call_next):
             )
             principal = verifier.verify(request.headers)
             principal_tenant = principal.tenant_id
-            principal_subject = principal.subject
     except Exception:
         principal_tenant = None
 

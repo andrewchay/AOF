@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -147,7 +148,6 @@ class PayloadVault:
 
     def put(self, *, data_key: str, tenant_id: str, payload: Mapping[str, Any]) -> str:
         """Store an encrypted payload; returns its content digest."""
-        import base64
         import os
 
         plaintext = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")

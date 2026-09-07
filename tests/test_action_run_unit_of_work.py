@@ -15,7 +15,6 @@ from bridge.decision_provenance import DecisionProvenanceStore
 from bridge.persistence.unit_of_work import SqliteUnitOfWork, SqliteUnitOfWorkSession
 from bridge.semantic_core import (
     ActionConnectorRegistry,
-    ActionRunError,
     ActionRunService,
     SqliteActionRunRepository,
 )

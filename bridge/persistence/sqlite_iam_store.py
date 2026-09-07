@@ -210,11 +210,11 @@ class _SqliteSequenceView(MutableSequence):
         for r in rows:
             yield _decode(json.loads(r[0]))
 
-    def __getitem__(self, index: int) -> Any:
+    def __getitem__(self, index: int | slice) -> Any:
         rows = list(self)
         return rows[index]
 
-    def __setitem__(self, index, value) -> None:
+    def __setitem__(self, index: int | slice, value: Any) -> None:
         if isinstance(index, slice):
             # Replace the whole sequence in one transaction (in-place [:] = kept)
             with managed_sqlite_connection(self._store._connect) as conn:
@@ -227,7 +227,7 @@ class _SqliteSequenceView(MutableSequence):
             return
         raise NotImplementedError("single-item assignment is not supported")
 
-    def __delitem__(self, index: int) -> None:
+    def __delitem__(self, index: int | slice) -> None:
         rows = list(self)
         del rows[index]
         self[:] = rows

@@ -10,12 +10,11 @@
 
 from __future__ import annotations
 
-import shutil
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from bridge.access.deletion import DeletionCoordinator, DeletionStatus, PayloadVault
+from bridge.access.deletion import DeletionCoordinator, PayloadVault
 from bridge.access.restore import BackupBundle, RestoreCoordinator, RestoreError
 from bridge.access.revocations import RevocationRegistry
 
@@ -57,9 +56,6 @@ def test_deleted_payload_does_not_resurrect_after_restore(tmp_path, governance):
     restored_dir = tmp_path / "restored"
     bundle.extract_to(restored_dir)
     restored_vault = PayloadVault(restored_dir / "vault.sqlite", master_key=b"governance-key")
-    restored_deletion = DeletionCoordinator(
-        restored_vault, path=restored_dir / "deletion.sqlite"
-    )
 
     # 4. 恢复计划：合并 LIVE 事件日志中备份点之后的删除决策
     rc = RestoreCoordinator(coordinator=coordinator, revocations=revocations)

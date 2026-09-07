@@ -19,7 +19,6 @@ def app_client(monkeypatch):
 def test_dynamic_paths_collapse_to_route_templates(app_client):
     app, client = app_client
     from services.semantic_middle_layer_api.app import (
-        OBS_PATH_STATS,
         _metric_route_label,
     )
 

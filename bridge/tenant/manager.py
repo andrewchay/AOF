@@ -517,7 +517,7 @@ class TenantManager:
     async def _slug_exists(self, slug: str) -> bool:
         """检查 slug 是否已存在"""
         if self.db is not None:
-            from sqlalchemy import select, text
+            from sqlalchemy import text
             async with self.db() as session:
                 # Use raw SQL for tenant table since we don't have a SQLAlchemy model for it
                 result = await session.execute(

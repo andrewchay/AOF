@@ -10,11 +10,9 @@ from __future__ import annotations
 
 import json
 
-import pytest
 
 from bridge.audit.logger import FileOutbox
 from bridge.audit.outbox_dispatch import (
-    EventTransport,
     FileBrokerTransport,
     Inbox,
     OutboxDispatcher,
@@ -176,5 +174,5 @@ def test_file_broker_transport_writes_sent_batches(tmp_path):
     transport.deliver([_event(1), _event(2)])
     sent_files = list((tmp_path / "broker" / "sent").glob("batch_*.jsonl"))
     assert len(sent_files) == 1
-    lines = [json.loads(l) for l in sent_files[0].read_text().splitlines()]
+    lines = [json.loads(item) for item in sent_files[0].read_text().splitlines()]
     assert [e["event_id"] for e in lines] == ["evt-0001", "evt-0002"]

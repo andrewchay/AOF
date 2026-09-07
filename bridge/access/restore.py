@@ -21,7 +21,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -285,8 +285,12 @@ class BackupBundle:
         import hashlib
 
         with tarfile.open(fileobj=io.BytesIO(inner), mode="r:gz") as tar:
-            meta_bytes = tar.extractfile(self.METADATA_NAME).read()
-            payload_bytes = tar.extractfile("payload.tar.gz").read()
+            meta_member = tar.extractfile(self.METADATA_NAME)
+            payload_member = tar.extractfile("payload.tar.gz")
+            if meta_member is None or payload_member is None:
+                raise RestoreError("backup bundle is missing required members")
+            meta_bytes = meta_member.read()
+            payload_bytes = payload_member.read()
         metadata = json.loads(meta_bytes)
         expected = metadata.get("payload_digest")
         actual = "sha256:" + hashlib.sha256(payload_bytes).hexdigest()
@@ -307,9 +311,12 @@ class BackupBundle:
         restored: dict[Path, Path] = {}
         with tarfile.open(fileobj=io.BytesIO(payload_bytes), mode="r:gz") as tar:
             for member in tar.getmembers():
+                member_file = tar.extractfile(member)
+                if member_file is None:
+                    continue  # directory member
                 dest = target / member.name
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes(tar.extractfile(member).read())
+                dest.write_bytes(member_file.read())
                 restored[Path(member.name)] = dest
         return restored
 

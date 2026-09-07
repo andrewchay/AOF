@@ -199,7 +199,9 @@ def test_owner_decided_default_policy_loads():
     }
     # 引擎用该策略做 dry-run：一年内的数据不会被清理
     from datetime import datetime, timedelta
-    store = RetentionRecordStore(tmp_factory := __import__('tempfile').mkdtemp() + '/r.sqlite')
+    import tempfile
+
+    store = RetentionRecordStore(tempfile.mkdtemp() + '/r.sqlite')
     store.register(data_key='recent', tenant_id='t1',
                    data_class=DataClass.RESTRICTED, policy=policy)
     engine = RetentionEngine(store)

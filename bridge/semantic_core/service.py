@@ -1,18 +1,11 @@
+"""Governed lifecycle for source-grounded semantic facts.
+
+Prototype status (K01): an early SemanticFact/Release lifecycle that is
+NOT connected to REST/MCP or any tests. The canonical contracts are
+models.py (SemanticResource) and releases.py (KnowledgeRelease). Do not
+use this module for new development; see
+docs/remediation/2026-09-05/implementation-plan.md.
 """
-⚠️ PROTOTYPE — NOT THE CANONICAL CONTRACT ⚠️
-
-This module contains an early prototype SemanticFact/Release lifecycle
-that is NOT connected to REST/MCP or any tests. The canonical semantic
-contracts are in models.py (SemanticResource) and releases.py (KnowledgeRelease).
-
-Do NOT use this module for new development. It is preserved for historical
-reference only. See docs/remediation/2026-09-05/implementation-plan.md K01.
-
----
-
-
-"""Governed lifecycle for source-grounded semantic facts."""
-
 from __future__ import annotations
 
 import hashlib

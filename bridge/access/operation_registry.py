@@ -53,7 +53,7 @@ def load_registry(path: str | Path | None = None) -> dict[str, RegisteredOperati
         raise OperationRegistryError(f"operation registry not found: {registry_path}")
     raw = json.loads(registry_path.read_text(encoding="utf-8"))
     operations: dict[str, RegisteredOperation] = {}
-    from bridge.access.policy import OperationPolicy, derive_default_policy
+    from bridge.access.policy import OperationPolicy
 
     for item in raw.get("operations", []):
         op = RegisteredOperation(

@@ -12,7 +12,7 @@ import os
 
 from bridge.audit.logger import (
     AuditEvent, AuditLevel, AuditLogger, DataMasker, 
-    AuditConfigurationError, AuditBackendError, FileOutbox
+    AuditConfigurationError, FileOutbox
 )
 
 

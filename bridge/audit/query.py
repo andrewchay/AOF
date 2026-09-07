@@ -13,7 +13,6 @@ from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 import json
-import re
 from pathlib import Path
 
 from .logger import AuditEvent, AuditLevel
