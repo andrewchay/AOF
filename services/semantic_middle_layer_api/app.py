@@ -4368,8 +4368,38 @@ def _decision_error(exc: Exception) -> HTTPException:
 
 
 def _decision_principal(request: Request, action: str = 'read'):
-    """Verify signed principal for decision API access (D01 fix)."""
+    """Verify the caller's principal (D01 fix).
+
+    W01.02: two coexisting auth paths -
+    1. Authorization: Bearer <OIDC JWT> (enterprise interactive login via
+       the configured IdP; signature verified against JWKS)
+    2. x-aof-principal-* HMAC envelope (controlled service-to-service
+       compatibility mode; the signing secret stays server-side)
+    """
     from bridge.semantic_core.identity import PrincipalVerificationError, SignedPrincipalVerifier
+
+    authorization = request.headers.get('authorization', '')
+    if authorization.startswith('Bearer '):
+        from bridge.access.oidc import OidcTokenVerifier, OidcVerificationError
+
+        try:
+            verifier = OidcTokenVerifier()
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail=f'OIDC verifier unavailable: {exc}') from exc
+        try:
+            oidc_principal = verifier.verify(authorization.removeprefix('Bearer '))
+        except OidcVerificationError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        # W01.02: map OIDC claims to a SemanticPrincipal-compatible return
+        from bridge.semantic_core.identity import SemanticPrincipal
+
+        return SemanticPrincipal(
+            subject=oidc_principal.subject,
+            tenant_id=oidc_principal.tenant_id,
+            roles=oidc_principal.roles,
+            issued_at=int(time.time()),
+            key_id='oidc',
+        )
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
     if not secret:
@@ -5196,6 +5226,20 @@ def _continuous_ingestion_error(exc: Exception) -> HTTPException:
 
 
 def _semantic_principal(request: Request, action: str):
+    """W01.02: delegate to the unified _decision_principal so that both
+    OIDC Bearer tokens and signed principal envelopes authenticate here.
+    Returns (principal, actor_string) where actor_string = role:subject."""
+    principal = _decision_principal(request, action)
+    try:
+        actor = principal.actor_for(action)
+    except Exception as exc:
+        from bridge.semantic_core.identity import PrincipalVerificationError
+        if isinstance(exc, PrincipalVerificationError):
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        raise
+    return principal, actor
+
+    # -- legacy signed-principal-only path (kept for reference, unreachable)
     from bridge.semantic_core.identity import PrincipalVerificationError, SignedPrincipalVerifier
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
