@@ -2070,12 +2070,15 @@
         "W08",
         "W10"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "权利人明确许可证/内部使用规则并提供证据；依赖与恢复资产归属清单无占位符",
-      "implementation_commit": null,
-      "tests": [],
+      "implementation_commit": "e0103321 + PR #9 (merge 4dd50da6)",
+      "tests": [
+        "575 tests + ruff clean + CI 5/5 SUCCESS on PR #9 and main"
+      ],
       "evidence": [
-        "LICENSE DIRECTION DECIDED (2026-09-07): owner chose BSL 1.1; verified no third-party copyright headers in the internal-merged code (clean relicensing); proposed parameters: Additional Use Grant=competitor-managed-service restriction, Change Date=4 years, Change License=Apache-2.0; LICENSE file + per-file headers pending final parameter confirmation"
+        "LICENSE DIRECTION DECIDED (2026-09-07): owner chose BSL 1.1; verified no third-party copyright headers in the internal-merged code (clean relicensing); proposed parameters: Additional Use Grant=competitor-managed-service restriction, Change Date=4 years, Change License=Apache-2.0; LICENSE file + per-file headers pending final parameter confirmation",
+        "LICENSE DELIVERED (2026-09-07, PR #9 merged 4dd50da6): verbatim official BSL 1.1 with owner parameters (Licensor Andrewchay; Additional Use Grant: production OK except competing hosted/managed service, HashiCorp-style additional grant per Covenants; Change License Apache-2.0 GPL-compatible; Change Date 4th anniversary per version); 312 source files stamped with per-file BSL notice; README License section + NOTICE.md third-party table; remaining: full SBOM generation is W07.05 scope"
       ],
       "reviewer": null,
       "closed_at": null
@@ -2271,5 +2274,5 @@
       "closed_at": null
     }
   ],
-  "progress_note": "2026-09-07 15:20: PR #7 merged (07fe964d)——诊断报告+修复文档全部入库（匿名化后），main CI 绿，文档同步缺口关闭，公开仓库自包含全部诊断与修复记录。此前: PR #6 (bad2c5c8) 合入 38 个修复提交，5 项必需检查全绿；cr-remediation-20260905 已由 owner:Andrewchay 签核。登记表状态: 1 closed / 33 in_progress / 1 mitigated / 45 not_started。"
+  "progress_note": "2026-09-07 16:45: PR #9 merged (4dd50da6)——BSL 1.1 许可证落地（官方逐字文本+参数+312文件头+README/NOTICE）。main CI 绿。main=4dd50da6。登记表状态: 1 closed / 33 in_progress / 1 mitigated / 45 not_started。剩余大头: W08 PostgreSQL 迁移（需环境）、W05 真实 MQ、W02.03 KMS 签名锚、W10.05 真实数据（均需外部输入/决策）。"
 }
