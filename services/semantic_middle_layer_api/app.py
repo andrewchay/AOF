@@ -4368,8 +4368,28 @@ def _decision_error(exc: Exception) -> HTTPException:
 
 
 def _decision_principal(request: Request, action: str = 'read'):
-    """Verify signed principal for decision API access (D01 fix)."""
+    """Verify the caller's principal (D01 fix).
+
+    W01.02: two coexisting auth paths -
+    1. Authorization: Bearer <OIDC JWT> (enterprise interactive login via
+       the configured IdP; signature verified against JWKS)
+    2. x-aof-principal-* HMAC envelope (controlled service-to-service
+       compatibility mode; the signing secret stays server-side)
+    """
     from bridge.semantic_core.identity import PrincipalVerificationError, SignedPrincipalVerifier
+
+    authorization = request.headers.get('authorization', '')
+    if authorization.startswith('Bearer '):
+        from bridge.semantic_core.oidc_verifier import OidcVerifier
+
+        try:
+            verifier = OidcVerifier()
+        except PrincipalVerificationError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        try:
+            return verifier.verify_bearer(authorization)
+        except PrincipalVerificationError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
     if not secret:
