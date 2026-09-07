@@ -4380,16 +4380,26 @@ def _decision_principal(request: Request, action: str = 'read'):
 
     authorization = request.headers.get('authorization', '')
     if authorization.startswith('Bearer '):
-        from bridge.semantic_core.oidc_verifier import OidcVerifier
+        from bridge.access.oidc import OidcTokenVerifier, OidcVerificationError
 
         try:
-            verifier = OidcVerifier()
-        except PrincipalVerificationError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+            verifier = OidcTokenVerifier()
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail=f'OIDC verifier unavailable: {exc}') from exc
         try:
-            return verifier.verify_bearer(authorization)
-        except PrincipalVerificationError as exc:
+            oidc_principal = verifier.verify(authorization.removeprefix('Bearer '))
+        except OidcVerificationError as exc:
             raise HTTPException(status_code=401, detail=str(exc)) from exc
+        # W01.02: map OIDC claims to a SemanticPrincipal-compatible return
+        from bridge.semantic_core.identity import SemanticPrincipal
+
+        return SemanticPrincipal(
+            subject=oidc_principal.subject,
+            tenant_id=oidc_principal.tenant_id,
+            roles=oidc_principal.roles,
+            issued_at=int(time.time()),
+            key_id='oidc',
+        )
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
     if not secret:
@@ -5216,6 +5226,20 @@ def _continuous_ingestion_error(exc: Exception) -> HTTPException:
 
 
 def _semantic_principal(request: Request, action: str):
+    """W01.02: delegate to the unified _decision_principal so that both
+    OIDC Bearer tokens and signed principal envelopes authenticate here.
+    Returns (principal, actor_string) where actor_string = role:subject."""
+    principal = _decision_principal(request, action)
+    try:
+        actor = principal.actor_for(action)
+    except Exception as exc:
+        from bridge.semantic_core.identity import PrincipalVerificationError
+        if isinstance(exc, PrincipalVerificationError):
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        raise
+    return principal, actor
+
+    # -- legacy signed-principal-only path (kept for reference, unreachable)
     from bridge.semantic_core.identity import PrincipalVerificationError, SignedPrincipalVerifier
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
