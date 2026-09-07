@@ -15,8 +15,6 @@ import socket
 
 import pytest
 
-import pytest
-
 pytest.importorskip(
     "psycopg", reason="psycopg not installed; PostgreSQL contract tests skipped"
 )
