@@ -1,6 +1,7 @@
 """Immutable Knowledge Release manifests for jointly runnable semantic revisions."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import json
 import re
@@ -234,7 +235,7 @@ class SqliteReleaseRepository:
     def __init__(self, database: str | Path) -> None:
         self.database = Path(database)
         self.database.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute(
                 """
@@ -286,7 +287,7 @@ class SqliteReleaseRepository:
         _validate_release_id(release_id)
         if not tenant_id.strip():
             raise ReleaseError("tenant_id is required")
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT manifest_json FROM knowledge_releases "
                 "WHERE tenant_id = ? AND release_id = ?",
@@ -297,7 +298,7 @@ class SqliteReleaseRepository:
     def get_unique(self, release_id: str) -> KnowledgeRelease | None:
         """Compatibility lookup; reject ambiguous cross-tenant release identities."""
         _validate_release_id(release_id)
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT manifest_json FROM knowledge_releases WHERE release_id = ?",
                 (release_id,),
@@ -307,12 +308,12 @@ class SqliteReleaseRepository:
         return None if not rows else KnowledgeRelease.from_dict(json.loads(rows[0][0]))
 
     def schema_version(self) -> int:
-        with self._connect() as connection:
+        with self._connection() as connection:
             return int(connection.execute("PRAGMA user_version").fetchone()[0])
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT tenant_id, release_id, release_digest, manifest_json FROM knowledge_releases"
             ).fetchall()
@@ -348,6 +349,10 @@ class SqliteReleaseRepository:
         connection = sqlite3.connect(self.database, timeout=30)
         connection.execute("PRAGMA foreign_keys=ON")
         return connection
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     @staticmethod
     def _validate_tenant(release: KnowledgeRelease, tenant_id: str) -> None:

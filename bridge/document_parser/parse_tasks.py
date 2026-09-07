@@ -53,10 +53,13 @@ class DocumentParseQueue(TaskQueue):
         priority: int = 5,
         timeout_seconds: Optional[int] = None,
         name: Optional[str] = None,
+        principal: Optional[tuple[str, str]] = None,
     ) -> str:
         """提交一个异步解析任务，返回 task_id。
 
         首次调用自动 start（幂等），便于单例直接 submit。
+        ``principal`` 为 (subject_id, tenant_id)：W06.03 要求排队任务记录
+        提交者身份，worker 执行前经队列 authorizer 重授权。
         """
         from bridge.tasks.models import Task
 
@@ -68,6 +71,10 @@ class DocumentParseQueue(TaskQueue):
             parameters={"path": str(path)},
             timeout_seconds=timeout_seconds,
         )
+        if principal is not None:
+            subject, tenant = principal
+            task.user_id = subject
+            task.tenant_id = tenant
         task.priority = _priority(priority)
         return await self.submit(task)
 

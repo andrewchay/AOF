@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Query
+from starlette.routing import Match
 from fastapi.responses import PlainTextResponse, FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -123,13 +124,49 @@ def _trusted_trace_sink(correlation: Mapping[str, str]) -> None:
 TRUSTED_RUNTIME_TELEMETRY.set_trace_sink(_trusted_trace_sink)
 
 
+_ROUTE_TEMPLATE_CACHE: dict[str, str] = {}
+_METRIC_UNMATCHED_LABEL = 'unmatched'
+
+
+def _metric_route_label(request_path: str) -> str:
+    """Map a raw request path to its bounded route template (W09.02).
+
+    Dynamic IDs (e.g. /v1/decisions/decision:abc) collapse to the route
+    template (/v1/decisions/{decision_id}); unknown paths share one
+    'unmatched' bucket so the metric key space cannot grow unboundedly.
+    Method is not part of the label: per-route latency/errors are tracked at
+    path granularity, matching the documented /metrics semantics.
+    """
+    cached = _ROUTE_TEMPLATE_CACHE.get(request_path)
+    if cached is not None:
+        return cached
+    label = _METRIC_UNMATCHED_LABEL
+    scope = {'type': 'http', 'path': request_path, 'method': 'GET'}
+    for route in app.routes:
+        # W03.05: the SPA static-hosting catch-all is not an API operation;
+        # unknown paths must keep collapsing into the 'unmatched' bucket.
+        if getattr(route, 'name', '') == '_spa_fallback':
+            continue
+        try:
+            match, _child_scope = route.matches(scope)
+        except Exception:
+            continue
+        if match == Match.FULL:
+            label = route.path
+            break
+    # Cache is bounded: templates plus a cap on one-off unmatched probes
+    if len(_ROUTE_TEMPLATE_CACHE) < 10_000 or label != _METRIC_UNMATCHED_LABEL:
+        _ROUTE_TEMPLATE_CACHE[request_path] = label
+    return label
+
+
 def _record_request_metric(path: str, status_code: int, latency_ms: float) -> None:
     global OBS_TOTAL_REQUESTS, OBS_TOTAL_ERRORS
     OBS_TOTAL_REQUESTS += 1
     if status_code >= 500:
         OBS_TOTAL_ERRORS += 1
 
-    stats = OBS_PATH_STATS[path]
+    stats = OBS_PATH_STATS[_metric_route_label(path)]
     stats['requests'] += 1
     if status_code >= 500:
         stats['errors'] += 1
@@ -149,6 +186,136 @@ def _percentile(values: list[float], p: float) -> float:
     return values[max(0, min(k, len(values) - 1))]
 
 
+# ==================== W01.04 Global authentication gate ====================
+# Default-deny operation gate. AOF_API_AUTH_MODE:
+#   'default' (dev/test compat): endpoints authenticate individually, as today.
+#   'strict'  : every operation requires a verified signed principal unless it
+#               is an explicitly public diagnostic/health path. This is the
+#               temporary mitigation for D01 legacy endpoints (W01.04) until
+#               per-operation policies land (W01.01).
+_RATE_LIMITER = None
+
+
+def _rate_limiter():
+    global _RATE_LIMITER
+    if _RATE_LIMITER is None:
+        from bridge.access.rate_limit import RateLimitConfig, TenantRateLimiter
+
+        if os.environ.get('AOF_RATE_LIMIT_ENABLED', '1').strip().lower() in {'0', 'false', 'off'}:
+            return None
+        _RATE_LIMITER = TenantRateLimiter(RateLimitConfig())
+    return _RATE_LIMITER
+
+
+@app.middleware('http')
+async def rate_limit_middleware(request: Request, call_next):
+    """W09.03: tenant-scoped rate limiting. Runs INSIDE the auth gate so
+    the bucket key is the verified tenant (anonymous traffic shares a
+    bounded per-IP bucket). 429 + Retry-After on exhaustion."""
+    limiter = _rate_limiter()
+    if limiter is None:
+        return await call_next(request)
+    path = request.url.path
+
+    # health/readiness probes and metrics must NEVER be rate limited:
+    # a throttled probe causes restart storms (W08.02)
+    if path in {'/healthz', '/readyz', '/metrics'} or path.startswith('/v1/ops/'):
+        return await call_next(request)
+
+    # derive a bounded key: verified tenant if the auth gate already ran
+    # (strict mode re-reads headers cheaply), else a coarse IP bucket
+    principal_tenant = None
+    try:
+        from bridge.semantic_core.identity import SignedPrincipalVerifier
+
+        secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+        if secret:
+            verifier = SignedPrincipalVerifier(
+                key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+                secret=secret,
+            )
+            principal = verifier.verify(request.headers)
+            principal_tenant = principal.tenant_id
+    except Exception:
+        principal_tenant = None
+
+    if principal_tenant:
+        key = f"tenant:{principal_tenant}"
+    else:
+        client_ip = request.client.host if request.client else 'unknown'
+        key = f"anon:{hash(client_ip) & 0xFFFFFFFF:08x}"
+
+    if not limiter.check(key):
+        retry_after = max(1.0, round(limiter.retry_after(key), 2))
+        return JSONResponse(
+            status_code=429,
+            headers={'Retry-After': str(int(retry_after) + 1)},
+            content={
+                'code': 'rate_limited',
+                'detail': f'request budget exhausted for {key.split(":")[0]} bucket',
+                'retry_after_seconds': retry_after,
+            },
+        )
+    return await call_next(request)
+
+
+def _auth_strict_mode() -> bool:
+    """Read per-request so runtime env changes take effect (test isolation)."""
+    return os.environ.get('AOF_API_AUTH_MODE', 'default').strip().lower() == 'strict'
+
+# Registry-driven anonymous paths (W01.01). Fail-closed: if the registry
+# cannot be loaded, only the minimal health probes stay anonymous.
+_API_MINIMUM_ANONYMOUS_PATHS = {'/healthz', '/readyz'}
+_API_PUBLIC_PREFIXES = ('/docs', '/openapi.json', '/redoc')
+_API_PUBLIC_PATHS: set[str] = set(_API_MINIMUM_ANONYMOUS_PATHS)
+try:
+    from bridge.access.operation_registry import load_registry as _load_operation_registry
+
+    for _op in _load_operation_registry().values():
+        if _op.public and _op.method != 'TOOL':
+            _API_PUBLIC_PATHS.add(_op.path)
+except Exception as _reg_exc:  # pragma: no cover - fail-closed fallback
+    logger.warning('operation registry unavailable, failing closed: %s', _reg_exc)
+
+# W01.01: per-operation authorization policies (from the registry)
+_API_OPERATION_POLICIES: dict = {}
+try:
+    _API_OPERATION_POLICIES = dict(_load_operation_registry())
+except Exception as _pol_exc:  # pragma: no cover
+    logger.warning('operation policies unavailable: %s', _pol_exc)
+
+
+@app.middleware('http')
+async def auth_middleware(request: Request, call_next):
+    if not _auth_strict_mode():
+        return await call_next(request)
+    path = request.url.path
+    if path in _API_PUBLIC_PATHS or path.startswith(_API_PUBLIC_PREFIXES):
+        return await call_next(request)
+
+    # W01.01: authenticate, then authorize against the per-operation policy
+    try:
+        principal = _decision_principal(request, 'read')
+    except HTTPException as exc:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={'code': 'authentication_required', 'detail': exc.detail},
+        )
+
+    from bridge.access.policy import PolicyDenied, authorize
+
+    operation = _API_OPERATION_POLICIES.get(f"{request.method.lower()}:{path}")
+    if operation is not None and operation.policy is not None:
+        try:
+            authorize(operation.policy, principal.roles)
+        except PolicyDenied as exc:
+            return JSONResponse(
+                status_code=403,
+                content={'code': 'operation_not_permitted', 'detail': str(exc)},
+            )
+    return await call_next(request)
+
+
 @app.middleware('http')
 async def metrics_middleware(request: Request, call_next):
     started = time.perf_counter()
@@ -159,6 +326,7 @@ async def metrics_middleware(request: Request, call_next):
     if runtime_mode not in {'development', 'test'}:
         diagnostic_paths = {
             '/healthz',
+            '/readyz',
             '/metrics',
             '/v1/ops/readiness',
             '/v1/ops/slo',
@@ -312,8 +480,25 @@ def _get_parse_queue():
     global _parse_queue_singleton
     if _parse_queue_singleton is None:
         from bridge.document_parser import DocumentParseQueue, ParserConfig
+        from bridge.tasks.models import TaskAuthorizationError
 
         _parse_queue_singleton = DocumentParseQueue(parser_config=ParserConfig())
+
+        async def _reauthorize_queued_task(task) -> None:
+            """W06.03: worker 执行前重授权——撤销注册表当前状态决定去留。"""
+            from bridge.access.revocations import RevocationRegistry
+
+            registry = RevocationRegistry()
+            if task.user_id and registry.is_revoked('subject', task.user_id):
+                raise TaskAuthorizationError(
+                    f'subject revoked since submission: {task.user_id}'
+                )
+            if task.tenant_id and registry.is_revoked('tenant', task.tenant_id):
+                raise TaskAuthorizationError(
+                    f'tenant suspended since submission: {task.tenant_id}'
+                )
+
+        _parse_queue_singleton.set_authorizer(_reauthorize_queued_task)
     return _parse_queue_singleton
 
 
@@ -496,7 +681,7 @@ def ingest_docs(req: IngestDocsReq) -> dict[str, Any]:
 
 
 @app.post('/v1/documents/parse')
-async def document_parse(req: ParseDocReq) -> dict[str, Any]:
+async def document_parse(req: ParseDocReq, request: Request) -> dict[str, Any]:
     """解析单个文件为干净 Markdown + 元数据（document_parser 阶段 3 对外能力）。
 
     同步模式：返回 ParsedDoc（content + metadata）。
@@ -516,8 +701,17 @@ async def document_parse(req: ParseDocReq) -> dict[str, Any]:
     from bridge.document_parser import ParserConfig, parse_document
 
     if req.async_:
+        # W06.03: 记录提交者身份（若提供签名 principal），worker 执行前重授权
+        principal_pair = None
+        try:
+            principal, _actor = _semantic_principal(request, 'ingest')
+            principal_pair = (principal.subject, principal.tenant_id)
+        except HTTPException:
+            principal_pair = None  # 匿名/默认模式：任务不带主体，authorizer 按现状放行
         queue = _get_parse_queue()
-        task_id = await queue.submit_parse(str(path), name=f"api-parse:{path.name}")
+        task_id = await queue.submit_parse(
+            str(path), name=f"api-parse:{path.name}", principal=principal_pair
+        )
         return {'status': 'accepted', 'task_id': task_id, 'path': str(path)}
 
     config = ParserConfig(lang=req.lang)
@@ -3437,6 +3631,27 @@ def healthz() -> dict[str, Any]:
     }
 
 
+@app.get('/readyz')
+def readyz() -> JSONResponse:
+    """Readiness probe: process is able to serve governed traffic.
+
+    Checks production trust/observability prerequisites (runtime mode,
+    signing keys, telemetry, SLO targets). Returns 503 with findings when
+    the deployment is not ready; never leaks secret values.
+    """
+    from bridge.semantic_core.production import ProductionReadiness
+
+    report = ProductionReadiness.evaluate(os.environ)
+    return JSONResponse(
+        status_code=200 if report.ready else 503,
+        content={
+            'ready': report.ready,
+            'mode': os.environ.get('AOF_RUNTIME_MODE', 'development'),
+            'findings': report.to_dict(),
+        },
+    )
+
+
 # ==================== Graph API Endpoints (v1) ====================
 # 专用知识图谱可视化API，支持高性能查询和实时交互
 
@@ -4145,48 +4360,109 @@ def _decision_error(exc: Exception) -> HTTPException:
     return HTTPException(status_code=404 if message.startswith('decision not found:') else 422, detail=message)
 
 
-@app.post('/v1/decisions', status_code=201)
-async def record_decision(req: DecisionRecordReq) -> dict[str, Any]:
-    """Record an Agent Decision Activity and its evidence/causal predecessors."""
+def _decision_principal(request: Request, action: str = 'read'):
+    """Verify signed principal for decision API access (D01 fix)."""
+    from bridge.semantic_core.identity import PrincipalVerificationError, SignedPrincipalVerifier
+
+    secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
+    if not secret:
+        raise HTTPException(status_code=503, detail='identity verifier is not configured')
+    verifier = SignedPrincipalVerifier(
+        key_id=os.environ.get('AOF_SEMANTIC_IDENTITY_KEY_ID', 'identity-key-default'),
+        secret=secret,
+    )
     try:
-        return _decision_store().record(**req.model_dump())
+        principal = verifier.verify(request.headers)
+        return principal
+    except PrincipalVerificationError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+@app.post('/v1/decisions', status_code=201)
+async def record_decision(req: DecisionRecordReq, request: Request) -> dict[str, Any]:
+    """Record an Agent Decision Activity and its evidence/causal predecessors."""
+    principal = _decision_principal(request, 'read')
+    try:
+        payload = req.model_dump()
+        # Server-side identity: override client-supplied agent_id/tenant_id (D01 fix)
+        payload['agent_id'] = principal.subject
+        payload['tenant_id'] = principal.tenant_id
+        return _decision_store().record(**payload)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _decision_error(exc) from exc
 
 
 @app.get('/v1/decisions/{decision_id}')
-async def get_decision(decision_id: str) -> dict[str, Any]:
+async def get_decision(decision_id: str, request: Request) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
     entry = _decision_store().get(decision_id)
     if entry is None:
+        raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
+    # Tenant isolation: only return decisions belonging to the caller's tenant
+    if entry.get('decision', {}).get('tenant_id') != principal.tenant_id:
         raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
     return entry
 
 
 @app.get('/v1/decisions/{decision_id}/causal-chain')
-async def decision_causal_chain(decision_id: str, direction: str = Query('ancestors'), max_depth: int = Query(8, ge=1, le=50)) -> dict[str, Any]:
+async def decision_causal_chain(decision_id: str, request: Request, direction: str = Query('ancestors'), max_depth: int = Query(8, ge=1, le=50)) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
     try:
-        return _decision_store().causal_chain(decision_id, direction=direction, max_depth=max_depth)
+        result = _decision_store().causal_chain(decision_id, direction=direction, max_depth=max_depth)
+        # Filter nodes to only include caller's tenant
+        result['nodes'] = [
+            node for node in result.get('nodes', [])
+            if node.get('decision', {}).get('tenant_id') == principal.tenant_id
+        ]
+        return result
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _decision_error(exc) from exc
 
 
 @app.post('/v1/decisions/precedents/search')
-async def search_decision_precedents(req: DecisionPrecedentReq) -> dict[str, Any]:
-    return {'results': _decision_store().find_precedents(**req.model_dump())}
+async def search_decision_precedents(req: DecisionPrecedentReq, request: Request) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
+    payload = req.model_dump()
+    # Force tenant filter to caller's tenant (D01 fix)
+    payload['tenant_id'] = principal.tenant_id
+    return {'results': _decision_store().find_precedents(**payload)}
 
 
 @app.post('/v1/decisions/impact')
-async def decision_impact(req: DecisionImpactReq) -> dict[str, Any]:
+async def decision_impact(req: DecisionImpactReq, request: Request) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
     try:
-        return _decision_store().impact(**req.model_dump())
+        result = _decision_store().impact(**req.model_dump())
+        # Filter nodes to only include caller's tenant
+        result['nodes'] = [
+            node for node in result.get('nodes', [])
+            if node.get('decision', {}).get('tenant_id') == principal.tenant_id
+        ]
+        return result
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _decision_error(exc) from exc
 
 
 @app.get('/v1/decisions/{decision_id}/audit-trail')
-async def decision_audit_trail(decision_id: str) -> dict[str, Any]:
+async def decision_audit_trail(decision_id: str, request: Request) -> dict[str, Any]:
+    principal = _decision_principal(request, 'read')
     try:
-        return _decision_store().audit_trail(decision_id)
+        result = _decision_store().audit_trail(decision_id)
+        # Filter causal chain nodes to only include caller's tenant
+        if 'causal_chain' in result:
+            result['causal_chain']['nodes'] = [
+                node for node in result['causal_chain'].get('nodes', [])
+                if node.get('decision', {}).get('tenant_id') == principal.tenant_id
+            ]
+        return result
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _decision_error(exc) from exc
 
@@ -4331,6 +4607,8 @@ class RuntimeSimulationReq(BaseModel):
 class AgenticRunReq(BaseModel):
     run_id: str = Field(min_length=1)
     session_id: str = Field(min_length=1)
+    visibility: str = Field(default='private', pattern='^(private|team|business-object)$')
+    business_object_id: Optional[str] = None
     query: str = Field(min_length=1)
     purpose: str = Field(min_length=1)
     channel: str = Field(min_length=1)
@@ -5449,7 +5727,76 @@ async def replay_enterprise_simulation(
 def _agentic_request(req: AgenticRunReq, tenant_id: str):
     from bridge.semantic_core import AgenticRequest
 
-    return AgenticRequest.create(tenant_id=tenant_id, **req.model_dump())
+    return AgenticRequest.create(
+        tenant_id=tenant_id,
+        **req.model_dump(exclude={'visibility', 'business_object_id'}),
+    )
+
+
+def _agentic_session_repo():
+    """W06.02: Session ACL repository colocated with the agentic run DB."""
+    from bridge.persistence.sqlite_session_store import SqliteSessionRepository
+
+    database = os.environ.get(
+        'AOF_AGENTIC_RUN_DATABASE',
+        str(AOF_ROOT / 'data' / 'agentic' / 'runs.sqlite3'),
+    )
+    return SqliteSessionRepository(database)
+
+
+def _register_agentic_session(req: AgenticRunReq, principal) -> None:
+    """W06.02: register the session on run creation (idempotent).
+
+    New sessions default to private with the caller as owner. Existing
+    sessions require write authorization from the caller.
+    """
+    from bridge.access.session_acl import (
+        Session,
+        SessionAction,
+        SessionVisibility,
+        authorize,
+    )
+
+    repo = _agentic_session_repo()
+    existing = repo.get(principal.tenant_id, req.session_id)
+    if existing is None:
+        repo.create(
+            Session(
+                tenant_id=principal.tenant_id,
+                session_id=req.session_id,
+                owner_subject=principal.subject,
+                visibility=SessionVisibility(req.visibility),
+                business_object_id=req.business_object_id,
+            )
+        )
+        return
+    authorize(
+        existing,
+        repo.list_acl(principal.tenant_id, req.session_id),
+        subject_id=principal.subject,
+        action=SessionAction.WRITE,
+    )
+
+
+def _authorize_agentic_session_read(tenant_id: str, session_id: str, subject: str) -> None:
+    """W06.02: authorize a session read; unknown sessions fail closed (404)."""
+    from bridge.access.session_acl import SessionAction, authorize
+
+    repo = _agentic_session_repo()
+    session = repo.get(tenant_id, session_id)
+    if session is None:
+        # Unknown/legacy session: restricted migration queue semantics (W06.01)
+        raise HTTPException(status_code=404, detail=f'session not found: {session_id}')
+    try:
+        authorize(
+            session,
+            repo.list_acl(tenant_id, session_id),
+            subject_id=subject,
+            action=SessionAction.READ,
+        )
+    except Exception:
+        # 404 (not 403) to avoid leaking session existence across subjects
+        raise HTTPException(status_code=404, detail=f'session not found: {session_id}')
 
 
 @app.post('/v1/agentic/route')
@@ -5473,6 +5820,7 @@ async def route_agentic_query(req: AgenticRunReq, request: Request) -> dict[str,
 async def run_agentic_query(req: AgenticRunReq, request: Request) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'agentic_run')
+        _register_agentic_session(req, principal)
         with trusted_runtime_telemetry().operation(
             'agentic.run', {'tenant_id': principal.tenant_id}
         ) as correlation:
@@ -5492,9 +5840,13 @@ async def run_agentic_query(req: AgenticRunReq, request: Request) -> dict[str, A
 async def get_agentic_run(run_id: str, request: Request) -> dict[str, Any]:
     try:
         principal, _ = _semantic_principal(request, 'read')
-        return _agentic_system(request.headers).repository.get(
+        run = _agentic_system(request.headers).repository.get(
             run_id, tenant_id=principal.tenant_id
         )
+        _authorize_agentic_session_read(
+            principal.tenant_id, run.get('session_id', ''), principal.subject
+        )
+        return run
     except Exception as exc:
         raise _agentic_error(exc) from exc
 
@@ -5505,6 +5857,12 @@ async def replay_agentic_run(
 ) -> dict[str, Any]:
     try:
         principal, actor = _semantic_principal(request, 'agentic_replay')
+        source = _agentic_system(request.headers).repository.get(
+            source_run_id, tenant_id=principal.tenant_id
+        )
+        _authorize_agentic_session_read(
+            principal.tenant_id, source.get('session_id', ''), principal.subject
+        )
         return _agentic_system(request.headers).replay(
             source_run_id,
             run_id=req.run_id,
@@ -5519,6 +5877,12 @@ async def replay_agentic_run(
 async def evaluate_agentic_run(run_id: str, request: Request) -> dict[str, Any]:
     try:
         principal, _ = _semantic_principal(request, 'read')
+        run = _agentic_system(request.headers).repository.get(
+            run_id, tenant_id=principal.tenant_id
+        )
+        _authorize_agentic_session_read(
+            principal.tenant_id, run.get('session_id', ''), principal.subject
+        )
         return _agentic_system(request.headers).evaluate(
             run_id, tenant_id=principal.tenant_id
         )
@@ -5530,10 +5894,278 @@ async def evaluate_agentic_run(run_id: str, request: Request) -> dict[str, Any]:
 async def get_agentic_memory(session_id: str, request: Request) -> dict[str, Any]:
     try:
         principal, _ = _semantic_principal(request, 'read')
+        _authorize_agentic_session_read(principal.tenant_id, session_id, principal.subject)
         values = _agentic_system(request.headers).repository.memory(
             tenant_id=principal.tenant_id, session_id=session_id
         )
         return {'items': values, 'count': len(values)}
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+# ---- W03.04: Context Exchange management (versioned policy + withdrawal) ----
+
+class ContextPolicyReq(BaseModel):
+    tenant_id: str = Field(min_length=1)
+    policy: dict[str, Any]  # TenantContextPolicy v1 contract
+
+
+@app.put('/v1/context/tenant-policy')
+async def put_context_tenant_policy(req: ContextPolicyReq, request: Request) -> dict[str, Any]:
+    """Save a new tenant context-policy revision. Admin role required."""
+    principal, _actor = _semantic_principal(request, 'read')
+    if 'admin' not in principal.roles:
+        raise HTTPException(status_code=403, detail='admin role required for context policy')
+    if req.tenant_id != principal.tenant_id:
+        raise HTTPException(status_code=403, detail='cannot set policy for another tenant')
+
+    from bridge.context_exchange.policy_store import SqliteTenantPolicyStore
+    from bridge.context_exchange.tenant_policy import TenantContextPolicy
+
+    try:
+        policy = TenantContextPolicy.from_dict(req.policy)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f'invalid tenant policy: {exc}') from exc
+    if policy.tenant_id != req.tenant_id:
+        raise HTTPException(status_code=422, detail='policy tenant_id must match path tenant')
+
+    store = SqliteTenantPolicyStore(AOF_ROOT / 'data' / 'context' / 'policies.sqlite3')
+    stored = store.save(policy, saved_by=principal.subject)
+    return {
+        'tenant_id': stored.tenant_id,
+        'revision': stored.revision,
+        'saved_by': stored.saved_by,
+        'saved_at': stored.saved_at,
+    }
+
+
+@app.get('/v1/context/tenant-policy/{tenant_id}')
+async def get_context_tenant_policy(
+    tenant_id: str, request: Request, revision: Optional[int] = Query(None)
+) -> dict[str, Any]:
+    """Pull the current (or a specific) policy revision.
+
+    Clients pass their cached revision as ``revision``: when it is still
+    current the response carries ``current: true`` so the client keeps its
+    cache; otherwise the new revision and policy are returned. On policy
+    mismatch the client must re-evaluate share eligibility conservatively
+    (deny unknown sources) before the next successful pull.
+    """
+    principal, _actor = _semantic_principal(request, 'read')
+    if tenant_id != principal.tenant_id:
+        # hide cross-tenant policy existence
+        raise HTTPException(status_code=404, detail=f'context policy not found: {tenant_id}')
+
+    from bridge.context_exchange.policy_store import SqliteTenantPolicyStore
+
+    store = SqliteTenantPolicyStore(AOF_ROOT / 'data' / 'context' / 'policies.sqlite3')
+    stored = (
+        store.revision(tenant_id, revision)
+        if revision is not None
+        else store.current(tenant_id)
+    )
+    if stored is None:
+        raise HTTPException(status_code=404, detail=f'context policy not found: {tenant_id}')
+    current = store.current(tenant_id)
+    return {
+        'tenant_id': stored.tenant_id,
+        'revision': stored.revision,
+        'is_current': stored.revision == current.revision,
+        'saved_at': stored.saved_at,
+        'policy': _context_policy_to_dict(stored.policy),
+    }
+
+
+def _context_policy_to_dict(policy) -> dict[str, Any]:
+    return {
+        "tenant_id": policy.tenant_id,
+        "spaces": {
+            name: {"draft_space_id": space.draft_space_id, "allowed_purposes": list(space.allowed_purposes)}
+            for name, space in policy.spaces.items()
+        },
+        "source_routes": [
+            {
+                "source_prefix": route.source_prefix,
+                "disposition": route.disposition.value,
+                "draft_space": route.draft_space_id,
+                "allowed_purposes": list(route.allowed_purposes),
+                "sensitivity_labels": list(route.sensitivity_labels),
+            }
+            for route in policy.source_routes
+        ],
+    }
+
+
+class ContextWithdrawReq(BaseModel):
+    visibility: str = Field(pattern='^(tenant-governed|public-governed)$')
+    reason: str = Field(min_length=1)
+
+
+@app.post('/v1/context/packets/{packet_id}/withdraw', status_code=200)
+async def withdraw_context_packet(
+    packet_id: str, req: ContextWithdrawReq, request: Request
+) -> dict[str, Any]:
+    """Withdraw a published context packet (W03.04 withdrawal protocol).
+
+    Withdrawal stops future query/training use of the packet while the
+    audit publication record is preserved. Admin role required.
+    """
+    principal, _actor = _semantic_principal(request, 'read')
+    if 'admin' not in principal.roles:
+        raise HTTPException(status_code=403, detail='admin role required to withdraw context')
+
+    from bridge.context_exchange.gateway import SqliteContextPacketRepository
+    from bridge.context_exchange.policy_store import SqliteTenantPolicyStore
+
+    repository = SqliteContextPacketRepository(
+        AOF_ROOT / 'data' / 'context' / 'packets.sqlite3'
+    )
+    store = SqliteTenantPolicyStore(AOF_ROOT / 'data' / 'context' / 'policies.sqlite3')
+    try:
+        return store.withdraw_publication(
+            repository,
+            packet_id=packet_id,
+            tenant_id=principal.tenant_id,
+            visibility=req.visibility,
+            changed_by=principal.subject,
+            reason=req.reason,
+        )
+    except Exception as exc:
+        message = str(exc)
+        if 'not found' in message:
+            raise HTTPException(status_code=404, detail=message) from exc
+        raise HTTPException(status_code=422, detail=message) from exc
+
+
+# ---- W06.03/W04.04: revocation registry admin (governed) ----
+
+class RevocationReq(BaseModel):
+    kind: str = Field(pattern='^(subject|session|tenant)$')
+    identity: str = Field(min_length=1)
+    reason: Optional[str] = None
+
+
+@app.post('/v1/access/revocations', status_code=201)
+async def revoke_identity(req: RevocationReq, request: Request) -> dict[str, Any]:
+    """Revoke a subject/session/tenant. Admin role required."""
+    principal, _actor = _semantic_principal(request, 'read')
+    if 'admin' not in principal.roles:
+        raise HTTPException(status_code=403, detail='admin role required to revoke')
+    from bridge.access.revocations import RevocationRegistry
+
+    RevocationRegistry().revoke(req.kind, req.identity, reason=req.reason)
+    return {'revoked': True, 'kind': req.kind, 'identity': req.identity}
+
+
+@app.get('/v1/access/revocations/{kind}/{identity}')
+async def check_revocation(kind: str, identity: str, request: Request) -> dict[str, Any]:
+    """Check whether an identity is currently revoked."""
+    _semantic_principal(request, 'read')
+    from bridge.access.revocations import RevocationError, RevocationRegistry
+
+    try:
+        return {
+            'kind': kind,
+            'identity': identity,
+            'revoked': RevocationRegistry().is_revoked(kind, identity),
+        }
+    except RevocationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# ---- W06.02: Session ACL management (owner / share-granted subjects) ----
+
+class SessionVisibilityReq(BaseModel):
+    visibility: str = Field(pattern='^(private|team|business-object)$')
+    business_object_id: Optional[str] = None
+
+
+class SessionAclGrantReq(BaseModel):
+    subject_kind: str = Field(pattern='^(subject|group)$')
+    subject_id: str = Field(min_length=1)
+    can_read: bool = True
+    can_write: bool = False
+    can_share: bool = False
+
+
+def _authorize_agentic_session_share(tenant_id: str, session_id: str, subject: str):
+    """Return (repo, session) if subject may manage the session ACL."""
+    from bridge.access.session_acl import SessionAction, authorize
+
+    repo = _agentic_session_repo()
+    session = repo.get(tenant_id, session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f'session not found: {session_id}')
+    try:
+        authorize(
+            session,
+            repo.list_acl(tenant_id, session_id),
+            subject_id=subject,
+            action=SessionAction.SHARE,
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail=f'session not found: {session_id}')
+    return repo, session
+
+
+@app.put('/v1/agentic/sessions/{session_id}/visibility')
+async def set_agentic_session_visibility(
+    session_id: str, req: SessionVisibilityReq, request: Request
+) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        repo, session = _authorize_agentic_session_share(
+            principal.tenant_id, session_id, principal.subject
+        )
+        from bridge.access.session_acl import SessionVisibility
+        updated = repo.set_visibility(
+            principal.tenant_id,
+            session_id,
+            SessionVisibility(req.visibility),
+            business_object_id=req.business_object_id,
+        )
+        return updated.to_dict()
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.put('/v1/agentic/sessions/{session_id}/acl')
+async def grant_agentic_session_acl(
+    session_id: str, req: SessionAclGrantReq, request: Request
+) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        repo, _session = _authorize_agentic_session_share(
+            principal.tenant_id, session_id, principal.subject
+        )
+        from bridge.access.session_acl import SessionAclEntry
+        updated = repo.upsert_acl(
+            principal.tenant_id,
+            session_id,
+            SessionAclEntry(
+                subject_kind=req.subject_kind,
+                subject_id=req.subject_id,
+                can_read=req.can_read,
+                can_write=req.can_write,
+                can_share=req.can_share,
+            ),
+        )
+        return {'acl_version': updated.acl_version, 'granted': req.model_dump()}
+    except Exception as exc:
+        raise _agentic_error(exc) from exc
+
+
+@app.delete('/v1/agentic/sessions/{session_id}/acl/{subject_kind}/{subject_id}')
+async def revoke_agentic_session_acl(
+    session_id: str, subject_kind: str, subject_id: str, request: Request
+) -> dict[str, Any]:
+    try:
+        principal, _ = _semantic_principal(request, 'read')
+        repo, _session = _authorize_agentic_session_share(
+            principal.tenant_id, session_id, principal.subject
+        )
+        updated = repo.delete_acl(principal.tenant_id, session_id, subject_kind, subject_id)
+        return {'acl_version': updated.acl_version, 'revoked': subject_id}
     except Exception as exc:
         raise _agentic_error(exc) from exc
 

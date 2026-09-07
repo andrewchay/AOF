@@ -6,7 +6,7 @@ metadata:
   labels:
     app: aof-api
 spec:
-  replicas: 3
+  replicas: 1  # D04 fix: single instance until shared state is proven
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -31,6 +31,8 @@ spec:
         env:
         - name: AOF_ROOT
           value: "/app"
+        - name: AOF_API_AUTH_MODE
+          value: "strict"
         envFrom:
         - configMapRef:
             name: aof-config
@@ -45,7 +47,7 @@ spec:
             cpu: "2000m"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /healthz
             port: http
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -53,7 +55,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /health
+            path: /readyz
             port: http
           initialDelaySeconds: 5
           periodSeconds: 5
@@ -62,9 +64,14 @@ spec:
         volumeMounts:
         - name: tmp
           mountPath: /tmp
+        - name: aof-data
+          mountPath: /app/data
       volumes:
       - name: tmp
         emptyDir: {}
+      - name: aof-data
+        persistentVolumeClaim:
+          claimName: aof-data-pvc
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

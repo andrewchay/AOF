@@ -47,3 +47,8 @@ ontologies/
 # Temporary files
 tmp/
 temp/
+
+# Environment files (D05 fix)
+.env
+.env.*
+*.env

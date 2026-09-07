@@ -83,6 +83,9 @@ class TaskQueue:
         # 回调
         self._on_progress: Optional[Callable] = None
         self._on_complete: Optional[Callable] = None
+        
+        # W06.03: 执行前重授权回调（异步 callable(task) -> None）
+        self._authorizer: Optional[Callable] = None
     
     async def connect(self) -> bool:
         """连接 Redis（如果配置了）"""
@@ -352,6 +355,11 @@ class TaskQueue:
             if not executor:
                 raise RuntimeError(f"No executor for task type: {task.task_type}")
             
+            # W06.03: 执行前重授权——排队期间撤权/冻结在此拦截，
+            # executor 永不会被调用
+            if self._authorizer is not None:
+                await self._authorizer(task)
+            
             # 执行（带超时）
             if task.timeout_seconds:
                 result_data = await asyncio.wait_for(
@@ -414,6 +422,14 @@ class TaskQueue:
             except Exception as e:
                 logger.error(f"Complete callback error: {e}")
     
+    def set_authorizer(self, authorizer: Optional[Callable]) -> None:
+        """W06.03: 注册执行前重授权回调。
+
+        callback(task) 在 executor 之前被 await；抛出 TaskAuthorizationError
+        则任务失败且执行器不运行。用于实现"排队期间撤权后 worker 拒绝"。
+        """
+        self._authorizer = authorizer
+
     def _get_executor(self, task_type: str) -> Optional[Callable]:
         """获取任务执行器"""
         # 这里应该根据任务类型返回对应的执行器

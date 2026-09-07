@@ -1,6 +1,7 @@
 """Immutable query runs, durable storage, and detached evidence attestations."""
 
 from __future__ import annotations
+from bridge.persistence.sqlite_support import managed_sqlite_connection
 
 import hashlib
 import hmac
@@ -290,7 +291,7 @@ class SqliteQueryRunRepository:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS query_runs (
@@ -308,6 +309,10 @@ class SqliteQueryRunRepository:
         connection = sqlite3.connect(self.path, timeout=30)
         connection.execute("PRAGMA journal_mode=WAL")
         return connection
+    def _connection(self):
+        """Transaction + close context manager (W09.01: no leaked connections)."""
+        return managed_sqlite_connection(self._connect)
+
 
     def put(self, run: QueryRun) -> QueryRun:
         payload = canonical_json(run.to_dict())
@@ -340,7 +345,7 @@ class SqliteQueryRunRepository:
             connection.close()
 
     def get(self, query_run_id: str, *, tenant_id: str) -> QueryRun | None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 "SELECT run_digest, payload FROM query_runs "
                 "WHERE tenant_id = ? AND query_run_id = ?",
@@ -354,12 +359,12 @@ class SqliteQueryRunRepository:
         return run
 
     def schema_version(self) -> int:
-        with self._connect() as connection:
+        with self._connection() as connection:
             return int(connection.execute("PRAGMA user_version").fetchone()[0])
 
     def verify_all(self) -> dict[str, Any]:
         errors = []
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 "SELECT tenant_id, query_run_id, run_digest, payload FROM query_runs"
             ).fetchall()

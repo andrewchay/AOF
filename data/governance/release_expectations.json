@@ -1,0 +1,10 @@
+{
+  "schema_version": "aof.release-expectations/v1",
+  "expected_change_requests": [
+    {
+      "file": "cr-remediation-20260905.json",
+      "expected_status": "APPROVED",
+      "note": "修复分支变更请求：2026-09-07 由 owner:Andrewchay 签核。"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "aof.retention-policy/v1",
+  "policy_id": "aof-default",
+  "revision": 1,
+  "decided_by": "owner:Andrewchay",
+  "decided_at": "2026-09-07",
+  "note": "owner 决策：各类数据统一保留一年（W06.04 版本化保留策略的真实输入）。",
+  "ttl_days": {
+    "public": 365,
+    "internal": 365,
+    "confidential": 365,
+    "restricted": 365
+  }
+}

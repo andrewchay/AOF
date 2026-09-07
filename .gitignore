@@ -2,3 +2,19 @@ __pycache__/
 *.pyc
 .DS_Store
 **/.DS_Store
+
+# Environment files (D05 fix)
+.env
+.env.*
+*.env
+
+# W09 runtime state files (local sqlite stores and ledger sidecars)
+data/**/*.sqlite3
+data/**/*.sqlite3-*
+data/**/*.sqlite
+data/**/*.sqlite-*
+data/**/*.jsonl.lock
+data/**/*.checkpoint
+data/audit/*.jsonl
+data/access/*.sqlite
+data/access/*.sqlite-*

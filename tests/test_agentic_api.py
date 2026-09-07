@@ -56,30 +56,71 @@ def test_agentic_api_routes_runs_evaluates_replays_and_isolates_memory(
     assert run.json()["status"] == "succeeded"
     assert run.json()["decision_id"].startswith("decision:")
 
-    evaluation = client.get(
+    # W06.02 (D09): sessions default to private — a different subject in the
+    # same tenant can no longer read the run/evaluation/memory (404 hides
+    # existence). The owner (analyst-user) retains full access.
+    denied_evaluation = client.get(
         "/v1/agentic/runs/api-agentic-001/evaluation", headers=headers("viewer")
     )
-    assert evaluation.status_code == 200
-    assert evaluation.json()["score"] == 1.0
+    assert denied_evaluation.status_code == 404
 
-    replay = client.post(
+    denied_replay = client.post(
         "/v1/agentic/runs/api-agentic-001/replay",
         json={"run_id": "api-agentic-002"},
         headers=headers("operator"),
     )
-    assert replay.status_code == 201
-    assert replay.json()["reproducible"] is True
+    assert denied_replay.status_code == 404
+
+    denied_memory = client.get(
+        "/v1/agentic/sessions/finance-review/memory", headers=headers("viewer")
+    )
+    assert denied_memory.status_code == 404
+
+    # Owner reads their own session data
+    evaluation = client.get(
+        "/v1/agentic/runs/api-agentic-001/evaluation", headers=headers("analyst")
+    )
+    assert evaluation.status_code == 200
+    assert evaluation.json()["score"] == 1.0
 
     memory = client.get(
-        "/v1/agentic/sessions/finance-review/memory", headers=headers("viewer")
+        "/v1/agentic/sessions/finance-review/memory", headers=headers("analyst")
     )
     assert memory.status_code == 200
     assert memory.json()["count"] == 2
+
+    # Explicit share via API: owner promotes to team visibility and grants
+    # viewer-user read access -> now allowed
+    non_owner_share = client.put(
+        "/v1/agentic/sessions/finance-review/visibility",
+        json={"visibility": "team"},
+        headers=headers("viewer"),
+    )
+    assert non_owner_share.status_code == 404  # non-owner cannot manage ACL
+
+    shared = client.put(
+        "/v1/agentic/sessions/finance-review/visibility",
+        json={"visibility": "team"},
+        headers=headers("analyst"),
+    )
+    assert shared.status_code == 200
+    granted = client.put(
+        "/v1/agentic/sessions/finance-review/acl",
+        json={"subject_kind": "subject", "subject_id": "viewer-user", "can_read": True},
+        headers=headers("analyst"),
+    )
+    assert granted.status_code == 200
+    granted_memory = client.get(
+        "/v1/agentic/sessions/finance-review/memory", headers=headers("viewer")
+    )
+    assert granted_memory.status_code == 200
+    assert granted_memory.json()["count"] == 2
+
+    # Tenant isolation still holds for other tenants
     other = client.get(
         "/v1/agentic/sessions/finance-review/memory", headers=headers("viewer", "other")
     )
-    assert other.status_code == 200
-    assert other.json()["count"] == 0
+    assert other.status_code == 404
 
 
 def test_agentic_run_requires_authorized_signed_role(tmp_path, monkeypatch):

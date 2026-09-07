@@ -13,6 +13,10 @@ rdflib>=7.0.0
 PyYAML>=6.0.0
 networkx>=3.0.0
 
+# Persistence & crypto (W02/W04/W06 remediation code)
+SQLAlchemy>=2.0.0
+cryptography>=42.0.0
+
 # Type checking (optional)
 mypy>=1.8.0
 

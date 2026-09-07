@@ -1984,6 +1984,24 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Healthz Healthz Get
+  /readyz:
+    get:
+      summary: Readyz
+      description: 'Readiness probe: process is able to serve governed traffic.
+
+
+        Checks production trust/observability prerequisites (runtime mode,
+
+        signing keys, telemetry, SLO targets). Returns 503 with findings when
+
+        the deployment is not ready; never leaks secret values.'
+      operationId: readyz_readyz_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
   /v1/graph/health:
     get:
       summary: Graph Health Check
@@ -4181,6 +4199,283 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/context/tenant-policy:
+    put:
+      summary: Put Context Tenant Policy
+      description: Save a new tenant context-policy revision. Admin role required.
+      operationId: put_context_tenant_policy_v1_context_tenant_policy_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextPolicyReq'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Put Context Tenant Policy V1 Context Tenant Policy
+                  Put
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/context/tenant-policy/{tenant_id}:
+    get:
+      summary: Get Context Tenant Policy
+      description: 'Pull the current (or a specific) policy revision.
+
+
+        Clients pass their cached revision as ``revision``: when it is still
+
+        current the response carries ``current: true`` so the client keeps its
+
+        cache; otherwise the new revision and policy are returned. On policy
+
+        mismatch the client must re-evaluate share eligibility conservatively
+
+        (deny unknown sources) before the next successful pull.'
+      operationId: get_context_tenant_policy_v1_context_tenant_policy__tenant_id__get
+      parameters:
+      - name: tenant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Tenant Id
+      - name: revision
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Revision
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Context Tenant Policy V1 Context Tenant Policy  Tenant
+                  Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/context/packets/{packet_id}/withdraw:
+    post:
+      summary: Withdraw Context Packet
+      description: 'Withdraw a published context packet (W03.04 withdrawal protocol).
+
+
+        Withdrawal stops future query/training use of the packet while the
+
+        audit publication record is preserved. Admin role required.'
+      operationId: withdraw_context_packet_v1_context_packets__packet_id__withdraw_post
+      parameters:
+      - name: packet_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Packet Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextWithdrawReq'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Withdraw Context Packet V1 Context Packets  Packet
+                  Id  Withdraw Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/access/revocations:
+    post:
+      summary: Revoke Identity
+      description: Revoke a subject/session/tenant. Admin role required.
+      operationId: revoke_identity_v1_access_revocations_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevocationReq'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Revoke Identity V1 Access Revocations Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/access/revocations/{kind}/{identity}:
+    get:
+      summary: Check Revocation
+      description: Check whether an identity is currently revoked.
+      operationId: check_revocation_v1_access_revocations__kind___identity__get
+      parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Kind
+      - name: identity
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Identity
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Check Revocation V1 Access Revocations  Kind   Identity  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/agentic/sessions/{session_id}/visibility:
+    put:
+      summary: Set Agentic Session Visibility
+      operationId: set_agentic_session_visibility_v1_agentic_sessions__session_id__visibility_put
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionVisibilityReq'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Set Agentic Session Visibility V1 Agentic Sessions  Session
+                  Id  Visibility Put
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/agentic/sessions/{session_id}/acl:
+    put:
+      summary: Grant Agentic Session Acl
+      operationId: grant_agentic_session_acl_v1_agentic_sessions__session_id__acl_put
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionAclGrantReq'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Grant Agentic Session Acl V1 Agentic Sessions  Session
+                  Id  Acl Put
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/agentic/sessions/{session_id}/acl/{subject_kind}/{subject_id}:
+    delete:
+      summary: Revoke Agentic Session Acl
+      operationId: revoke_agentic_session_acl_v1_agentic_sessions__session_id__acl__subject_kind___subject_id__delete
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      - name: subject_kind
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Kind
+      - name: subject_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subject Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Revoke Agentic Session Acl V1 Agentic Sessions  Session
+                  Id  Acl  Subject Kind   Subject Id  Delete
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/agentic/runs/{run_id}/refresh-actions:
     post:
       summary: Refresh Agentic Actions
@@ -4851,6 +5146,16 @@ components:
           type: string
           minLength: 1
           title: Session Id
+        visibility:
+          type: string
+          pattern: ^(private|team|business-object)$
+          title: Visibility
+          default: private
+        business_object_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Business Object Id
         query:
           type: string
           minLength: 1
@@ -5035,6 +5340,36 @@ components:
       - topic
       - intent
       title: CompileReq
+    ContextPolicyReq:
+      properties:
+        tenant_id:
+          type: string
+          minLength: 1
+          title: Tenant Id
+        policy:
+          additionalProperties: true
+          type: object
+          title: Policy
+      type: object
+      required:
+      - tenant_id
+      - policy
+      title: ContextPolicyReq
+    ContextWithdrawReq:
+      properties:
+        visibility:
+          type: string
+          pattern: ^(tenant-governed|public-governed)$
+          title: Visibility
+        reason:
+          type: string
+          minLength: 1
+          title: Reason
+      type: object
+      required:
+      - visibility
+      - reason
+      title: ContextWithdrawReq
     ContinuousCompileStageReq:
       properties:
         release_id:
@@ -5908,6 +6243,26 @@ components:
       - topic
       - query
       title: RetrieveReq
+    RevocationReq:
+      properties:
+        kind:
+          type: string
+          pattern: ^(subject|session|tenant)$
+          title: Kind
+        identity:
+          type: string
+          minLength: 1
+          title: Identity
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason
+      type: object
+      required:
+      - kind
+      - identity
+      title: RevocationReq
     RuntimeReasoningReq:
       properties:
         ruleset_id:
@@ -6569,6 +6924,48 @@ components:
       - finding_id
       - policy
       title: SemanticWaiverReq
+    SessionAclGrantReq:
+      properties:
+        subject_kind:
+          type: string
+          pattern: ^(subject|group)$
+          title: Subject Kind
+        subject_id:
+          type: string
+          minLength: 1
+          title: Subject Id
+        can_read:
+          type: boolean
+          title: Can Read
+          default: true
+        can_write:
+          type: boolean
+          title: Can Write
+          default: false
+        can_share:
+          type: boolean
+          title: Can Share
+          default: false
+      type: object
+      required:
+      - subject_kind
+      - subject_id
+      title: SessionAclGrantReq
+    SessionVisibilityReq:
+      properties:
+        visibility:
+          type: string
+          pattern: ^(private|team|business-object)$
+          title: Visibility
+        business_object_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Business Object Id
+      type: object
+      required:
+      - visibility
+      title: SessionVisibilityReq
     ShortestPathReq:
       properties:
         dataset_name:
