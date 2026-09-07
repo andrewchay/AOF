@@ -1,0 +1,4 @@
+[tool.ruff]
+# docs/** 下的证据存档脚本为历史复现材料（诊断快照），保持原样不 lint。
+# 仅排除目录，不改变 CI 的默认规则集（与修复前的 CI 行为一致）。
+extend-exclude = ["docs"]
