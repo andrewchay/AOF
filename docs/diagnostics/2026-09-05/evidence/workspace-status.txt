@@ -1,0 +1,28 @@
+## main...origin/main [behind 9]
+ M data/api_runs/run_index.json
+ M data/api_runs/topic_state.json
+?? .claude/
+?? .env
+?? _rag_smoke_test.py
+?? data/.DS_Store
+?? data/api_runs/community/
+?? data/harness_sessions/
+?? data/middle_layer/community/
+?? data/parse_cache/
+?? data/poc/
+?? data/showcase/
+?? docs/.DS_Store
+?? docs/internal/.DS_Store
+?? docs/internal/methodology/.DS_Store
+?? examples/
+?? logs/aof_add_result.genshin_massive_run.json
+?? logs/aof_add_result.genshin_run.json
+?? logs/aof_add_result.genshin_supplement_run.json
+?? logs/aof_run_result.genshin_run.json
+?? logs/aof_run_result.genshin_supplement_run.json
+?? ontologies/.DS_Store
+?? test_data/
+?? tools/retrieval_gain/
+?? visualization/
+?? web/
+?? workspace-files/

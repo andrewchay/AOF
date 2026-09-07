@@ -1,0 +1,19 @@
+.................................................................        [100%]/private/tmp/aof-diagnosis-20260905/cached-venv/lib/python3.13/site-packages/_pytest/unraisableexception.py:33: RuntimeWarning: coroutine 'run_pipeline' was never awaited
+  gc.collect()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+
+=============================== warnings summary ===============================
+tests/test_end_to_end.py::TestAOFAddPipeline::test_add_with_file
+  /Users/<owner>/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/unittest/mock.py:2247: RuntimeWarning: coroutine 'run_cognify' was never awaited
+    def __init__(self, name, parent):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/test_end_to_end.py::TestAOFAddPipeline::test_add_with_file
+  /Users/<owner>/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/unittest/mock.py:2247: RuntimeWarning: coroutine 'run_pipeline' was never awaited
+    def __init__(self, name, parent):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+65 passed, 2 warnings in 0.38s

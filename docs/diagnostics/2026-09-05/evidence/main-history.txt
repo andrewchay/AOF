@@ -1,0 +1,10 @@
+bfc1e02d feat(agentic): 完成受治理财务单域工程闭环 (#5)
+d43ea9f2 feat(runtime): integrate governed semantic P0-P2 baseline (#4)
+31c86a1c Merge pull request #1 from andrewchay/codex/internal-edition
+32ea4202 fix(ci): add FastAPI dev deps and restore retrieve manifest guard
+7cfdaacd fix: resolve ruff lint failures across bridge and api modules
+11c6504f feat: AOF v2.0 Enterprise Edition - Route A implementation
+e6af9838 chore: enforce governance gate in CI and add topic-scoped release checks
+52ac1055 feat: add productionization foundations for observability, governance, realtime cache, and agent sdk
+6fae1531 chore: fork internal docs and remove fundraising-facing materials
+649bf527 Initial commit: AOF - Agentic Ontology Factory v0.2.0

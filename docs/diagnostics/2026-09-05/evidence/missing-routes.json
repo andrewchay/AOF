@@ -1,0 +1,20 @@
+[
+  {
+    "method": "GET",
+    "path": "/v1/harness/sessions",
+    "status": 500,
+    "body": "Internal Server Error"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/training-data/generate",
+    "status": 500,
+    "body": "Internal Server Error"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/graph/health",
+    "status": 200,
+    "body": "{\"status\":\"degraded\",\"api_version\":\"1.0.0\",\"backend_type\":\"CogneeBackend\",\"features\":[\"nodes_query\",\"edges_query\",\"neighbors_query\",\"search\",\"statistics\",\"cypher_query\"]}"
+  }
+]

@@ -1,0 +1,2275 @@
+{
+  "schema_version": "aof.remediation-plan/v1",
+  "status": "in_progress_b0_complete_b1_partial",
+  "baseline_commit": "bfc1e02d799c5810fef25b3ee10c9445d7e52f12",
+  "diagnosis": "../../diagnostics/2026-09-05/README.md",
+  "closure_rule": "Every registered item must be closed with frozen-version tests, evidence and independent review. blocked/skipped/waived/deferred are not closed. New findings join the register.",
+  "finding_ids": [
+    "D01",
+    "D02",
+    "D03",
+    "D04",
+    "D05",
+    "D06",
+    "D07",
+    "D08",
+    "D09",
+    "D10",
+    "D11",
+    "D12",
+    "K01",
+    "K02",
+    "K03",
+    "K04"
+  ],
+  "work_packages": [
+    {
+      "id": "W00",
+      "title": "版本与能力基线",
+      "owner_role": "工程负责人",
+      "depends_on": [],
+      "finding_ids": [
+        "D03",
+        "D12",
+        "K01"
+      ]
+    },
+    {
+      "id": "W01",
+      "title": "身份与全入口授权",
+      "owner_role": "安全后端负责人",
+      "depends_on": [
+        "W00"
+      ],
+      "finding_ids": [
+        "D01",
+        "D03",
+        "D09"
+      ]
+    },
+    {
+      "id": "W02",
+      "title": "事务化决策账本与状态一致性",
+      "owner_role": "存储负责人",
+      "depends_on": [
+        "W00"
+      ],
+      "finding_ids": [
+        "D02",
+        "D04",
+        "D11",
+        "K04"
+      ]
+    },
+    {
+      "id": "W03",
+      "title": "缺失能力与前端完整归并",
+      "owner_role": "产品工程负责人",
+      "depends_on": [
+        "W00",
+        "W01"
+      ],
+      "finding_ids": [
+        "D03",
+        "D12"
+      ]
+    },
+    {
+      "id": "W04",
+      "title": "IAM租户与权限真实持久化",
+      "owner_role": "身份数据负责人",
+      "depends_on": [
+        "W00",
+        "W02"
+      ],
+      "finding_ids": [
+        "D06",
+        "D09"
+      ]
+    },
+    {
+      "id": "W05",
+      "title": "审计查询与真实后端适配器",
+      "owner_role": "集成负责人",
+      "depends_on": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "finding_ids": [
+        "D08",
+        "D10"
+      ]
+    },
+    {
+      "id": "W06",
+      "title": "会话隐私与数据生命周期",
+      "owner_role": "安全产品负责人",
+      "depends_on": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "finding_ids": [
+        "D09"
+      ]
+    },
+    {
+      "id": "W07",
+      "title": "可复现依赖与安全打包",
+      "owner_role": "构建负责人",
+      "depends_on": [
+        "W00"
+      ],
+      "finding_ids": [
+        "D05",
+        "D10",
+        "D12"
+      ]
+    },
+    {
+      "id": "W08",
+      "title": "生产部署与全状态共享",
+      "owner_role": "SRE负责人",
+      "depends_on": [
+        "W01",
+        "W02",
+        "W04",
+        "W07"
+      ],
+      "finding_ids": [
+        "D04",
+        "D10",
+        "K04"
+      ]
+    },
+    {
+      "id": "W09",
+      "title": "连接资源与容量运维",
+      "owner_role": "性能负责人",
+      "depends_on": [
+        "W02",
+        "W05",
+        "W08"
+      ],
+      "finding_ids": [
+        "D11",
+        "K04"
+      ]
+    },
+    {
+      "id": "W10",
+      "title": "模型能力与企业财务业务验收",
+      "owner_role": "领域集成负责人",
+      "depends_on": [
+        "W03",
+        "W05",
+        "W06",
+        "W08"
+      ],
+      "finding_ids": [
+        "D10",
+        "K02",
+        "K03"
+      ]
+    },
+    {
+      "id": "W11",
+      "title": "CI与自动关闭门禁",
+      "owner_role": "质量负责人",
+      "depends_on": [
+        "W00",
+        "W07"
+      ],
+      "finding_ids": [
+        "D07"
+      ]
+    },
+    {
+      "id": "W12",
+      "title": "文档与许可交付",
+      "owner_role": "文档及产品负责人",
+      "depends_on": [
+        "W03",
+        "W05",
+        "W07",
+        "W08",
+        "W10"
+      ],
+      "finding_ids": [
+        "D12",
+        "K01"
+      ]
+    },
+    {
+      "id": "W13",
+      "title": "全问题关闭与移交",
+      "owner_role": "验收负责人",
+      "depends_on": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W09",
+        "W10",
+        "W11",
+        "W12"
+      ],
+      "finding_ids": [
+        "D01",
+        "D02",
+        "D03",
+        "D04",
+        "D05",
+        "D06",
+        "D07",
+        "D08",
+        "D09",
+        "D10",
+        "D11",
+        "D12",
+        "K01",
+        "K02",
+        "K03",
+        "K04"
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "W00.01",
+      "work_package": "W00",
+      "title": "冻结基线与保存工作区",
+      "finding_ids": [
+        "D03",
+        "D12",
+        "K01"
+      ],
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [],
+      "status": "closed",
+      "acceptance": "记录 main/internal/工作区提交、文件摘要和差异；隔离 checkout；原脏文件摘要不变",
+      "implementation_commit": "n/a (worktree snapshot /tmp/aof-remediation-20260905/main at bfc1e02d)",
+      "tests": [],
+      "evidence": [
+        "worktree snapshot created; original dirty workspace untouched (git status verified)"
+      ],
+      "reviewer": "self (bookkeeping only)",
+      "closed_at": null
+    },
+    {
+      "id": "W00.02",
+      "work_package": "W00",
+      "title": "逐项能力归并清单",
+      "finding_ids": [
+        "D03",
+        "D12",
+        "K01"
+      ],
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [],
+      "status": "in_progress",
+      "acceptance": "main/internal 的 REST、MCP、CLI、UI、模块、测试、数据迁移逐项映射；所有诊断缺失模块有实施任务",
+      "implementation_commit": "9930f6af",
+      "tests": [],
+      "evidence": [
+        "config/capabilities/capability-manifest.json: 26 capability domains covering 198 operations; owner_person binding and W00.05 environment freeze still open"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W00.03",
+      "work_package": "W00",
+      "title": "回归复现转正式测试",
+      "finding_ids": [
+        "D03",
+        "D12",
+        "K01"
+      ],
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [],
+      "status": "in_progress",
+      "acceptance": "诊断的匿名写入、账本竞态、损坏读取、空持久化、缺模块、探针问题在基线上失败",
+      "implementation_commit": "3dacda14",
+      "tests": [
+        "tests/test_remediation_regression.py (17 tests)"
+      ],
+      "evidence": [
+        "diagnosis reproductions D01/D02/D03/D04 codified as permanent regression tests"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W00.04",
+      "work_package": "W00",
+      "title": "规范合同收敛",
+      "finding_ids": [
+        "D03",
+        "D12",
+        "K01"
+      ],
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [],
+      "status": "not_started",
+      "acceptance": "唯一 SemanticResource/KnowledgeRelease 合同；第二套原型迁移或显式适配；旧数据/消费者兼容测试通过",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W00.05",
+      "work_package": "W00",
+      "title": "冻结部署与连接器矩阵",
+      "finding_ids": [
+        "D03",
+        "D12",
+        "K01"
+      ],
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [],
+      "status": "not_started",
+      "acceptance": "命名实际 IdP、Cognee、SQL、图、向量、MQ、ERP/CRM、KMS 和数据负责人；每项必需能力都有真实验收环境",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W01.01",
+      "work_package": "W01",
+      "title": "默认拒绝的操作注册表",
+      "finding_ids": [
+        "D01",
+        "D03",
+        "D09"
+      ],
+      "owner_role": "安全后端负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "in_progress",
+      "acceptance": "全部 REST/MCP/CLI/worker 操作有 action/resource/purpose/auth policy；新增无声明路由不能构建",
+      "implementation_commit": "30f79a65 + 85a91beb",
+      "tests": [
+        "tests/test_operation_registry.py (7 tests)",
+        "tests/test_operation_policy.py (7 tests)"
+      ],
+      "evidence": [
+        "198 operations registered; registry-driven auth gate; unregistered-route negative test; per-operation policy matrix pending",
+        "per-operation authorization policies on all 203 operations (regenerable derivation + explicit sensitive branches); strict gate authenticate-then-authorize (403 operation_not_permitted); undeclared/malformed policy fails registry validation; MCP/CLI policy wiring and purpose rules remain"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W01.02",
+      "work_package": "W01",
+      "title": "可信认证与主体映射",
+      "finding_ids": [
+        "D01",
+        "D03",
+        "D09"
+      ],
+      "owner_role": "安全后端负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "not_started",
+      "acceptance": "OIDC/API credential 与本地主体映射；伪造/过期/错误受众/错误签发方拒绝；agent 不持有身份签名密钥",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W01.03",
+      "work_package": "W01",
+      "title": "决策读写租户约束",
+      "finding_ids": [
+        "D01",
+        "D03",
+        "D09"
+      ],
+      "owner_role": "安全后端负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "in_progress",
+      "acceptance": "匿名读写失败；body 主体不能越权；先例、父链、影响分析和导出不能跨租户",
+      "implementation_commit": "3b7a8945",
+      "tests": [
+        "tests/test_remediation_regression.py test_d01_* (6 tests)"
+      ],
+      "evidence": [
+        "decision API: anonymous 401, body identity overridden, cross-tenant 404, precedent forced tenant"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W01.04",
+      "work_package": "W01",
+      "title": "旧入口统一保护",
+      "finding_ids": [
+        "D01",
+        "D03",
+        "D09"
+      ],
+      "owner_role": "安全后端负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "mitigated",
+      "acceptance": "metadata/build/export/parse/graph/training/harness/ops 与下载均鉴权限域；后台任务重新授权",
+      "implementation_commit": "3c2bd73a",
+      "tests": [
+        "strict-mode verification: anonymous legacy 401, forged headers 401, probes anonymous"
+      ],
+      "evidence": [
+        "global strict auth gate covers ~129 legacy operations; per-endpoint auth and background-task re-authz still pending"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W01.05",
+      "work_package": "W01",
+      "title": "MCP与SDK权限等价",
+      "finding_ids": [
+        "D01",
+        "D03",
+        "D09"
+      ],
+      "owner_role": "安全后端负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "not_started",
+      "acceptance": "同主体同操作 REST/MCP/SDK 结果等价；工具参数不能构造任意 actor/tenant",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W01.06",
+      "work_package": "W01",
+      "title": "缓存撤权与动作分离",
+      "finding_ids": [
+        "D01",
+        "D03",
+        "D09"
+      ],
+      "owner_role": "安全后端负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "not_started",
+      "acceptance": "停用租户、撤销角色后执行前重新检查；缓存/队列不保留授权；创建审批执行主体策略有效",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W02.01",
+      "work_package": "W02",
+      "title": "账本数据库与迁移",
+      "finding_ids": [
+        "D02",
+        "D04",
+        "D11",
+        "K04"
+      ],
+      "owner_role": "存储负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "in_progress",
+      "acceptance": "tenant/sequence/decision 唯一约束；历史 JSONL 验证后导入；损坏/缺租户/重复记录隔离且有处置证据",
+      "implementation_commit": "9930f6af..3c7d6c45 (continuation) + a21666a1",
+      "tests": [
+        "tests/test_decision_ledger_repository.py (11 tests)"
+      ],
+      "evidence": [
+        "SQLiteDecisionLedgerRepository: PRIMARY KEY(tenant_id,sequence), UNIQUE(tenant_id,decision_id), BEGIN IMMEDIATE head-lock, idempotent append, quarantine table; JSONL migration with manifest; PostgreSQL backend pending DB environment"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W02.02",
+      "work_package": "W02",
+      "title": "并发追加与幂等",
+      "finding_ids": [
+        "D02",
+        "D04",
+        "D11",
+        "K04"
+      ],
+      "owner_role": "存储负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "in_progress",
+      "acceptance": "同租户链头锁和唯一约束同事务；8进程×1000条及同key竞争无断链、无重复副作用",
+      "implementation_commit": "8ac05855",
+      "tests": [
+        "tests/test_decision_ledger_multiprocess.py (3 tests)"
+      ],
+      "evidence": [
+        "8 processes x 1000 appends (8000 entries in 4.5s): chain valid, no gaps, zero duplicate ids; same-key contention yields exactly 1 entry; cross-tenant chains independent; kill-during-commit fault injection pending"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W02.03",
+      "work_package": "W02",
+      "title": "读时完整性与签名锚",
+      "finding_ids": [
+        "D02",
+        "D04",
+        "D11",
+        "K04"
+      ],
+      "owner_role": "存储负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "in_progress",
+      "acceptance": "改写/中间删除/尾截断/替换/重排被检测；受控读取拒绝；独立锚定检测管理员重算链",
+      "implementation_commit": "3dacda14",
+      "tests": [
+        "test_d02_tampered_ledger_read_fails_closed",
+        "test_d02_truncated_tail_read_fails_closed",
+        "test_d02_concurrent_writes_keep_chain_valid"
+      ],
+      "evidence": [
+        "checkpoint sidecar detects tail truncation; verified reads fail closed; independent signing anchor pending KMS decision (W00.05)"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W02.04",
+      "work_package": "W02",
+      "title": "业务状态与审计原子提交",
+      "finding_ids": [
+        "D02",
+        "D04",
+        "D11",
+        "K04"
+      ],
+      "owner_role": "存储负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "in_progress",
+      "acceptance": "state+event+outbox 同事务；提交前后 kill/crash 均无已确认成功但缺失审计",
+      "implementation_commit": "a21666a1",
+      "tests": [
+        "tests/test_action_run_unit_of_work.py (5 tests)"
+      ],
+      "evidence": [
+        "SqliteUnitOfWork: decision+state in ONE transaction; simulated crash during state insert/update rolls back BOTH; UoW+repo share one DB file; outbox for external effects is W02.05"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W02.05",
+      "work_package": "W02",
+      "title": "外部动作不确定结果恢复",
+      "finding_ids": [
+        "D02",
+        "D04",
+        "D11",
+        "K04"
+      ],
+      "owner_role": "存储负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "in_progress",
+      "acceptance": "外部成功本地超时/重启不重复业务写；先查回执，不支持查询则进入 reconciliation_required",
+      "implementation_commit": "75ead154",
+      "tests": [
+        "tests/test_action_run_receipt_recovery.py (5 tests)"
+      ],
+      "evidence": [
+        "interrupted executions settle from connector query_receipt WITHOUT re-invocation (invoke count stays 1); unknown/failed-query/unsupported all go to reconciliation_required; compensation on failed+applied preserved"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W02.06",
+      "work_package": "W02",
+      "title": "跨存储恢复水位",
+      "finding_ids": [
+        "D02",
+        "D04",
+        "D11",
+        "K04"
+      ],
+      "owner_role": "存储负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "in_progress",
+      "acceptance": "数据库、artifact、ledger、outbox、tombstone 统一 checkpoint；恢复后业务引用与签名一致",
+      "implementation_commit": "6783df82",
+      "tests": [
+        "tests/test_cross_store_checkpoint.py (8 tests)"
+      ],
+      "evidence": [
+        "WatermarkCheckpointStore atomically records ledger/outbox/tombstone/revocation/action watermarks; verify_watermarks reports per-store drift (counter regression, chain-behind, same-sequence hash rewrite, missing tenant) without silent acceptance; coordinator wires real repositories; artifact-store watermark and signed artifact reference checks remain (W08.05 content-addressed store)"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W03.01",
+      "work_package": "W03",
+      "title": "Harness和训练数据恢复",
+      "finding_ids": [
+        "D03",
+        "D12"
+      ],
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W01"
+      ],
+      "status": "not_started",
+      "acceptance": "缺失模块及原测试归并；鉴权/持久化/质量门/来源许可通过；真实调用无 ModuleNotFoundError",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W03.02",
+      "work_package": "W03",
+      "title": "OKF RAG与图检索恢复",
+      "finding_ids": [
+        "D03",
+        "D12"
+      ],
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W01"
+      ],
+      "status": "not_started",
+      "acceptance": "10个缺失内部导入归零；exporter/hybrid/graph doctor/markdown 接口及MCP功能成功",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W03.03",
+      "work_package": "W03",
+      "title": "Context Exchange完整恢复",
+      "finding_ids": [
+        "D03",
+        "D12"
+      ],
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W01"
+      ],
+      "status": "in_progress",
+      "acceptance": "私有导出→可信tenant路由→quarantine→独立批准→发布→受限查询；未知来源默认私有",
+      "implementation_commit": "0b7cc35d (restore) + 98ac2431 (e2e tests)",
+      "tests": [
+        "tests/test_context_exchange_governance.py (10 tests)"
+      ],
+      "evidence": [
+        "full governance flow verified: default-private unknown sources, share-eligible routing, quarantine with decision receipts (idempotent+tamper-proof), three-role approval matrix with submitter!=publisher, promotion through AOF release pipeline, tenant-scoped publication query; admin UI/versioned policy API (W03.04) and client cache protocol remain"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W03.04",
+      "work_package": "W03",
+      "title": "Context管理与策略协议",
+      "finding_ids": [
+        "D03",
+        "D12"
+      ],
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W01"
+      ],
+      "status": "in_progress",
+      "acceptance": "管理员 UI、版本化策略 API、客户端拉取/缓存/过期失效及撤回协议端到端验证",
+      "implementation_commit": "1ae0895e",
+      "tests": [
+        "tests/test_context_policy_api.py (6 tests)"
+      ],
+      "evidence": [
+        "versioned tenant policy API (append-only revision chain, admin-only same-tenant saves, cache revalidation via pinned revision + is_current); withdrawal protocol stops future use with audit_preserved=true; browser admin UI remains (W03.05 dependency)"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W03.05",
+      "work_package": "W03",
+      "title": "前端源码构建与审批工作台",
+      "finding_ids": [
+        "D03",
+        "D12"
+      ],
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W01"
+      ],
+      "status": "in_progress",
+      "acceptance": "干净安装 build/typecheck/browser E2E；登录、审批、回执、对账、权限拒绝、运行状态 UI 可用",
+      "implementation_commit": "8e503584 + c3bf8954 + fa8ff619",
+      "tests": [
+        "manual: pnpm install/build/preview smoke",
+        "web/e2e/test_governance_e2e.py (8/8 PASS: login x2, permission denial 403, runtime UI, full governance cycle create->validate->approve->publish with dedicated reviewer/publisher, UI-level denial, console hygiene)"
+      ],
+      "evidence": [
+        "web/ restored from internal (34 files, lockfile committed); clean pnpm install + vue-tsc typecheck + vite build passes; preview + backend smoke 200; security review: browser holds no identity secret, pasted trusted envelope is server-verified; NOT yet done: Playwright E2E flows and production-image static hosting",
+        "Playwright browser E2E over backend-hosted production build (same-origin SPA hosting = real deployment shape): login flows, browser-origin permission denial (viewer PUT 403), runtime view render, no uncaught JS errors; remaining: full approve->execute->reconcile E2E cycle with seeded governed release",
+        "FULL governance cycle through the browser UI with separation of duties (admin creates/validates, dedicated reviewer approves, dedicated publisher publishes); viewer sees approve disabled; remaining: production-image static hosting (the backend SPA hosting path exists and is what E2E exercises)"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W03.06",
+      "work_package": "W03",
+      "title": "能力与端点逐项调用",
+      "finding_ids": [
+        "D03",
+        "D12"
+      ],
+      "owner_role": "产品工程负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W01"
+      ],
+      "status": "not_started",
+      "acceptance": "全部公开操作有成功或安全拒绝语义测试；支持profile无临时503/禁用项；历史410只有批准的替代能力",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W04.01",
+      "work_package": "W04",
+      "title": "统一Repository接线",
+      "finding_ids": [
+        "D06",
+        "D09"
+      ],
+      "owner_role": "身份数据负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W02"
+      ],
+      "status": "in_progress",
+      "acceptance": "复用/补齐SQLAlchemy适配器；默认构造不再走pass；SQLite与PostgreSQL合同相同",
+      "implementation_commit": "3c7d6c45",
+      "tests": [
+        "tests/test_iam_sqlite_persistence.py (7 tests)"
+      ],
+      "evidence": [
+        "durable SQLite store: user/role/assignment/tenant persist across manager instances; username+slug UNIQUE at DB level; identity-mutation sites fixed; SQLAlchemy/PostgreSQL path and admin entry wiring remain"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W04.02",
+      "work_package": "W04",
+      "title": "用户角色权限事务CRUD",
+      "finding_ids": [
+        "D06",
+        "D09"
+      ],
+      "owner_role": "身份数据负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W02"
+      ],
+      "status": "not_started",
+      "acceptance": "创建后跨进程读取/更新/删除；角色继承与assignment；数据库失败无成功响应",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W04.03",
+      "work_package": "W04",
+      "title": "租户唯一性与生命周期",
+      "finding_ids": [
+        "D06",
+        "D09"
+      ],
+      "owner_role": "身份数据负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W02"
+      ],
+      "status": "in_progress",
+      "acceptance": "同slug并发唯一；provisioning→active只在必需资源成功后；suspend/delete权限生效",
+      "implementation_commit": "3c7d6c45",
+      "tests": [],
+      "evidence": [
+        "tenant slug uniqueness now DB-enforced across instances; full lifecycle gating (provisioning->active on resource success) still pending"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W04.04",
+      "work_package": "W04",
+      "title": "签发撤销与缓存失效",
+      "finding_ids": [
+        "D06",
+        "D09"
+      ],
+      "owner_role": "身份数据负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W02"
+      ],
+      "status": "in_progress",
+      "acceptance": "签发方查询有效membership；API key哈希保存、撤销、轮换；缓存跨实例失效",
+      "implementation_commit": "b665093c",
+      "tests": [],
+      "evidence": [
+        "persistent revocation registry + governed admin endpoints (POST/GET /v1/access/revocations, admin role); API-key rotation & cross-instance cache invalidation still pending"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W04.05",
+      "work_package": "W04",
+      "title": "管理入口与真实配额",
+      "finding_ids": [
+        "D06",
+        "D09"
+      ],
+      "owner_role": "身份数据负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W02"
+      ],
+      "status": "not_started",
+      "acceptance": "管理员授权、无自提权；实际使用量聚合；并发预留/归还配额，失败不泄露",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W04.06",
+      "work_package": "W04",
+      "title": "IAM迁移与恢复",
+      "finding_ids": [
+        "D06",
+        "D09"
+      ],
+      "owner_role": "身份数据负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W02"
+      ],
+      "status": "not_started",
+      "acceptance": "旧ID映射、未知成员隔离、恢复后撤权不回滚、首次管理员引导无默认密码",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W05.01",
+      "work_package": "W05",
+      "title": "Audit数据库与文件查询",
+      "finding_ids": [
+        "D08",
+        "D10"
+      ],
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "not_started",
+      "acceptance": "DB和文件事件可按ID/时间/主体/资源分页查询；稳定游标、租户过滤、精确计数",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W05.02",
+      "work_package": "W05",
+      "title": "MQ持久发布与消费",
+      "finding_ids": [
+        "D08",
+        "D10"
+      ],
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "in_progress",
+      "acceptance": "事务outbox→实际MQ→inbox去重；broker停止恢复/重复/乱序不丢事件；各已声明broker适配器验收",
+      "implementation_commit": "27d3e6c1",
+      "tests": [
+        "tests/test_outbox_dispatch.py (6 tests)"
+      ],
+      "evidence": [
+        "OutboxDispatcher + Inbox: at-least-once delivery with exactly-once consumer effect verified (crash between ack and mark -> redelivery -> dedup, zero double-processing); broker outage keeps events pending without loss and recovery completes; bounded retries + dead-letter; FileBrokerTransport is the reference transport - real MQ broker adapters (Kafka/RabbitMQ) remain"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W05.03",
+      "work_package": "W05",
+      "title": "审计报告与异常检测",
+      "finding_ids": [
+        "D08",
+        "D10"
+      ],
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "not_started",
+      "acceptance": "JSON/CSV/HTML/PDF有实际数据；注入、转义和CSV公式防护；阈值规则告警含证据、误报口径",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W05.04",
+      "work_package": "W05",
+      "title": "Cognee存储CRUD补齐",
+      "finding_ids": [
+        "D08",
+        "D10"
+      ],
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "not_started",
+      "acceptance": "查询/读回/清理范围/分页/删除真实后端验证；禁止清理其他tenant/dataset",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W05.05",
+      "work_package": "W05",
+      "title": "其余已声明后端盘点补齐",
+      "finding_ids": [
+        "D08",
+        "D10"
+      ],
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "not_started",
+      "acceptance": "S3/URL/DB schema/增量同步/缓存/任务/图库逐项真实依赖合同测试；无成功空实现",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W05.06",
+      "work_package": "W05",
+      "title": "外部错误语义",
+      "finding_ids": [
+        "D08",
+        "D10"
+      ],
+      "owner_role": "集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "not_started",
+      "acceptance": "鉴权错/限流/超时/无数据/未配置/不支持明确分类；已启用必需后端失败阻止就绪",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W06.01",
+      "work_package": "W06",
+      "title": "Session ACL模型",
+      "finding_ids": [
+        "D09"
+      ],
+      "owner_role": "安全产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "in_progress",
+      "acceptance": "private/team/business-object 三种scope；owner/membership/ACL版本；默认private",
+      "implementation_commit": "12a62ad1",
+      "tests": [
+        "tests/test_session_acl.py (11 tests)"
+      ],
+      "evidence": [
+        "Session entity (private/team/business-object, default private), ACL entries, authorize() decision function, SQLite repo with atomic acl_version bumps; same-tenant private-session denial verified; endpoint wiring is W06.02"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W06.02",
+      "work_package": "W06",
+      "title": "全链路ACL和缓存",
+      "finding_ids": [
+        "D09"
+      ],
+      "owner_role": "安全产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "in_progress",
+      "acceptance": "run/memory/replay/export/summary/citation/下载/缓存都按有效ACL过滤；同tenant不同用户负例通过",
+      "implementation_commit": "29fe6f37",
+      "tests": [
+        "tests/test_agentic_api.py (updated, 2 tests)",
+        "tests/test_session_acl.py (11 tests)"
+      ],
+      "evidence": [
+        "run/memory/replay/evaluation endpoints authorize against session ACL; same-tenant cross-subject denied (404); API-driven share restores access; cache-key/background-worker re-authz (W06.03) pending"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W06.03",
+      "work_package": "W06",
+      "title": "后台持续授权",
+      "finding_ids": [
+        "D09"
+      ],
+      "owner_role": "安全产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "in_progress",
+      "acceptance": "排队期间撤权/移出团队/删除session后worker拒绝；replay不恢复旧权限",
+      "implementation_commit": "b665093c",
+      "tests": [
+        "tests/test_task_reauthorization.py (8 tests)"
+      ],
+      "evidence": [
+        "queued tasks re-authorize at execution time via queue authorizer; subject revoked mid-queue -> executor never runs; persistent RevocationRegistry (subject/session/tenant); replay uses current principal (W06.02); 24h/worker-pool scale pending"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W06.04",
+      "work_package": "W06",
+      "title": "数据分类脱敏与保留",
+      "finding_ids": [
+        "D09"
+      ],
+      "owner_role": "安全产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "in_progress",
+      "acceptance": "各payload字段分类；必要最小日志；版本化TTL/清理dry-run/审计；敏感哨兵不出日志trace",
+      "implementation_commit": "ddea095d",
+      "tests": [
+        "tests/test_data_governance.py (10 tests)"
+      ],
+      "evidence": [
+        "DataClass classification + minimize_for_log (restricted masked, confidential digested) + sentinel leak detection; versioned RetentionPolicy with dry-run-first cleanup and policy-revision-bound receipts; TTL sweep into live stores and deletion tombstones are W06.05 scope",
+        "POLICY INPUT DECIDED (2026-09-07): owner set all data classes to 365-day retention; config/governance/retention-policy.json as versioned policy aof-default rev1; legal-hold process owner remains open"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W06.05",
+      "work_package": "W06",
+      "title": "删除冻结与不可变审计协调",
+      "finding_ids": [
+        "D09"
+      ],
+      "owner_role": "安全产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "in_progress",
+      "acceptance": "敏感payload外置加密；tombstone/保留合法冻结；不修改既有链hash来假装删除",
+      "implementation_commit": "a2de9083",
+      "tests": [
+        "tests/test_deletion_legal_hold.py (7 tests)"
+      ],
+      "evidence": [
+        "PayloadVault per-entry derived-key encryption with destroy() purging ciphertext+key material; tombstones + legal holds (pending_legal_review, nothing silently deleted); deletion never rewrites audit chain (head hash identical pre/post); receipts bind tombstone+policy revision; backup-restore-not-resurrect (W06.06) pending"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W06.06",
+      "work_package": "W06",
+      "title": "恢复不复活已删除数据",
+      "finding_ids": [
+        "D09"
+      ],
+      "owner_role": "安全产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04"
+      ],
+      "status": "in_progress",
+      "acceptance": "恢复前应用独立删除日志/ACL epoch；备份到期/加密/密钥销毁验收",
+      "implementation_commit": "64beaae3",
+      "tests": [
+        "tests/test_restore_no_resurrection.py (6 tests)"
+      ],
+      "evidence": [
+        "RestoreCoordinator merges post-backup tombstones/revocations/holds before restore and re-applies them to restored stores (deleted payload stays deleted); BackupBundle encrypted with digest+expiry+key-destruction; real timestamp-format bug (SQLite datetime(now) vs isoformat) found and fixed; full backup DR drill at scale (W09.05) remains"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W07.01",
+      "work_package": "W07",
+      "title": "依赖单一声明和锁定",
+      "finding_ids": [
+        "D05",
+        "D10",
+        "D12"
+      ],
+      "owner_role": "构建负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "in_progress",
+      "acceptance": "core/dev/cognee/parser/observability/connectors/frontend profile锁文件、解释器和平台版本固定",
+      "implementation_commit": "2967fc79",
+      "tests": [],
+      "evidence": [
+        "requirements/locks/reference-local.lock (154 pkgs frozen), core/dev/cognee .in profiles; fresh-install validation and enterprise profile lock pending"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W07.02",
+      "work_package": "W07",
+      "title": "Cognee兼容性矩阵",
+      "finding_ids": [
+        "D05",
+        "D10",
+        "D12"
+      ],
+      "owner_role": "构建负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "not_started",
+      "acceptance": "锁定实际可安装的官方包或可复现fork提交；CLI/REST/MCP ontology集成真实通过",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W07.03",
+      "work_package": "W07",
+      "title": "全新安装与轮包闭包",
+      "finding_ids": [
+        "D05",
+        "D10",
+        "D12"
+      ],
+      "owner_role": "构建负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "not_started",
+      "acceptance": "空cache、无.pth、无editable目录 fresh install；wheel sdist console脚本镜像均可运行",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W07.04",
+      "work_package": "W07",
+      "title": "构建上下文最小化",
+      "finding_ids": [
+        "D05",
+        "D10",
+        "D12"
+      ],
+      "owner_role": "构建负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "not_started",
+      "acceptance": ".env/.env.*及私有目录不入context；合成哨兵扫描所有镜像层和build产物",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W07.05",
+      "work_package": "W07",
+      "title": "供应链与制品来源",
+      "finding_ids": [
+        "D05",
+        "D10",
+        "D12"
+      ],
+      "owner_role": "构建负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "not_started",
+      "acceptance": "SBOM、许可证清单、镜像digest、依赖漏洞检查；生产制品只来自冻结提交",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W07.06",
+      "work_package": "W07",
+      "title": "可选与必需能力状态",
+      "finding_ids": [
+        "D05",
+        "D10",
+        "D12"
+      ],
+      "owner_role": "构建负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00"
+      ],
+      "status": "not_started",
+      "acceptance": "开发未启用可选依赖可明确skip；完整profile所有启用集成零skip且readiness验证",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W08.01",
+      "work_package": "W08",
+      "title": "生产配置统一",
+      "finding_ids": [
+        "D04",
+        "D10",
+        "K04"
+      ],
+      "owner_role": "SRE负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "Compose/K8s/CLI配置同schema；production不可悄悄降为development；密钥/路径/SLO缺失失败",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W08.02",
+      "work_package": "W08",
+      "title": "健康与就绪探针",
+      "finding_ids": [
+        "D04",
+        "D10",
+        "K04"
+      ],
+      "owner_role": "SRE负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "healthz只测存活；readyz检查schema/身份/账本/必要后端；依赖故障不造成liveness重启风暴",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W08.03",
+      "work_package": "W08",
+      "title": "单实例持久化部署",
+      "finding_ids": [
+        "D04",
+        "D10",
+        "K04"
+      ],
+      "owner_role": "SRE负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "非root只读镜像+持久卷；创建发布/动作/会话后删除容器重建状态保留",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W08.04",
+      "work_package": "W08",
+      "title": "所有控制状态迁移PostgreSQL",
+      "finding_ids": [
+        "D04",
+        "D10",
+        "K04"
+      ],
+      "owner_role": "SRE负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "IAM/源游标/leases/compiler/channel/release/query/action/workflow/session/audit/outbox统一Repository；无进程局部权威状态",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W08.05",
+      "work_package": "W08",
+      "title": "共享制品与多副本竞争",
+      "finding_ids": [
+        "D04",
+        "D10",
+        "K04"
+      ],
+      "owner_role": "SRE负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "内容寻址artifact store；三副本不同节点轮流请求，promotion/claim/execute竞争一致、无重复执行",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W08.06",
+      "work_package": "W08",
+      "title": "KMS轮换及TLS",
+      "finding_ids": [
+        "D04",
+        "D10",
+        "K04"
+      ],
+      "owner_role": "SRE负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "实际密钥服务签名/验签/旧key读历史/撤销；TLS与身份网关接入，不暴露身份签名密钥给agent",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W08.07",
+      "work_package": "W08",
+      "title": "上线与回滚演练",
+      "finding_ids": [
+        "D04",
+        "D10",
+        "K04"
+      ],
+      "owner_role": "SRE负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W04",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "迁移expand-contract；canary、数据库故障切换、滚回兼容镜像、未知动作冻结均有回执",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W09.01",
+      "work_package": "W09",
+      "title": "连接文件线程生命周期",
+      "finding_ids": [
+        "D11",
+        "K04"
+      ],
+      "owner_role": "性能负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W02",
+        "W05",
+        "W08"
+      ],
+      "status": "in_progress",
+      "acceptance": "同步/异步connection显式关闭；异常cancel超时不泄露；任务子进程可回收",
+      "implementation_commit": "081a9ed6",
+      "tests": [
+        "tests/test_sqlite_connection_lifecycle.py (3 tests)"
+      ],
+      "evidence": [
+        "54 with-sites across 13 modules converted to managed connections; zero live connections after 50 saves; 24h soak not yet run"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W09.02",
+      "work_package": "W09",
+      "title": "观测指标有界",
+      "finding_ids": [
+        "D11",
+        "K04"
+      ],
+      "owner_role": "性能负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W02",
+        "W05",
+        "W08"
+      ],
+      "status": "in_progress",
+      "acceptance": "模板路由label、404统一桶、租户字段受控；100000随机ID路径不增长无界键",
+      "implementation_commit": "d73f2d9c",
+      "tests": [
+        "tests/test_metrics_cardinality.py (4 tests)"
+      ],
+      "evidence": [
+        "route-template labels; 600 random requests add <=5 keys; cache bounded 10k; 100k-scale check pending"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W09.03",
+      "work_package": "W09",
+      "title": "限流超时与背压",
+      "finding_ids": [
+        "D11",
+        "K04"
+      ],
+      "owner_role": "性能负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W02",
+        "W05",
+        "W08"
+      ],
+      "status": "in_progress",
+      "acceptance": "tenant请求/队列/连接预算；慢依赖隔离，重试有限；动作重试遵循幂等与对账",
+      "implementation_commit": "fa2eba6f",
+      "tests": [
+        "tests/test_rate_limit.py (9 tests)"
+      ],
+      "evidence": [
+        "tenant-scoped token buckets (burst+refill configurable, tenant isolation verified, bounded key space with LRU eviction, thread-safe exact no-overgrant); middleware 429+Retry-After; probes/ops exempt (restart-storm prevention); multi-instance shared budgets are W08 scope"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W09.04",
+      "work_package": "W09",
+      "title": "性能与浸泡测试",
+      "finding_ids": [
+        "D11",
+        "K04"
+      ],
+      "owner_role": "性能负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W02",
+        "W05",
+        "W08"
+      ],
+      "status": "not_started",
+      "acceptance": "冻结硬件/数据/并发；满足方案SLO、24小时浸泡、FD与RSS不持续增长",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W09.05",
+      "work_package": "W09",
+      "title": "备份恢复与灾备",
+      "finding_ids": [
+        "D11",
+        "K04"
+      ],
+      "owner_role": "性能负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W02",
+        "W05",
+        "W08"
+      ],
+      "status": "not_started",
+      "acceptance": "真实加密异地备份；签名/删除日志/水位验收；RPO/RTO演练达到冻结目标",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W09.06",
+      "work_package": "W09",
+      "title": "告警和值班验证",
+      "finding_ids": [
+        "D11",
+        "K04"
+      ],
+      "owner_role": "性能负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W02",
+        "W05",
+        "W08"
+      ],
+      "status": "not_started",
+      "acceptance": "真实触发错误率/延迟/审计损坏/outbox积压告警，送达测试通道并由值班人确认",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W10.01",
+      "work_package": "W10",
+      "title": "受治理LLM fallback",
+      "finding_ids": [
+        "D10",
+        "K02",
+        "K03"
+      ],
+      "owner_role": "领域集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W06",
+        "W08"
+      ],
+      "status": "not_started",
+      "acceptance": "真实配置模型调用；结构化plan校验、预算、拒绝；模型不能授予权限或裸SQL/执行动作",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W10.02",
+      "work_package": "W10",
+      "title": "Embedding与外部知识后端",
+      "finding_ids": [
+        "D10",
+        "K02",
+        "K03"
+      ],
+      "owner_role": "领域集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W06",
+        "W08"
+      ],
+      "status": "not_started",
+      "acceptance": "真实embedding与图/向量服务，按tenant/release/ACL筛选；删除/版本/不可用负例通过",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W10.03",
+      "work_package": "W10",
+      "title": "有限动态规划与领域评估",
+      "finding_ids": [
+        "D10",
+        "K02",
+        "K03"
+      ],
+      "owner_role": "领域集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W06",
+        "W08"
+      ],
+      "status": "in_progress",
+      "acceptance": "仅声明能力DAG可重规划，发布契约与预算限制；holdout评估含未知问题/拒答/注入",
+      "implementation_commit": "482323d2",
+      "tests": [
+        "tests/test_finance_mock_domain.py (12 tests)"
+      ],
+      "evidence": [
+        "MOCK MACHINERY VERIFIED (2026-09-07): deterministic finance dataset with golden aggregates + injected anomalies; holdout harness scores governed answer_fn (numeric agreement/refusal correctness) and catches the fabricating-answer failure mode; mock evaluation is NOT business validation - W10.05 real-data sign-off remains open"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W10.04",
+      "work_package": "W10",
+      "title": "真实SQL与ERP CRM连接器",
+      "finding_ids": [
+        "D10",
+        "K02",
+        "K03"
+      ],
+      "owner_role": "领域集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W06",
+        "W08"
+      ],
+      "status": "in_progress",
+      "acceptance": "至少选定企业财务源/工单接口完成读取、审批后写入、回执查验、补偿或人工对账",
+      "implementation_commit": "482323d2",
+      "tests": [
+        "tests/test_finance_mock_domain.py (12 tests)"
+      ],
+      "evidence": [
+        "MOCK PROTOCOL VERIFIED (2026-09-07): MockErpTicketConnector implements full protocol (invoke/query_receipt/compensate + idempotency replay + unknown-outcome injection); duplicate delivery is idempotent; real ERP adapter remains"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W10.05",
+      "work_package": "W10",
+      "title": "财务样本与业务签字",
+      "finding_ids": [
+        "D10",
+        "K02",
+        "K03"
+      ],
+      "owner_role": "领域集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W06",
+        "W08"
+      ],
+      "status": "not_started",
+      "acceptance": "业务确认数据授权/口径/金额/合同/时间；真实验收样本与Golden隔离；负责人签字",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [
+        "blocked on authorized real enterprise data + business sign-off; mock machinery (W10.03/W10.04 evidence) now in place so the swap is a data-source change, not a code change"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W10.06",
+      "work_package": "W10",
+      "title": "价值核算与观察期",
+      "finding_ids": [
+        "D10",
+        "K02",
+        "K03"
+      ],
+      "owner_role": "领域集成负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W06",
+        "W08"
+      ],
+      "status": "not_started",
+      "acceptance": "记录基线人工成本、复核负担、实际使用结果；正负结果均记账，未证实节省不记realised",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W11.01",
+      "work_package": "W11",
+      "title": "类型解析与所有诊断修复",
+      "finding_ids": [
+        "D07"
+      ],
+      "owner_role": "质量负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "修复模块重复命名、缺依赖stub和真实类型问题；完整受支持代码mypy零错误",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W11.02",
+      "work_package": "W11",
+      "title": "CI不可软失败",
+      "finding_ids": [
+        "D07"
+      ],
+      "owner_role": "质量负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W07"
+      ],
+      "status": "in_progress",
+      "acceptance": "删除||true/continue-on-error；汇总gate读取全部job结论和profile预期，不接受缺失/skip",
+      "implementation_commit": "a5e1690d",
+      "tests": [
+        "tests/test_closure_gate.py (5 tests)"
+      ],
+      "evidence": [
+        "CI split into 4 required jobs (lint-type/unit-contract/governance/api-contract) + always-run closure-gate reading actual conclusions (failure/skip/cancelled/absence all fail); negative-drill workflow_dispatch hook for W11.05; CR gate signed off by owner:Andrewchay (5847998d)"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W11.03",
+      "work_package": "W11",
+      "title": "CR与发布证据门禁",
+      "finding_ids": [
+        "D07"
+      ],
+      "owner_role": "质量负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W07"
+      ],
+      "status": "in_progress",
+      "acceptance": "受版本化清单驱动，缺配置/缺审核证据失败；显式no-changes可核验；不以任意空目录通过",
+      "implementation_commit": "9507bc4f",
+      "tests": [
+        "tests/test_release_gate.py (11 tests)"
+      ],
+      "evidence": [
+        "gate now REQUIRES versioned expectation manifest (missing dir/manifest = config error, never pass); declaration-consistency semantics (declared-PENDING passes as open item, declared-APPROVED-but-PENDING blocks); hidden changes rejected; verifiable no-changes generation refusing governed-code changes; repo baseline declares the remediation CR as honestly PENDING awaiting human sign-off"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W11.04",
+      "work_package": "W11",
+      "title": "覆盖与端点功能矩阵",
+      "finding_ids": [
+        "D07"
+      ],
+      "owner_role": "质量负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "全量unit/integration/REST/MCP/browser/镜像/K8s；入口覆盖不靠schema；合同对抗100%通过",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W11.05",
+      "work_package": "W11",
+      "title": "分支保护及负向演练",
+      "finding_ids": [
+        "D07"
+      ],
+      "owner_role": "质量负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W07"
+      ],
+      "status": "in_progress",
+      "acceptance": "真实配置required checks/可信来源；故意失败type/deploy/import/closure时PR不可合并",
+      "implementation_commit": "a5e1690d (hook) + branch protection via gh API",
+      "tests": [],
+      "evidence": [
+        "EXTERNAL BLOCKER (2026-09-07): required status checks need GitHub Pro for private repos (API 403 \"Upgrade to GitHub Pro or make this repository public\"); owner decision pending on upgrade vs public; closure-gate checker script + negative-drill hook are in place and locally verified, awaiting the GitHub-side enforcement switch",
+        "OPTION ANALYSIS (2026-09-07, owner-questioned): (a) GitHub Pro ~$4/mo unlocks branch protection on private repos; (b) making the repo PUBLIC is DISCOURAGED until fixes merge to main AND history is handled - docs/diagnostics/2026-09-05/ contains a detailed internal attack-surface map (anonymous endpoints, ledger concurrency flaws, IAM stubs) and main@bfc1e02d still carries every flaw; (c) DEFER is acceptable for a solo project - closure-gate remains visibly red/green in Actions and W13 enforcement comes from the acceptance process (register + evidence + independent review), not merge blocking",
+        "DECIDED (2026-09-07): repo made PUBLIC by owner; branch protection configured via gh API - required checks closure-gate+lint-type+unit-contract+governance+api-contract, enforce_admins, no force-push. SECURITY NOTE: diagnostics docs now public while main@bfc1e02d still carries the flaws - merging the remediation branch to main is now the priority mitigation"
+      ],
+      "reviewer": null,
+      "closed_at": null,
+      "blocker_note": "blocked_on: GitHub Pro upgrade OR repo visibility change (owner decision)"
+    },
+    {
+      "id": "W11.06",
+      "work_package": "W11",
+      "title": "独立验收与证据重跑",
+      "finding_ids": [
+        "D07"
+      ],
+      "owner_role": "质量负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W00",
+        "W07"
+      ],
+      "status": "not_started",
+      "acceptance": "冻结最终SHA+镜像重跑；生成摘要与digest；修复作者以外角色审查关闭证据",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W12.01",
+      "work_package": "W12",
+      "title": "能力台账驱动文档",
+      "finding_ids": [
+        "D12",
+        "K01"
+      ],
+      "owner_role": "文档及产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W07",
+        "W08",
+        "W10"
+      ],
+      "status": "not_started",
+      "acceptance": "REST/MCP/CLI/UI/依赖/部署profile同源；README端点数字与产物自动一致",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W12.02",
+      "work_package": "W12",
+      "title": "开发部署迁移运维手册",
+      "finding_ids": [
+        "D12",
+        "K01"
+      ],
+      "owner_role": "文档及产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W07",
+        "W08",
+        "W10"
+      ],
+      "status": "not_started",
+      "acceptance": "全新同事按文档安装、登录、发布、审批、恢复；配置无本机私有路径",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W12.03",
+      "work_package": "W12",
+      "title": "License与第三方来源",
+      "finding_ids": [
+        "D12",
+        "K01"
+      ],
+      "owner_role": "文档及产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W07",
+        "W08",
+        "W10"
+      ],
+      "status": "not_started",
+      "acceptance": "权利人明确许可证/内部使用规则并提供证据；依赖与恢复资产归属清单无占位符",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [
+        "LICENSE DIRECTION DECIDED (2026-09-07): owner chose BSL 1.1; verified no third-party copyright headers in the internal-merged code (clean relicensing); proposed parameters: Additional Use Grant=competitor-managed-service restriction, Change Date=4 years, Change License=Apache-2.0; LICENSE file + per-file headers pending final parameter confirmation"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W12.04",
+      "work_package": "W12",
+      "title": "兼容路径与原型处置",
+      "finding_ids": [
+        "D12",
+        "K01"
+      ],
+      "owner_role": "文档及产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W07",
+        "W08",
+        "W10"
+      ],
+      "status": "not_started",
+      "acceptance": "旧裸SQL410保持；替代端点覆盖业务功能；第二套Release不再被误当正式合同",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W12.05",
+      "work_package": "W12",
+      "title": "正式发布包与SBOM",
+      "finding_ids": [
+        "D12",
+        "K01"
+      ],
+      "owner_role": "文档及产品负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W03",
+        "W05",
+        "W07",
+        "W08",
+        "W10"
+      ],
+      "status": "not_started",
+      "acceptance": "前后端、锁文件、迁移脚本、默认策略、部署包和runbook一致，制品可追踪至主线",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W13.01",
+      "work_package": "W13",
+      "title": "全登记项零未关闭",
+      "finding_ids": [
+        "D01",
+        "D02",
+        "D03",
+        "D04",
+        "D05",
+        "D06",
+        "D07",
+        "D08",
+        "D09",
+        "D10",
+        "D11",
+        "D12",
+        "K01",
+        "K02",
+        "K03",
+        "K04"
+      ],
+      "owner_role": "验收负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W09",
+        "W10",
+        "W11",
+        "W12"
+      ],
+      "status": "not_started",
+      "acceptance": "D/K/实施中新发现问题全部closed；blocked/deferred/waived/risk-accepted/skip都不能关闭",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [
+        "governance sign-off: cr-remediation-20260905 APPROVED by owner:Andrewchay (5847998d) - the branch-level change request is signed; W13.01 itself still requires ALL register items closed"
+      ],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W13.02",
+      "work_package": "W13",
+      "title": "同一版本全矩阵通过",
+      "finding_ids": [
+        "D01",
+        "D02",
+        "D03",
+        "D04",
+        "D05",
+        "D06",
+        "D07",
+        "D08",
+        "D09",
+        "D10",
+        "D11",
+        "D12",
+        "K01",
+        "K02",
+        "K03",
+        "K04"
+      ],
+      "owner_role": "验收负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W09",
+        "W10",
+        "W11",
+        "W12"
+      ],
+      "status": "not_started",
+      "acceptance": "最终main SHA、schema、policy、镜像、UI、连接器profile对应的证据一致且未过期",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    },
+    {
+      "id": "W13.03",
+      "work_package": "W13",
+      "title": "业务上线与恢复签收",
+      "finding_ids": [
+        "D01",
+        "D02",
+        "D03",
+        "D04",
+        "D05",
+        "D06",
+        "D07",
+        "D08",
+        "D09",
+        "D10",
+        "D11",
+        "D12",
+        "K01",
+        "K02",
+        "K03",
+        "K04"
+      ],
+      "owner_role": "验收负责人",
+      "owner_person": null,
+      "depends_on_packages": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W09",
+        "W10",
+        "W11",
+        "W12"
+      ],
+      "status": "not_started",
+      "acceptance": "技术/安全/SRE/业务负责人分别签收，真实业务观察期、回滚、值班交接完成",
+      "implementation_commit": null,
+      "tests": [],
+      "evidence": [],
+      "reviewer": null,
+      "closed_at": null
+    }
+  ],
+  "progress_note": "2026-09-07 12:20: main=bad2c5c8（PR #6 已合并，CI 绿）。分支新增 W10 mock 层：确定性财务数据集（含异常注入）+ 全协议 mock ERP + holdout 评估 harness（12测试，ruff清零）。W10.03/W10.04 的 mock 机制已验证；W10.05 真实数据+签字仍开放。"
+}

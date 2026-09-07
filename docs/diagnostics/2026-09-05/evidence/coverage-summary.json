@@ -1,0 +1,1305 @@
+{
+  "scope": "bridge and services; statement coverage; local .venv; 389 passed",
+  "totals": {
+    "covered_lines": 10295,
+    "num_statements": 17593,
+    "percent_covered": 58.51759222418007,
+    "percent_covered_display": "59",
+    "missing_lines": 7298,
+    "excluded_lines": 49,
+    "percent_statements_covered": 58.51759222418007,
+    "percent_statements_covered_display": "59"
+  },
+  "files": {
+    "bridge/__init__.py": {
+      "covered_lines": 0,
+      "num_statements": 0,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/audit/__init__.py": {
+      "covered_lines": 3,
+      "num_statements": 3,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/audit/logger.py": {
+      "covered_lines": 145,
+      "num_statements": 253,
+      "percent_covered": 57.312252964426875,
+      "percent_covered_display": "57",
+      "missing_lines": 108,
+      "excluded_lines": 0,
+      "percent_statements_covered": 57.312252964426875,
+      "percent_statements_covered_display": "57"
+    },
+    "bridge/audit/query.py": {
+      "covered_lines": 73,
+      "num_statements": 190,
+      "percent_covered": 38.421052631578945,
+      "percent_covered_display": "38",
+      "missing_lines": 117,
+      "excluded_lines": 0,
+      "percent_statements_covered": 38.421052631578945,
+      "percent_statements_covered_display": "38"
+    },
+    "bridge/auth/__init__.py": {
+      "covered_lines": 3,
+      "num_statements": 3,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/auth/db_models.py": {
+      "covered_lines": 0,
+      "num_statements": 82,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 82,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/auth/models.py": {
+      "covered_lines": 105,
+      "num_statements": 123,
+      "percent_covered": 85.36585365853658,
+      "percent_covered_display": "85",
+      "missing_lines": 18,
+      "excluded_lines": 0,
+      "percent_statements_covered": 85.36585365853658,
+      "percent_statements_covered_display": "85"
+    },
+    "bridge/auth/rbac.py": {
+      "covered_lines": 81,
+      "num_statements": 200,
+      "percent_covered": 40.5,
+      "percent_covered_display": "40",
+      "missing_lines": 119,
+      "excluded_lines": 0,
+      "percent_statements_covered": 40.5,
+      "percent_statements_covered_display": "40"
+    },
+    "bridge/batch_ingestion.py": {
+      "covered_lines": 0,
+      "num_statements": 169,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 169,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/cache/__init__.py": {
+      "covered_lines": 4,
+      "num_statements": 4,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/cache/local_cache.py": {
+      "covered_lines": 108,
+      "num_statements": 132,
+      "percent_covered": 81.81818181818181,
+      "percent_covered_display": "82",
+      "missing_lines": 24,
+      "excluded_lines": 0,
+      "percent_statements_covered": 81.81818181818181,
+      "percent_statements_covered_display": "82"
+    },
+    "bridge/cache/manager.py": {
+      "covered_lines": 111,
+      "num_statements": 160,
+      "percent_covered": 69.375,
+      "percent_covered_display": "69",
+      "missing_lines": 49,
+      "excluded_lines": 0,
+      "percent_statements_covered": 69.375,
+      "percent_statements_covered_display": "69"
+    },
+    "bridge/cache/materialized_view.py": {
+      "covered_lines": 94,
+      "num_statements": 191,
+      "percent_covered": 49.21465968586387,
+      "percent_covered_display": "49",
+      "missing_lines": 97,
+      "excluded_lines": 0,
+      "percent_statements_covered": 49.21465968586387,
+      "percent_statements_covered_display": "49"
+    },
+    "bridge/cache/redis_cache.py": {
+      "covered_lines": 36,
+      "num_statements": 204,
+      "percent_covered": 17.647058823529413,
+      "percent_covered_display": "18",
+      "missing_lines": 168,
+      "excluded_lines": 0,
+      "percent_statements_covered": 17.647058823529413,
+      "percent_statements_covered_display": "18"
+    },
+    "bridge/cognee_add_runner.py": {
+      "covered_lines": 51,
+      "num_statements": 68,
+      "percent_covered": 75.0,
+      "percent_covered_display": "75",
+      "missing_lines": 17,
+      "excluded_lines": 5,
+      "percent_statements_covered": 75.0,
+      "percent_statements_covered_display": "75"
+    },
+    "bridge/cognee_runner.py": {
+      "covered_lines": 22,
+      "num_statements": 42,
+      "percent_covered": 52.38095238095238,
+      "percent_covered_display": "52",
+      "missing_lines": 20,
+      "excluded_lines": 7,
+      "percent_statements_covered": 52.38095238095238,
+      "percent_statements_covered_display": "52"
+    },
+    "bridge/cypher_query.py": {
+      "covered_lines": 0,
+      "num_statements": 145,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 145,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/data_sync.py": {
+      "covered_lines": 0,
+      "num_statements": 261,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 261,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/database_schema_extractor.py": {
+      "covered_lines": 0,
+      "num_statements": 175,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 175,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/dataset_manager.py": {
+      "covered_lines": 0,
+      "num_statements": 160,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 160,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/decision_provenance.py": {
+      "covered_lines": 128,
+      "num_statements": 146,
+      "percent_covered": 87.67123287671232,
+      "percent_covered_display": "88",
+      "missing_lines": 18,
+      "excluded_lines": 0,
+      "percent_statements_covered": 87.67123287671232,
+      "percent_statements_covered_display": "88"
+    },
+    "bridge/document_parser/__init__.py": {
+      "covered_lines": 7,
+      "num_statements": 7,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/document_parser/cache.py": {
+      "covered_lines": 51,
+      "num_statements": 63,
+      "percent_covered": 80.95238095238095,
+      "percent_covered_display": "81",
+      "missing_lines": 12,
+      "excluded_lines": 0,
+      "percent_statements_covered": 80.95238095238095,
+      "percent_statements_covered_display": "81"
+    },
+    "bridge/document_parser/config.py": {
+      "covered_lines": 42,
+      "num_statements": 47,
+      "percent_covered": 89.36170212765957,
+      "percent_covered_display": "89",
+      "missing_lines": 5,
+      "excluded_lines": 0,
+      "percent_statements_covered": 89.36170212765957,
+      "percent_statements_covered_display": "89"
+    },
+    "bridge/document_parser/core.py": {
+      "covered_lines": 61,
+      "num_statements": 71,
+      "percent_covered": 85.91549295774648,
+      "percent_covered_display": "86",
+      "missing_lines": 10,
+      "excluded_lines": 2,
+      "percent_statements_covered": 85.91549295774648,
+      "percent_statements_covered_display": "86"
+    },
+    "bridge/document_parser/engine_base.py": {
+      "covered_lines": 25,
+      "num_statements": 25,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 6,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/document_parser/engines/__init__.py": {
+      "covered_lines": 0,
+      "num_statements": 0,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/document_parser/engines/docling_engine.py": {
+      "covered_lines": 11,
+      "num_statements": 18,
+      "percent_covered": 61.111111111111114,
+      "percent_covered_display": "61",
+      "missing_lines": 7,
+      "excluded_lines": 0,
+      "percent_statements_covered": 61.111111111111114,
+      "percent_statements_covered_display": "61"
+    },
+    "bridge/document_parser/engines/mineru_engine.py": {
+      "covered_lines": 11,
+      "num_statements": 18,
+      "percent_covered": 61.111111111111114,
+      "percent_covered_display": "61",
+      "missing_lines": 7,
+      "excluded_lines": 0,
+      "percent_statements_covered": 61.111111111111114,
+      "percent_statements_covered_display": "61"
+    },
+    "bridge/document_parser/ingest_helper.py": {
+      "covered_lines": 16,
+      "num_statements": 18,
+      "percent_covered": 88.88888888888889,
+      "percent_covered_display": "89",
+      "missing_lines": 2,
+      "excluded_lines": 3,
+      "percent_statements_covered": 88.88888888888889,
+      "percent_statements_covered_display": "89"
+    },
+    "bridge/document_parser/normalizer.py": {
+      "covered_lines": 17,
+      "num_statements": 19,
+      "percent_covered": 89.47368421052632,
+      "percent_covered_display": "89",
+      "missing_lines": 2,
+      "excluded_lines": 0,
+      "percent_statements_covered": 89.47368421052632,
+      "percent_statements_covered_display": "89"
+    },
+    "bridge/document_parser/parse_tasks.py": {
+      "covered_lines": 42,
+      "num_statements": 46,
+      "percent_covered": 91.30434782608695,
+      "percent_covered_display": "91",
+      "missing_lines": 4,
+      "excluded_lines": 0,
+      "percent_statements_covered": 91.30434782608695,
+      "percent_statements_covered_display": "91"
+    },
+    "bridge/document_parser/security.py": {
+      "covered_lines": 34,
+      "num_statements": 37,
+      "percent_covered": 91.89189189189189,
+      "percent_covered_display": "92",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 91.89189189189189,
+      "percent_statements_covered_display": "92"
+    },
+    "bridge/document_parser/subprocess_runner.py": {
+      "covered_lines": 15,
+      "num_statements": 56,
+      "percent_covered": 26.785714285714285,
+      "percent_covered_display": "27",
+      "missing_lines": 41,
+      "excluded_lines": 0,
+      "percent_statements_covered": 26.785714285714285,
+      "percent_statements_covered_display": "27"
+    },
+    "bridge/enhanced_search.py": {
+      "covered_lines": 0,
+      "num_statements": 159,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 159,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/errors.py": {
+      "covered_lines": 7,
+      "num_statements": 7,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/graph_analytics.py": {
+      "covered_lines": 0,
+      "num_statements": 329,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 329,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/graph_visualizer.py": {
+      "covered_lines": 0,
+      "num_statements": 131,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 131,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/incremental_loader.py": {
+      "covered_lines": 0,
+      "num_statements": 249,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 249,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/memify_feedback_loop.py": {
+      "covered_lines": 0,
+      "num_statements": 151,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 151,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/ontology_adapter/__init__.py": {
+      "covered_lines": 2,
+      "num_statements": 2,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/ontology_adapter/adapter.py": {
+      "covered_lines": 20,
+      "num_statements": 20,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 2,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/ontology_governance/__init__.py": {
+      "covered_lines": 3,
+      "num_statements": 3,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/ontology_governance/governance.py": {
+      "covered_lines": 395,
+      "num_statements": 469,
+      "percent_covered": 84.22174840085287,
+      "percent_covered_display": "84",
+      "missing_lines": 74,
+      "excluded_lines": 0,
+      "percent_statements_covered": 84.22174840085287,
+      "percent_statements_covered_display": "84"
+    },
+    "bridge/ontology_governance/reasoning.py": {
+      "covered_lines": 208,
+      "num_statements": 222,
+      "percent_covered": 93.69369369369369,
+      "percent_covered_display": "94",
+      "missing_lines": 14,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.69369369369369,
+      "percent_statements_covered_display": "94"
+    },
+    "bridge/path_resolver.py": {
+      "covered_lines": 15,
+      "num_statements": 28,
+      "percent_covered": 53.57142857142857,
+      "percent_covered_display": "54",
+      "missing_lines": 13,
+      "excluded_lines": 0,
+      "percent_statements_covered": 53.57142857142857,
+      "percent_statements_covered_display": "54"
+    },
+    "bridge/preflight.py": {
+      "covered_lines": 40,
+      "num_statements": 66,
+      "percent_covered": 60.60606060606061,
+      "percent_covered_display": "61",
+      "missing_lines": 26,
+      "excluded_lines": 0,
+      "percent_statements_covered": 60.60606060606061,
+      "percent_statements_covered_display": "61"
+    },
+    "bridge/quality_gate/__init__.py": {
+      "covered_lines": 2,
+      "num_statements": 2,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/quality_gate/gate.py": {
+      "covered_lines": 8,
+      "num_statements": 20,
+      "percent_covered": 40.0,
+      "percent_covered_display": "40",
+      "missing_lines": 12,
+      "excluded_lines": 0,
+      "percent_statements_covered": 40.0,
+      "percent_statements_covered_display": "40"
+    },
+    "bridge/resilience/__init__.py": {
+      "covered_lines": 4,
+      "num_statements": 4,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/resilience/circuit_breaker.py": {
+      "covered_lines": 132,
+      "num_statements": 159,
+      "percent_covered": 83.01886792452831,
+      "percent_covered_display": "83",
+      "missing_lines": 27,
+      "excluded_lines": 0,
+      "percent_statements_covered": 83.01886792452831,
+      "percent_statements_covered_display": "83"
+    },
+    "bridge/resilience/rate_limiter.py": {
+      "covered_lines": 102,
+      "num_statements": 135,
+      "percent_covered": 75.55555555555556,
+      "percent_covered_display": "76",
+      "missing_lines": 33,
+      "excluded_lines": 0,
+      "percent_statements_covered": 75.55555555555556,
+      "percent_statements_covered_display": "76"
+    },
+    "bridge/resilience/retry.py": {
+      "covered_lines": 76,
+      "num_statements": 93,
+      "percent_covered": 81.72043010752688,
+      "percent_covered_display": "82",
+      "missing_lines": 17,
+      "excluded_lines": 0,
+      "percent_statements_covered": 81.72043010752688,
+      "percent_statements_covered_display": "82"
+    },
+    "bridge/s3_ingestion.py": {
+      "covered_lines": 0,
+      "num_statements": 281,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 281,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/semantic_core/__init__.py": {
+      "covered_lines": 34,
+      "num_statements": 34,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/semantic_core/action_contracts.py": {
+      "covered_lines": 114,
+      "num_statements": 135,
+      "percent_covered": 84.44444444444444,
+      "percent_covered_display": "84",
+      "missing_lines": 21,
+      "excluded_lines": 0,
+      "percent_statements_covered": 84.44444444444444,
+      "percent_statements_covered_display": "84"
+    },
+    "bridge/semantic_core/action_control.py": {
+      "covered_lines": 53,
+      "num_statements": 59,
+      "percent_covered": 89.83050847457628,
+      "percent_covered_display": "90",
+      "missing_lines": 6,
+      "excluded_lines": 0,
+      "percent_statements_covered": 89.83050847457628,
+      "percent_statements_covered_display": "90"
+    },
+    "bridge/semantic_core/action_plans.py": {
+      "covered_lines": 197,
+      "num_statements": 229,
+      "percent_covered": 86.02620087336244,
+      "percent_covered_display": "86",
+      "missing_lines": 32,
+      "excluded_lines": 0,
+      "percent_statements_covered": 86.02620087336244,
+      "percent_statements_covered_display": "86"
+    },
+    "bridge/semantic_core/action_runs.py": {
+      "covered_lines": 237,
+      "num_statements": 278,
+      "percent_covered": 85.25179856115108,
+      "percent_covered_display": "85",
+      "missing_lines": 41,
+      "excluded_lines": 5,
+      "percent_statements_covered": 85.25179856115108,
+      "percent_statements_covered_display": "85"
+    },
+    "bridge/semantic_core/adapters/__init__.py": {
+      "covered_lines": 6,
+      "num_statements": 6,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/semantic_core/adapters/base.py": {
+      "covered_lines": 18,
+      "num_statements": 18,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/semantic_core/adapters/mapping.py": {
+      "covered_lines": 57,
+      "num_statements": 69,
+      "percent_covered": 82.6086956521739,
+      "percent_covered_display": "83",
+      "missing_lines": 12,
+      "excluded_lines": 0,
+      "percent_statements_covered": 82.6086956521739,
+      "percent_statements_covered_display": "83"
+    },
+    "bridge/semantic_core/adapters/okf.py": {
+      "covered_lines": 17,
+      "num_statements": 20,
+      "percent_covered": 85.0,
+      "percent_covered_display": "85",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 85.0,
+      "percent_statements_covered_display": "85"
+    },
+    "bridge/semantic_core/adapters/ontology.py": {
+      "covered_lines": 27,
+      "num_statements": 30,
+      "percent_covered": 90.0,
+      "percent_covered_display": "90",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 90.0,
+      "percent_statements_covered_display": "90"
+    },
+    "bridge/semantic_core/adapters/ruleset.py": {
+      "covered_lines": 15,
+      "num_statements": 17,
+      "percent_covered": 88.23529411764706,
+      "percent_covered_display": "88",
+      "missing_lines": 2,
+      "excluded_lines": 0,
+      "percent_statements_covered": 88.23529411764706,
+      "percent_statements_covered_display": "88"
+    },
+    "bridge/semantic_core/agentic_system.py": {
+      "covered_lines": 288,
+      "num_statements": 320,
+      "percent_covered": 90.0,
+      "percent_covered_display": "90",
+      "missing_lines": 32,
+      "excluded_lines": 0,
+      "percent_statements_covered": 90.0,
+      "percent_statements_covered_display": "90"
+    },
+    "bridge/semantic_core/attestations.py": {
+      "covered_lines": 28,
+      "num_statements": 34,
+      "percent_covered": 82.3529411764706,
+      "percent_covered_display": "82",
+      "missing_lines": 6,
+      "excluded_lines": 0,
+      "percent_statements_covered": 82.3529411764706,
+      "percent_statements_covered_display": "82"
+    },
+    "bridge/semantic_core/bitemporal.py": {
+      "covered_lines": 83,
+      "num_statements": 120,
+      "percent_covered": 69.16666666666667,
+      "percent_covered_display": "69",
+      "missing_lines": 37,
+      "excluded_lines": 0,
+      "percent_statements_covered": 69.16666666666667,
+      "percent_statements_covered_display": "69"
+    },
+    "bridge/semantic_core/business_plan.py": {
+      "covered_lines": 79,
+      "num_statements": 102,
+      "percent_covered": 77.45098039215686,
+      "percent_covered_display": "77",
+      "missing_lines": 23,
+      "excluded_lines": 0,
+      "percent_statements_covered": 77.45098039215686,
+      "percent_statements_covered_display": "77"
+    },
+    "bridge/semantic_core/canonical.py": {
+      "covered_lines": 24,
+      "num_statements": 27,
+      "percent_covered": 88.88888888888889,
+      "percent_covered_display": "89",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 88.88888888888889,
+      "percent_statements_covered_display": "89"
+    },
+    "bridge/semantic_core/compilers/__init__.py": {
+      "covered_lines": 9,
+      "num_statements": 9,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/semantic_core/compilers/base.py": {
+      "covered_lines": 169,
+      "num_statements": 187,
+      "percent_covered": 90.37433155080214,
+      "percent_covered_display": "90",
+      "missing_lines": 18,
+      "excluded_lines": 0,
+      "percent_statements_covered": 90.37433155080214,
+      "percent_statements_covered_display": "90"
+    },
+    "bridge/semantic_core/compilers/control_plane.py": {
+      "covered_lines": 105,
+      "num_statements": 127,
+      "percent_covered": 82.67716535433071,
+      "percent_covered_display": "83",
+      "missing_lines": 22,
+      "excluded_lines": 0,
+      "percent_statements_covered": 82.67716535433071,
+      "percent_statements_covered_display": "83"
+    },
+    "bridge/semantic_core/compilers/governance.py": {
+      "covered_lines": 113,
+      "num_statements": 127,
+      "percent_covered": 88.97637795275591,
+      "percent_covered_display": "89",
+      "missing_lines": 14,
+      "excluded_lines": 0,
+      "percent_statements_covered": 88.97637795275591,
+      "percent_statements_covered_display": "89"
+    },
+    "bridge/semantic_core/compilers/runs.py": {
+      "covered_lines": 310,
+      "num_statements": 383,
+      "percent_covered": 80.93994778067885,
+      "percent_covered_display": "81",
+      "missing_lines": 73,
+      "excluded_lines": 0,
+      "percent_statements_covered": 80.93994778067885,
+      "percent_statements_covered_display": "81"
+    },
+    "bridge/semantic_core/compilers/runtime_targets.py": {
+      "covered_lines": 111,
+      "num_statements": 117,
+      "percent_covered": 94.87179487179488,
+      "percent_covered_display": "95",
+      "missing_lines": 6,
+      "excluded_lines": 0,
+      "percent_statements_covered": 94.87179487179488,
+      "percent_statements_covered_display": "95"
+    },
+    "bridge/semantic_core/compilers/semantic_bundle.py": {
+      "covered_lines": 14,
+      "num_statements": 14,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/semantic_core/continuous_compile.py": {
+      "covered_lines": 20,
+      "num_statements": 66,
+      "percent_covered": 30.303030303030305,
+      "percent_covered_display": "30",
+      "missing_lines": 46,
+      "excluded_lines": 0,
+      "percent_statements_covered": 30.303030303030305,
+      "percent_statements_covered_display": "30"
+    },
+    "bridge/semantic_core/continuous_ingest.py": {
+      "covered_lines": 126,
+      "num_statements": 356,
+      "percent_covered": 35.39325842696629,
+      "percent_covered_display": "35",
+      "missing_lines": 230,
+      "excluded_lines": 3,
+      "percent_statements_covered": 35.39325842696629,
+      "percent_statements_covered_display": "35"
+    },
+    "bridge/semantic_core/contracts.py": {
+      "covered_lines": 0,
+      "num_statements": 62,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 62,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/semantic_core/events.py": {
+      "covered_lines": 158,
+      "num_statements": 228,
+      "percent_covered": 69.29824561403508,
+      "percent_covered_display": "69",
+      "missing_lines": 70,
+      "excluded_lines": 0,
+      "percent_statements_covered": 69.29824561403508,
+      "percent_statements_covered_display": "69"
+    },
+    "bridge/semantic_core/federated_query.py": {
+      "covered_lines": 132,
+      "num_statements": 147,
+      "percent_covered": 89.79591836734694,
+      "percent_covered_display": "90",
+      "missing_lines": 15,
+      "excluded_lines": 0,
+      "percent_statements_covered": 89.79591836734694,
+      "percent_statements_covered_display": "90"
+    },
+    "bridge/semantic_core/governance.py": {
+      "covered_lines": 221,
+      "num_statements": 239,
+      "percent_covered": 92.46861924686192,
+      "percent_covered_display": "92",
+      "missing_lines": 18,
+      "excluded_lines": 0,
+      "percent_statements_covered": 92.46861924686192,
+      "percent_statements_covered_display": "92"
+    },
+    "bridge/semantic_core/identity.py": {
+      "covered_lines": 51,
+      "num_statements": 54,
+      "percent_covered": 94.44444444444444,
+      "percent_covered_display": "94",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 94.44444444444444,
+      "percent_statements_covered_display": "94"
+    },
+    "bridge/semantic_core/impact.py": {
+      "covered_lines": 64,
+      "num_statements": 66,
+      "percent_covered": 96.96969696969697,
+      "percent_covered_display": "97",
+      "missing_lines": 2,
+      "excluded_lines": 0,
+      "percent_statements_covered": 96.96969696969697,
+      "percent_statements_covered_display": "97"
+    },
+    "bridge/semantic_core/incremental_reasoning.py": {
+      "covered_lines": 221,
+      "num_statements": 244,
+      "percent_covered": 90.57377049180327,
+      "percent_covered_display": "91",
+      "missing_lines": 23,
+      "excluded_lines": 0,
+      "percent_statements_covered": 90.57377049180327,
+      "percent_statements_covered_display": "91"
+    },
+    "bridge/semantic_core/keys.py": {
+      "covered_lines": 79,
+      "num_statements": 118,
+      "percent_covered": 66.94915254237289,
+      "percent_covered_display": "67",
+      "missing_lines": 39,
+      "excluded_lines": 16,
+      "percent_statements_covered": 66.94915254237289,
+      "percent_statements_covered_display": "67"
+    },
+    "bridge/semantic_core/models.py": {
+      "covered_lines": 107,
+      "num_statements": 113,
+      "percent_covered": 94.69026548672566,
+      "percent_covered_display": "95",
+      "missing_lines": 6,
+      "excluded_lines": 0,
+      "percent_statements_covered": 94.69026548672566,
+      "percent_statements_covered_display": "95"
+    },
+    "bridge/semantic_core/natural_query.py": {
+      "covered_lines": 39,
+      "num_statements": 42,
+      "percent_covered": 92.85714285714286,
+      "percent_covered_display": "93",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 92.85714285714286,
+      "percent_statements_covered_display": "93"
+    },
+    "bridge/semantic_core/observability.py": {
+      "covered_lines": 81,
+      "num_statements": 86,
+      "percent_covered": 94.18604651162791,
+      "percent_covered_display": "94",
+      "missing_lines": 5,
+      "excluded_lines": 0,
+      "percent_statements_covered": 94.18604651162791,
+      "percent_statements_covered_display": "94"
+    },
+    "bridge/semantic_core/production.py": {
+      "covered_lines": 77,
+      "num_statements": 84,
+      "percent_covered": 91.66666666666667,
+      "percent_covered_display": "92",
+      "missing_lines": 7,
+      "excluded_lines": 0,
+      "percent_statements_covered": 91.66666666666667,
+      "percent_statements_covered_display": "92"
+    },
+    "bridge/semantic_core/query_audit.py": {
+      "covered_lines": 77,
+      "num_statements": 80,
+      "percent_covered": 96.25,
+      "percent_covered_display": "96",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 96.25,
+      "percent_statements_covered_display": "96"
+    },
+    "bridge/semantic_core/query_control.py": {
+      "covered_lines": 138,
+      "num_statements": 162,
+      "percent_covered": 85.18518518518519,
+      "percent_covered_display": "85",
+      "missing_lines": 24,
+      "excluded_lines": 0,
+      "percent_statements_covered": 85.18518518518519,
+      "percent_statements_covered_display": "85"
+    },
+    "bridge/semantic_core/query_execution.py": {
+      "covered_lines": 321,
+      "num_statements": 363,
+      "percent_covered": 88.4297520661157,
+      "percent_covered_display": "88",
+      "missing_lines": 42,
+      "excluded_lines": 0,
+      "percent_statements_covered": 88.4297520661157,
+      "percent_statements_covered_display": "88"
+    },
+    "bridge/semantic_core/query_plans.py": {
+      "covered_lines": 196,
+      "num_statements": 231,
+      "percent_covered": 84.84848484848484,
+      "percent_covered_display": "85",
+      "missing_lines": 35,
+      "excluded_lines": 0,
+      "percent_statements_covered": 84.84848484848484,
+      "percent_statements_covered_display": "85"
+    },
+    "bridge/semantic_core/query_policy.py": {
+      "covered_lines": 186,
+      "num_statements": 208,
+      "percent_covered": 89.42307692307692,
+      "percent_covered_display": "89",
+      "missing_lines": 22,
+      "excluded_lines": 0,
+      "percent_statements_covered": 89.42307692307692,
+      "percent_statements_covered_display": "89"
+    },
+    "bridge/semantic_core/query_runs.py": {
+      "covered_lines": 167,
+      "num_statements": 188,
+      "percent_covered": 88.82978723404256,
+      "percent_covered_display": "89",
+      "missing_lines": 21,
+      "excluded_lines": 0,
+      "percent_statements_covered": 88.82978723404256,
+      "percent_statements_covered_display": "89"
+    },
+    "bridge/semantic_core/releases.py": {
+      "covered_lines": 176,
+      "num_statements": 198,
+      "percent_covered": 88.88888888888889,
+      "percent_covered_display": "89",
+      "missing_lines": 22,
+      "excluded_lines": 0,
+      "percent_statements_covered": 88.88888888888889,
+      "percent_statements_covered_display": "89"
+    },
+    "bridge/semantic_core/repository.py": {
+      "covered_lines": 0,
+      "num_statements": 34,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 34,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/semantic_core/runtime.py": {
+      "covered_lines": 40,
+      "num_statements": 43,
+      "percent_covered": 93.02325581395348,
+      "percent_covered_display": "93",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.02325581395348,
+      "percent_statements_covered_display": "93"
+    },
+    "bridge/semantic_core/runtime_control.py": {
+      "covered_lines": 85,
+      "num_statements": 127,
+      "percent_covered": 66.92913385826772,
+      "percent_covered_display": "67",
+      "missing_lines": 42,
+      "excluded_lines": 0,
+      "percent_statements_covered": 66.92913385826772,
+      "percent_statements_covered_display": "67"
+    },
+    "bridge/semantic_core/semantic_query.py": {
+      "covered_lines": 158,
+      "num_statements": 185,
+      "percent_covered": 85.4054054054054,
+      "percent_covered_display": "85",
+      "missing_lines": 27,
+      "excluded_lines": 0,
+      "percent_statements_covered": 85.4054054054054,
+      "percent_statements_covered_display": "85"
+    },
+    "bridge/semantic_core/service.py": {
+      "covered_lines": 0,
+      "num_statements": 110,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 110,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "bridge/semantic_core/simulation.py": {
+      "covered_lines": 202,
+      "num_statements": 230,
+      "percent_covered": 87.82608695652173,
+      "percent_covered_display": "88",
+      "missing_lines": 28,
+      "excluded_lines": 0,
+      "percent_statements_covered": 87.82608695652173,
+      "percent_statements_covered_display": "88"
+    },
+    "bridge/semantic_core/source_connectors.py": {
+      "covered_lines": 57,
+      "num_statements": 62,
+      "percent_covered": 91.93548387096774,
+      "percent_covered_display": "92",
+      "missing_lines": 5,
+      "excluded_lines": 0,
+      "percent_statements_covered": 91.93548387096774,
+      "percent_statements_covered_display": "92"
+    },
+    "bridge/semantic_core/validators/__init__.py": {
+      "covered_lines": 3,
+      "num_statements": 3,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/semantic_core/validators/ontology.py": {
+      "covered_lines": 33,
+      "num_statements": 36,
+      "percent_covered": 91.66666666666667,
+      "percent_covered_display": "92",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 91.66666666666667,
+      "percent_statements_covered_display": "92"
+    },
+    "bridge/semantic_core/validators/query_regression.py": {
+      "covered_lines": 44,
+      "num_statements": 53,
+      "percent_covered": 83.01886792452831,
+      "percent_covered_display": "83",
+      "missing_lines": 9,
+      "excluded_lines": 0,
+      "percent_statements_covered": 83.01886792452831,
+      "percent_statements_covered_display": "83"
+    },
+    "bridge/semantic_core/workflows.py": {
+      "covered_lines": 269,
+      "num_statements": 296,
+      "percent_covered": 90.87837837837837,
+      "percent_covered_display": "91",
+      "missing_lines": 27,
+      "excluded_lines": 0,
+      "percent_statements_covered": 90.87837837837837,
+      "percent_statements_covered_display": "91"
+    },
+    "bridge/spec_mapper/__init__.py": {
+      "covered_lines": 2,
+      "num_statements": 2,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/spec_mapper/mapper.py": {
+      "covered_lines": 4,
+      "num_statements": 4,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/storage/__init__.py": {
+      "covered_lines": 8,
+      "num_statements": 10,
+      "percent_covered": 80.0,
+      "percent_covered_display": "80",
+      "missing_lines": 2,
+      "excluded_lines": 0,
+      "percent_statements_covered": 80.0,
+      "percent_statements_covered_display": "80"
+    },
+    "bridge/storage/base.py": {
+      "covered_lines": 132,
+      "num_statements": 164,
+      "percent_covered": 80.48780487804878,
+      "percent_covered_display": "80",
+      "missing_lines": 32,
+      "excluded_lines": 0,
+      "percent_statements_covered": 80.48780487804878,
+      "percent_statements_covered_display": "80"
+    },
+    "bridge/storage/cognee_backend.py": {
+      "covered_lines": 35,
+      "num_statements": 84,
+      "percent_covered": 41.666666666666664,
+      "percent_covered_display": "42",
+      "missing_lines": 49,
+      "excluded_lines": 0,
+      "percent_statements_covered": 41.666666666666664,
+      "percent_statements_covered_display": "42"
+    },
+    "bridge/storage/cypher_to_ngql.py": {
+      "covered_lines": 37,
+      "num_statements": 100,
+      "percent_covered": 37.0,
+      "percent_covered_display": "37",
+      "missing_lines": 63,
+      "excluded_lines": 0,
+      "percent_statements_covered": 37.0,
+      "percent_statements_covered_display": "37"
+    },
+    "bridge/storage/factory.py": {
+      "covered_lines": 54,
+      "num_statements": 59,
+      "percent_covered": 91.52542372881356,
+      "percent_covered_display": "92",
+      "missing_lines": 5,
+      "excluded_lines": 0,
+      "percent_statements_covered": 91.52542372881356,
+      "percent_statements_covered_display": "92"
+    },
+    "bridge/storage/nebula_backend.py": {
+      "covered_lines": 40,
+      "num_statements": 298,
+      "percent_covered": 13.422818791946309,
+      "percent_covered_display": "13",
+      "missing_lines": 258,
+      "excluded_lines": 0,
+      "percent_statements_covered": 13.422818791946309,
+      "percent_statements_covered_display": "13"
+    },
+    "bridge/storage/ngql_builder.py": {
+      "covered_lines": 134,
+      "num_statements": 200,
+      "percent_covered": 67.0,
+      "percent_covered_display": "67",
+      "missing_lines": 66,
+      "excluded_lines": 0,
+      "percent_statements_covered": 67.0,
+      "percent_statements_covered_display": "67"
+    },
+    "bridge/tasks/__init__.py": {
+      "covered_lines": 4,
+      "num_statements": 4,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/tasks/executors.py": {
+      "covered_lines": 14,
+      "num_statements": 35,
+      "percent_covered": 40.0,
+      "percent_covered_display": "40",
+      "missing_lines": 21,
+      "excluded_lines": 0,
+      "percent_statements_covered": 40.0,
+      "percent_statements_covered_display": "40"
+    },
+    "bridge/tasks/models.py": {
+      "covered_lines": 91,
+      "num_statements": 94,
+      "percent_covered": 96.80851063829788,
+      "percent_covered_display": "97",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 96.80851063829788,
+      "percent_statements_covered_display": "97"
+    },
+    "bridge/tasks/queue.py": {
+      "covered_lines": 128,
+      "num_statements": 258,
+      "percent_covered": 49.6124031007752,
+      "percent_covered_display": "50",
+      "missing_lines": 130,
+      "excluded_lines": 0,
+      "percent_statements_covered": 49.6124031007752,
+      "percent_statements_covered_display": "50"
+    },
+    "bridge/tenant/__init__.py": {
+      "covered_lines": 4,
+      "num_statements": 4,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "bridge/tenant/context.py": {
+      "covered_lines": 53,
+      "num_statements": 57,
+      "percent_covered": 92.98245614035088,
+      "percent_covered_display": "93",
+      "missing_lines": 4,
+      "excluded_lines": 0,
+      "percent_statements_covered": 92.98245614035088,
+      "percent_statements_covered_display": "93"
+    },
+    "bridge/tenant/manager.py": {
+      "covered_lines": 105,
+      "num_statements": 222,
+      "percent_covered": 47.2972972972973,
+      "percent_covered_display": "47",
+      "missing_lines": 117,
+      "excluded_lines": 0,
+      "percent_statements_covered": 47.2972972972973,
+      "percent_statements_covered_display": "47"
+    },
+    "bridge/tenant/middleware.py": {
+      "covered_lines": 28,
+      "num_statements": 114,
+      "percent_covered": 24.56140350877193,
+      "percent_covered_display": "25",
+      "missing_lines": 86,
+      "excluded_lines": 0,
+      "percent_statements_covered": 24.56140350877193,
+      "percent_statements_covered_display": "25"
+    },
+    "bridge/url_ingestion.py": {
+      "covered_lines": 0,
+      "num_statements": 199,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 199,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "services/semantic_middle_layer_api/app.py": {
+      "covered_lines": 1302,
+      "num_statements": 2685,
+      "percent_covered": 48.49162011173184,
+      "percent_covered_display": "48",
+      "missing_lines": 1383,
+      "excluded_lines": 0,
+      "percent_statements_covered": 48.49162011173184,
+      "percent_statements_covered_display": "48"
+    },
+    "services/semantic_middle_layer_api/app_enhanced.py": {
+      "covered_lines": 174,
+      "num_statements": 358,
+      "percent_covered": 48.60335195530726,
+      "percent_covered_display": "49",
+      "missing_lines": 184,
+      "excluded_lines": 0,
+      "percent_statements_covered": 48.60335195530726,
+      "percent_statements_covered_display": "49"
+    }
+  }
+}

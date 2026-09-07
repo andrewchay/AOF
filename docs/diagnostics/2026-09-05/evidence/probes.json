@@ -1,0 +1,42 @@
+{
+  "anonymous_metadata_status": 200,
+  "anonymous_metadata_persisted": true,
+  "anonymous_governed_status": 401,
+  "k8s_health_status": 404,
+  "docker_health_status": 200,
+  "default_readiness": {
+    "api_version": "aof.production-readiness/v1",
+    "mode": "development",
+    "ready": true,
+    "findings": [],
+    "report_digest": "sha256:83a690a4774b90f1ebba82bf1c05747329c311eee3302cd223834a542a415f6a"
+  },
+  "middleware": [
+    "BaseHTTPMiddleware"
+  ],
+  "api_paths": 159,
+  "api_operations": 168,
+  "legacy_persistence": {
+    "user_returned": true,
+    "user_readback": null,
+    "tenant_status": "active",
+    "tenant_readback": null,
+    "duplicate_slug_created": true
+  },
+  "concurrent_ledger": {
+    "writes_returned": 2,
+    "integrity": {
+      "valid": false,
+      "entries_checked": 2,
+      "failed_decision_id": "decision:1"
+    }
+  },
+  "tampered_ledger": {
+    "integrity": {
+      "valid": false,
+      "entries_checked": 1,
+      "failed_decision_id": "decision:original"
+    },
+    "read_conclusion": "modified"
+  }
+}

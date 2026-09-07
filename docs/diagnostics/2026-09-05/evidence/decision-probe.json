@@ -1,0 +1,9 @@
+{
+  "anonymous_create": 201,
+  "accepted_agent": "publisher:impersonated",
+  "accepted_tenant": "tenant-a",
+  "anonymous_read": 200,
+  "anonymous_search": 200,
+  "search_matches": 1,
+  "shared_ledger": "/private/var/folders/59/q3vzby0n52n0fpkjsts6xr080000gq/T/aof-decisions-probe-3p2lwbsg/data/audit/decision_provenance.jsonl"
+}

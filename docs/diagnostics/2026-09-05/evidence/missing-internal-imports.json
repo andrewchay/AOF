@@ -1,0 +1,42 @@
+{
+  "bridge.training_data": [
+    "services/semantic_middle_layer_api/app.py:2012"
+  ],
+  "bridge.training_data.generators": [
+    "services/semantic_middle_layer_api/app.py:2013"
+  ],
+  "bridge.training_data.raw_trajectory": [
+    "services/semantic_middle_layer_api/app.py:2014"
+  ],
+  "bridge.harness_trainer": [
+    "services/semantic_middle_layer_api/app.py:2272",
+    "services/semantic_middle_layer_api/app.py:2314",
+    "services/semantic_middle_layer_api/app.py:2329",
+    "services/semantic_middle_layer_api/app.py:2346",
+    "services/semantic_middle_layer_api/app.py:2202"
+  ],
+  "exporters.okf_service": [
+    "services/semantic_middle_layer_api/app.py:3991",
+    "mcp_server.py:296",
+    "mcp_server.py:302",
+    "mcp_server.py:309",
+    "mcp_server.py:316",
+    "mcp_server.py:330"
+  ],
+  "exporters.okf_exporter": [
+    "services/semantic_middle_layer_api/app.py:4073"
+  ],
+  "exporters.rag_service": [
+    "services/semantic_middle_layer_api/app.py:5877",
+    "mcp_server.py:337"
+  ],
+  "bridge.hybrid_search": [
+    "mcp_server.py:166"
+  ],
+  "bridge.graph_doctor": [
+    "mcp_server.py:237"
+  ],
+  "exporters.markdown_exporter": [
+    "mcp_server.py:249"
+  ]
+}
