@@ -394,7 +394,9 @@
       "acceptance": "OIDC/API credential 与本地主体映射；伪造/过期/错误受众/错误签发方拒绝；agent 不持有身份签名密钥",
       "implementation_commit": null,
       "tests": [],
-      "evidence": [],
+      "evidence": [
+        "Frontend OIDC login delivered (PR #25, merge 6983e792): web/src/api/oidc.ts with password grant login, client.ts prefers Bearer over envelope; production PKCE flow and browser E2E remain"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -778,7 +780,8 @@
       "evidence": [
         "web/ restored from internal (34 files, lockfile committed); clean pnpm install + vue-tsc typecheck + vite build passes; preview + backend smoke 200; security review: browser holds no identity secret, pasted trusted envelope is server-verified; NOT yet done: Playwright E2E flows and production-image static hosting",
         "Playwright browser E2E over backend-hosted production build (same-origin SPA hosting = real deployment shape): login flows, browser-origin permission denial (viewer PUT 403), runtime view render, no uncaught JS errors; remaining: full approve->execute->reconcile E2E cycle with seeded governed release",
-        "FULL governance cycle through the browser UI with separation of duties (admin creates/validates, dedicated reviewer approves, dedicated publisher publishes); viewer sees approve disabled; remaining: production-image static hosting (the backend SPA hosting path exists and is what E2E exercises)"
+        "FULL governance cycle through the browser UI with separation of duties (admin creates/validates, dedicated reviewer approves, dedicated publisher publishes); viewer sees approve disabled; remaining: production-image static hosting (the backend SPA hosting path exists and is what E2E exercises)",
+        "Frontend OIDC login wired (PR #25): oidc.ts login/logout, Bearer preferred over envelope in client.ts"
       ],
       "reviewer": null,
       "closed_at": null
@@ -960,11 +963,15 @@
         "W02",
         "W04"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "DB和文件事件可按ID/时间/主体/资源分页查询；稳定游标、租户过滤、精确计数",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "bridge/audit/query.py (existing) + tests/test_audit_query.py",
+      "tests": [
+        "tests/test_audit_query.py (6 tests)"
+      ],
+      "evidence": [
+        "AuditQuery test coverage added: full query, user filtering, pagination without overlap, get_event_by_id, keyword search; DB query path also implemented in query.py but needs PG-backed tests (W08.04 dependency)"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -2279,5 +2286,5 @@
       "closed_at": null
     }
   ],
-  "progress_note": "2026-09-08 16:30: main=46c19ae5 (PR #6-#21 all merged, CI green). W08.04: 5 control-plane stores on PostgreSQL (ledger, action-runs, IAM, session, inbox) + workflow. Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started. 638 tests total."
+  "progress_note": "2026-09-08 17:30: main=6983e792+ (PR #6-#26). 647 tests passing. W05.01 audit query test coverage added. Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started."
 }
