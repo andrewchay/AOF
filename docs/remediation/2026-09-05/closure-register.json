@@ -1475,7 +1475,9 @@
       "acceptance": "IAM/源游标/leases/compiler/channel/release/query/action/workflow/session/audit/outbox统一Repository；无进程局部权威状态",
       "implementation_commit": null,
       "tests": [],
-      "evidence": [],
+      "evidence": [
+        "IAM store migrated to PostgreSQL (PR #15, merge 32401cc5): PostgresIamStore implements the Mapping/Sequence facade contract (users/roles/assignments/tenants, natural-key uniqueness on username+slug); dual-backend contract suite 12/12 against running PG; remaining for W08.04 closure: session/outbox/workflow stores on PG"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -2274,5 +2276,5 @@
       "closed_at": null
     }
   ],
-  "progress_note": "2026-09-07 16:45: PR #9 merged (4dd50da6)——BSL 1.1 许可证落地（官方逐字文本+参数+312文件头+README/NOTICE）。main CI 绿。main=4dd50da6。登记表状态: 1 closed / 33 in_progress / 1 mitigated / 45 not_started。剩余大头: W08 PostgreSQL 迁移（需环境）、W05 真实 MQ、W02.03 KMS 签名锚、W10.05 真实数据（均需外部输入/决策）。"
+  "progress_note": "2026-09-08 12:20: main=32401cc5 (PR #15 merged). W08.04 progress: ledger + action-runs + IAM on PostgreSQL. Infra stack running. 626 tests, ruff clean. Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started."
 }
