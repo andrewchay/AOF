@@ -1473,12 +1473,13 @@
       ],
       "status": "not_started",
       "acceptance": "IAM/源游标/leases/compiler/channel/release/query/action/workflow/session/audit/outbox统一Repository；无进程局部权威状态",
-      "implementation_commit": "13bab216 (session PG)",
+      "implementation_commit": "13bab216 (session PG) + bbd6d45f (inbox PG)",
       "tests": [],
       "evidence": [
         "IAM store migrated to PostgreSQL (PR #15, merge 32401cc5): PostgresIamStore implements the Mapping/Sequence facade contract (users/roles/assignments/tenants, natural-key uniqueness on username+slug); dual-backend contract suite 12/12 against running PG; remaining for W08.04 closure: session/outbox/workflow stores on PG",
         "Session ACL store migrated to PostgreSQL (PR #17, merge 3c3eae33): PostgresSessionRepository with same contract as SQLite (create/get/set_state/set_visibility/upsert_acl/delete_acl, atomic acl_version bumps); dual-backend contract suite (8 tests x 2 backends) verified against running PG. Remaining for W08.04 closure: outbox/workflow stores on PG",
-        "Workflow store migrated to PostgreSQL (PR #19, merge 872a911c): PostgresWorkflowRunRepository with same contract as SQLite; E2E verified on both backends. ALL 4 primary control-plane stores on PG"
+        "Workflow store migrated to PostgreSQL (PR #19, merge 872a911c): PostgresWorkflowRunRepository with same contract as SQLite; E2E verified on both backends. ALL 4 primary control-plane stores on PG",
+        "Inbox dedup store migrated to PostgreSQL (PR #21, merge 46c19ae5): PostgresInboxStore with same contract as SQLite (accept/seen/dead_letter/dead_letter_count); dual-backend contract suite verified against running PG. W08.04 PG migration: 5 stores (ledger, action-runs, IAM, session, inbox) + workflow on PG"
       ],
       "reviewer": null,
       "closed_at": null
@@ -2278,5 +2279,5 @@
       "closed_at": null
     }
   ],
-  "progress_note": "2026-09-08 14:00: main=872a911c (PR #6-#19 all merged, CI green). W08.04: ALL 4 primary control-plane stores on PostgreSQL. Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started. 636 tests."
+  "progress_note": "2026-09-08 16:30: main=46c19ae5 (PR #6-#21 all merged, CI green). W08.04: 5 control-plane stores on PostgreSQL (ledger, action-runs, IAM, session, inbox) + workflow. Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started. 638 tests total."
 }
