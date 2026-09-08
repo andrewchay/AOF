@@ -1471,7 +1471,11 @@ def get_dataset_status(dataset_id: str, pipeline_name: str = "cognify_pipeline")
             'last_updated': status.last_updated.isoformat() if status.last_updated else None,
         }
         
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=f'Invalid dataset ID: {e}')
     except Exception as e:
+        if 'badly formed hexadecimal UUID' in str(e):
+            raise HTTPException(status_code=422, detail=f'Invalid dataset ID format: {dataset_id}')
         raise HTTPException(status_code=500, detail=f'Failed to get dataset status: {e}')
 
 
@@ -1520,7 +1524,11 @@ def list_dataset_data(dataset_id: str, limit: int = 100) -> dict[str, Any]:
             ]
         }
         
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=f'Invalid dataset ID: {e}')
     except Exception as e:
+        if 'badly formed hexadecimal UUID' in str(e):
+            raise HTTPException(status_code=422, detail=f'Invalid dataset ID format: {dataset_id}')
         raise HTTPException(status_code=500, detail=f'Failed to list data items: {e}')
 
 
@@ -2827,7 +2835,7 @@ async def ingest_s3_file_endpoint(req: S3IngestReq) -> dict[str, Any]:
         }
         
     except ImportError as e:
-        raise HTTPException(status_code=500, detail=f'S3 support not available: {e}. Install with: pip install boto3')
+        raise HTTPException(status_code=503, detail=f'S3 support not available: {e}. Install with: pip install boto3')
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'S3 ingestion failed: {e}')
 
@@ -2894,7 +2902,7 @@ async def ingest_s3_prefix_endpoint(req: S3PrefixIngestReq) -> dict[str, Any]:
         }
         
     except ImportError as e:
-        raise HTTPException(status_code=500, detail=f'S3 support not available: {e}')
+        raise HTTPException(status_code=503, detail=f'S3 support not available: {e}')
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'S3 prefix ingestion failed: {e}')
 
@@ -2945,7 +2953,7 @@ async def sync_s3_prefix_endpoint(req: S3SyncReq) -> dict[str, Any]:
         }
         
     except ImportError as e:
-        raise HTTPException(status_code=500, detail=f'S3 support not available: {e}')
+        raise HTTPException(status_code=503, detail=f'S3 support not available: {e}')
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'S3 sync failed: {e}')
 
@@ -2982,8 +2990,10 @@ async def list_s3_buckets(endpoint_url: Optional[str] = None, region: str = "us-
         }
         
     except ImportError as e:
-        raise HTTPException(status_code=500, detail=f'S3 support not available: {e}')
+        raise HTTPException(status_code=503, detail=f'S3 support not available: {e}')
     except Exception as e:
+        if 'boto3 is required' in str(e):
+            raise HTTPException(status_code=503, detail=f'S3 support not available: {e}')
         raise HTTPException(status_code=500, detail=f'Failed to list buckets: {e}')
 
 
@@ -3037,7 +3047,7 @@ async def list_s3_objects(
         }
         
     except ImportError as e:
-        raise HTTPException(status_code=500, detail=f'S3 support not available: {e}')
+        raise HTTPException(status_code=503, detail=f'S3 support not available: {e}')
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Failed to list objects: {e}')
 
@@ -4233,16 +4243,21 @@ def _resolve_bundle_dir(name: str | None, bundle_root: Path) -> tuple[Path, str,
 @app.get('/v1/okf/bundles')
 async def okf_list_bundles() -> dict[str, Any]:
     """列出 OKF 知识包根目录下的所有知识包."""
-    svc = _okf_service()
     root = _okf_root()
+    if not root.is_dir():
+        return {'bundles': [], 'count': 0, 'root': str(root)}
+    svc = _okf_service()
     return svc.list_bundles(root)
 
 
 @app.get('/v1/okf/bundles/{bundle_name}/index')
 async def okf_bundle_index(bundle_name: str) -> dict[str, Any]:
     """读取指定知识包的 index.md 渐进式披露目录."""
+    root = _okf_root()
+    if not root.is_dir():
+        return {'error': 'OKF bundle root not found', 'bundle': bundle_name}
     svc = _okf_service()
-    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    bindir, _, error = _resolve_bundle_dir(bundle_name, root)
     if error:
         return {'bundle_dir': str(bindir), 'exists': False, 'error': error}
     return svc.read_index(bindir)
@@ -4268,8 +4283,11 @@ async def okf_search_concepts(
     limit: int = Query(default=20, ge=1, le=100),
 ) -> dict[str, Any]:
     """按 type/title/tag/正文搜索知识包内 Concept."""
+    root = _okf_root()
+    if not root.is_dir():
+        return {'bundle_dir': str(root / bundle_name), 'error': 'OKF bundle root not found', 'count': 0, 'results': []}
     svc = _okf_service()
-    bindir, _, error = _resolve_bundle_dir(bundle_name, _okf_root())
+    bindir, _, error = _resolve_bundle_dir(bundle_name, root)
     if error:
         return {'bundle_dir': str(bindir), 'error': error, 'count': 0, 'results': []}
     return svc.search_concepts(bindir, query=query, node_type=type, title=title, tag=tag, limit=limit)
