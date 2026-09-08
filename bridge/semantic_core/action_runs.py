@@ -451,12 +451,16 @@ class ActionRunService:
         connectors: ActionConnectorRegistry,
         decision_store: DecisionProvenanceStore,
         unit_of_work=None,
+        connector_timeout_seconds: float = 60.0,
     ) -> None:
         self.repository = repository
         self.connectors = connectors
         self.decision_store = decision_store
         # W02.04: when provided, decision+state writes share one transaction
         self.unit_of_work = unit_of_work
+        # W09.03: slow-dependency isolation — connector invocations exceeding
+        # this timeout produce an unknown outcome (reconciliation), not a hang
+        self.connector_timeout_seconds = connector_timeout_seconds
 
     def submit(self, plan: ActionPlan, *, actor: str, rationale: str) -> ActionRun:
         identity = ActionRun.create(
@@ -602,8 +606,31 @@ class ActionRunService:
             "inputs": canonical_data(run.plan["inputs"]),
         }
         try:
-            raw_result = connector.invoke(request)
-            result = self._result(raw_result)
+            # W09.03: slow-dependency isolation via bounded wait (works in
+            # both sync and async contexts via ThreadPoolExecutor)
+            import concurrent.futures
+
+            pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            future = pool.submit(connector.invoke, request)
+            try:
+                raw_result = future.result(timeout=self.connector_timeout_seconds)
+                result = self._result(raw_result)
+            except concurrent.futures.TimeoutError:
+                # don't wait for the thread to finish — let it run to
+                # completion in the background; the run is marked unknown
+                pool.shutdown(wait=False)
+                raise TimeoutError(
+                    f"connector did not respond within {self.connector_timeout_seconds}s"
+                )
+            finally:
+                pool.shutdown(wait=False)
+        except TimeoutError as exc:
+            result = {
+                "outcome": "unknown",
+                "effect_applied": None,
+                "error": {"type": "ConnectorTimeout", "message": str(exc)},
+                "receipt": {},
+            }
         except Exception as exc:
             result = {
                 "outcome": "unknown",
