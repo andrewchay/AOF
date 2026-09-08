@@ -1477,7 +1477,8 @@
       "tests": [],
       "evidence": [
         "IAM store migrated to PostgreSQL (PR #15, merge 32401cc5): PostgresIamStore implements the Mapping/Sequence facade contract (users/roles/assignments/tenants, natural-key uniqueness on username+slug); dual-backend contract suite 12/12 against running PG; remaining for W08.04 closure: session/outbox/workflow stores on PG",
-        "Session ACL store migrated to PostgreSQL (PR #17, merge 3c3eae33): PostgresSessionRepository with same contract as SQLite (create/get/set_state/set_visibility/upsert_acl/delete_acl, atomic acl_version bumps); dual-backend contract suite (8 tests x 2 backends) verified against running PG. Remaining for W08.04 closure: outbox/workflow stores on PG"
+        "Session ACL store migrated to PostgreSQL (PR #17, merge 3c3eae33): PostgresSessionRepository with same contract as SQLite (create/get/set_state/set_visibility/upsert_acl/delete_acl, atomic acl_version bumps); dual-backend contract suite (8 tests x 2 backends) verified against running PG. Remaining for W08.04 closure: outbox/workflow stores on PG",
+        "Workflow store migrated to PostgreSQL (PR #19, merge 872a911c): PostgresWorkflowRunRepository with same contract as SQLite; E2E verified on both backends. ALL 4 primary control-plane stores on PG"
       ],
       "reviewer": null,
       "closed_at": null
@@ -2277,5 +2278,5 @@
       "closed_at": null
     }
   ],
-  "progress_note": "2026-09-08 13:10: main=3c3eae33 (PR #6-#17 all merged, CI green). W08.04: ledger + action-runs + IAM + session on PG (dual-backend verified). Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started. 634 tests."
+  "progress_note": "2026-09-08 14:00: main=872a911c (PR #6-#19 all merged, CI green). W08.04: ALL 4 primary control-plane stores on PostgreSQL. Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started. 636 tests."
 }
