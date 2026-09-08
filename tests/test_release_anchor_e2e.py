@@ -8,9 +8,23 @@ from bridge.semantic_core.attestations import HmacReleaseAttestor
 from bridge.semantic_core.compilers import default_compiler_registry
 from bridge.semantic_core.governance import SemanticGovernancePolicy, SemanticGovernanceService
 from bridge.semantic_core.models import ResourceKind, SemanticResource
-from bridge.semantic_core.openbao_signer import OpenBaoTransitClient
 from bridge.semantic_core.release_anchor import GovernedReleaseAnchor
 from bridge.semantic_core.releases import SqliteReleaseRepository
+
+
+def _openbao_up() -> bool:
+    try:
+        import socket
+        s = socket.create_connection(("127.0.0.1", 8200), timeout=1)
+        s.close()
+        return True
+    except OSError:
+        return False
+
+pytestmark = pytest.mark.skipif(
+    not _openbao_up(), reason="OpenBao not running (deploy/docker-compose.infra.yml)"
+)
+
 
 
 def _make_resource():

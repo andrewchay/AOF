@@ -39,7 +39,9 @@ class PostgresActionRunRepository:
         self._init_schema()
 
     def _connect(self) -> psycopg.Connection:
-        return psycopg.connect(self.dsn, row_factory=dict_row)
+        connection = psycopg.connect(self.dsn)
+        connection.row_factory = dict_row  # type: ignore[assignment]
+        return connection
 
     def _init_schema(self) -> None:
         with self._connect() as connection:
@@ -52,7 +54,7 @@ class PostgresActionRunRepository:
                 "SELECT run_id FROM action_runs WHERE idempotency_identity = %s",
                 (identity,),
             ).fetchone()
-        return self.get(str(row["run_id"])) if row is not None else None
+        return self.get(str(row["run_id"])) if row is not None else None  # type: ignore[call-overload]
 
     def get(self, run_id: str) -> ActionRun | None:
         with self._connect() as connection:
@@ -63,7 +65,7 @@ class PostgresActionRunRepository:
             return None
         from bridge.semantic_core.action_runs import ActionRun
 
-        return ActionRun.from_dict(json.loads(row["payload"]))
+        return ActionRun.from_dict(json.loads(row["payload"]))  # type: ignore[call-overload]
 
     def put_new(self, run: ActionRun) -> ActionRun:
         with self._connect() as connection:
@@ -111,12 +113,12 @@ class PostgresActionRunRepository:
             ).fetchall()
         for row in rows:
             try:
-                run = ActionRun.from_dict(json.loads(row["payload"]))
-                if (run.run_id != row["run_id"]
-                        or run.run_digest != row["run_digest"]):
+                run = ActionRun.from_dict(json.loads(row["payload"]))  # type: ignore[call-overload]
+                if (run.run_id != row["run_id"]  # type: ignore[call-overload]
+                        or run.run_digest != row["run_digest"]):  # type: ignore[call-overload]
                     raise ActionRunError("indexed ActionRun identity mismatch")
             except Exception as exc:
-                errors.append(f"run/{row['run_id']}: {exc}")
+                errors.append(f"run/{row['run_id']}: {exc}")  # type: ignore[call-overload]
         return {"valid": not errors, "action_run_count": len(rows), "errors": errors}
 
     def backup_to(self, destination: str | Path) -> Path:
