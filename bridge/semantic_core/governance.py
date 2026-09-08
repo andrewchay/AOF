@@ -21,6 +21,7 @@ from bridge.decision_provenance import DecisionProvenanceStore
 
 from .canonical import canonical_json, content_digest
 from .attestations import HmacReleaseAttestor
+from .release_anchor import GovernedReleaseAnchor
 from .compilers import CompilerRegistry
 from .impact import SemanticImpactAnalyzer
 from .models import ResourceKind, SemanticResource
@@ -102,6 +103,7 @@ class SemanticGovernanceService:
         | None = None,
         access_policy: SemanticGovernancePolicy | None = None,
         release_attestor: HmacReleaseAttestor | None = None,
+        release_anchor: "GovernedReleaseAnchor | None" = None,
     ) -> None:
         self.root = Path(root)
         self.decision_store = decision_store or DecisionProvenanceStore(
@@ -114,6 +116,7 @@ class SemanticGovernanceService:
         )
         self.access_policy = access_policy
         self.release_attestor = release_attestor
+        self.release_anchor = release_anchor
 
     def create_proposal(
         self,
@@ -576,6 +579,16 @@ class SemanticGovernanceService:
                 decision_id=decision["decision"]["id"],
                 tenant_id=manifest["tenant_id"],
             )
+        # W02.03: anchor the published release with the OpenBao key (independent
+        # of DB admin access; a recomputed chain fails anchor verification)
+        if self.release_anchor is not None:
+            anchor_block = self.release_anchor.anchor_publish(
+                release_id=release.release_id,
+                release_digest=release.release_digest,
+                tenant_id=manifest["tenant_id"],
+                publish_decision_id=decision["decision"]["id"],
+            )
+            manifest["anchor_signature"] = anchor_block["anchor_signature"]
         self._write(self._proposal_path(proposal_id), manifest)
         return manifest
 

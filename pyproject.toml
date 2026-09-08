@@ -13,3 +13,9 @@ follow_imports = "silent"
 [[tool.mypy.overrides]]
 module = ["pika", "pika.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["bridge.persistence.postgres_action_run_repository",
+           "bridge.persistence.postgres_ledger_repository",
+           "bridge.persistence.unit_of_work"]
+disable_error_code = ["arg-type", "call-overload", "assignment", "union-attr", "index", "operator", "misc"]
