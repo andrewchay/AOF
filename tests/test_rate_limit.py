@@ -147,3 +147,30 @@ def test_other_tenant_unaffected(limited_client):
         client.get('/v1/ontology/workbench/session', headers=headers)
     # tenant-b 不受影响
     assert client.get('/v1/ontology/workbench/session', headers=other).status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# W09.03 — Per-operation cost weighting
+# ---------------------------------------------------------------------------
+
+
+def test_governed_write_costs_more_than_read():
+    from bridge.access.rate_limit_policy import cost_for_method
+
+    assert cost_for_method("GET", "/v1/decisions") == 1
+    assert cost_for_method("POST", "/v1/semantic/proposals") == 3
+    assert cost_for_method("POST", "/v1/ingest/metadata") == 2
+
+
+def test_burst_read_ok_but_write_exhausts_faster():
+    limiter = _limiter(capacity=6, refill=0.001)
+    # 6 reads fill exactly the capacity
+    for _ in range(6):
+        assert limiter.check("t", cost=1)
+    assert limiter.check("t", cost=1) is False
+
+    # refill, then same capacity but writes cost 2 → only 3 writes fit
+    limiter2 = _limiter(capacity=6, refill=0.001)
+    for _ in range(3):
+        assert limiter2.check("t", cost=2)
+    assert limiter2.check("t", cost=2) is False

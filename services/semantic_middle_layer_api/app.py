@@ -252,8 +252,12 @@ async def rate_limit_middleware(request: Request, call_next):
         client_ip = request.client.host if request.client else 'unknown'
         key = f"anon:{hash(client_ip) & 0xFFFFFFFF:08x}"
 
-    if not limiter.check(key):
-        retry_after = max(1.0, round(limiter.retry_after(key), 2))
+    # W09.03: per-operation cost weighting (governed writes cost more)
+    from bridge.access.rate_limit_policy import cost_for_method
+
+    cost = cost_for_method(request.method, path)
+    if not limiter.check(key, cost=cost):
+        retry_after = max(1.0, round(limiter.retry_after(key, cost=cost), 2))
         return JSONResponse(
             status_code=429,
             headers={'Retry-After': str(int(retry_after) + 1)},
