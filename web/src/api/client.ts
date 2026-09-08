@@ -37,6 +37,13 @@ const client: AxiosInstance = axios.create({
 })
 
 client.interceptors.request.use((config) => {
+  // W01.02: prefer OIDC Bearer token if present
+  const oidcToken = localStorage.getItem('aof.oidc-access-token')
+  if (oidcToken) {
+    config.headers.set('Authorization', `Bearer ${oidcToken}`)
+    return config
+  }
+  // fallback: signed principal envelope (service-to-service compat mode)
   const signedHeaders = getPrincipalHeaders()
   Object.entries(signedHeaders).forEach(([name, value]) => {
     if (name.toLowerCase().startsWith('x-aof-principal-')) config.headers.set(name, value)
