@@ -574,7 +574,8 @@
         "test_d02_concurrent_writes_keep_chain_valid"
       ],
       "evidence": [
-        "checkpoint sidecar detects tail truncation; verified reads fail closed; independent signing anchor pending KMS decision (W00.05)"
+        "checkpoint sidecar detects tail truncation; verified reads fail closed; independent signing anchor pending KMS decision (W00.05)",
+        "SIGNING ANCHOR DELIVERED (2026-09-07, PR #12 merge 5eed68be): OpenBaoTransitClient implements ExternalSignerClient over the transit HTTP API (ed25519, key material never leaves OpenBao); LedgerAnchor signs ledger checkpoints — test proves a DB admin recomputing the chain FAILS anchor verification; verified against REAL running OpenBao; remaining: production hardening (TLS+scoped policy+W08.06) and integration into the release publish path"
       ],
       "reviewer": null,
       "closed_at": null
@@ -997,7 +998,8 @@
         "tests/test_outbox_dispatch.py (6 tests)"
       ],
       "evidence": [
-        "OutboxDispatcher + Inbox: at-least-once delivery with exactly-once consumer effect verified (crash between ack and mark -> redelivery -> dedup, zero double-processing); broker outage keeps events pending without loss and recovery completes; bounded retries + dead-letter; FileBrokerTransport is the reference transport - real MQ broker adapters (Kafka/RabbitMQ) remain"
+        "OutboxDispatcher + Inbox: at-least-once delivery with exactly-once consumer effect verified (crash between ack and mark -> redelivery -> dedup, zero double-processing); broker outage keeps events pending without loss and recovery completes; bounded retries + dead-letter; FileBrokerTransport is the reference transport - real MQ broker adapters (Kafka/RabbitMQ) remain",
+        "RABBITMQ TRANSPORT DELIVERED (2026-09-07, PR #12): RabbitMqTransport implements EventTransport over pika (durable queue, persistent delivery, order preserved, failures as TransportDownError); RabbitMqConsumer context manager with same-channel ack (cross-channel ack silently ignored — caught by first test run); full chain outbox->RabbitMQ->inbox verified against the real broker (at-least-once, exactly-once effect); remaining: production broker hardening + all-declared-brokers matrix"
       ],
       "reviewer": null,
       "closed_at": null
@@ -1478,8 +1480,9 @@
         "W04",
         "W07"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "IAM/源游标/leases/compiler/channel/release/query/action/workflow/session/audit/outbox统一Repository；无进程局部权威状态",
+<<<<<<< Updated upstream
       "implementation_commit": "13bab216 (session PG) + bbd6d45f (inbox PG)",
       "tests": [],
       "evidence": [
@@ -1487,6 +1490,16 @@
         "Session ACL store migrated to PostgreSQL (PR #17, merge 3c3eae33): PostgresSessionRepository with same contract as SQLite (create/get/set_state/set_visibility/upsert_acl/delete_acl, atomic acl_version bumps); dual-backend contract suite (8 tests x 2 backends) verified against running PG. Remaining for W08.04 closure: outbox/workflow stores on PG",
         "Workflow store migrated to PostgreSQL (PR #19, merge 872a911c): PostgresWorkflowRunRepository with same contract as SQLite; E2E verified on both backends. ALL 4 primary control-plane stores on PG",
         "Inbox dedup store migrated to PostgreSQL (PR #21, merge 46c19ae5): PostgresInboxStore with same contract as SQLite (accept/seen/dead_letter/dead_letter_count); dual-backend contract suite verified against running PG. W08.04 PG migration: 5 stores (ledger, action-runs, IAM, session, inbox) + workflow on PG"
+=======
+      "implementation_commit": "b847e5bd + 4c2850a9 + ff657519 (PR #11, merge ab7bc9ca)",
+      "tests": [
+        "tests/test_postgres_ledger_contract.py (12 tests: 6 scenarios x 2 backends)"
+      ],
+      "evidence": [
+        "INFRA STACK LIVE + PG LEDGER DELIVERED (2026-09-07): deploy/docker-compose.infra.yml with the owner-approved stack (pgvector/pgvector, Keycloak 26, RabbitMQ 4, OpenBao 2.2) running locally with healthchecks; PostgresDecisionLedgerRepository implements the ledger SPI with PG-native FOR UPDATE head locking and ON CONFLICT idempotency; the SAME contract test suite passes against BOTH backends against a real running PostgreSQL; remaining for W08.04: IAM/session/action/outbox stores migration",
+        "PostgresActionRunRepository delivered (PR pending): put_new with idempotency + ON CONFLICT, update with optimistic concurrency, get_by_identity, verify_all, backup_to; dual-backend contract tests (8 scenarios x 2 backends) passing against real running PostgreSQL; remaining for W08.04 closure: IAM/session/outbox stores also on PG + workflow/compilation stores migration",
+        "action-run repository migrated to PostgreSQL (PR #14, merge ca4beb8b): put_new with idempotency, update with optimistic concurrency, get_by_identity, verify_all, backup_to; dual-backend contract suite (8 tests x 2 backends) verified against running PG; remaining for W08.04 closure: IAM/session/outbox/workflow stores on PG"
+>>>>>>> Stashed changes
       ],
       "reviewer": null,
       "closed_at": null
@@ -2286,5 +2299,9 @@
       "closed_at": null
     }
   ],
+<<<<<<< Updated upstream
   "progress_note": "2026-09-08 17:30: main=6983e792+ (PR #6-#26). 647 tests passing. W05.01 audit query test coverage added. Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started."
+=======
+  "progress_note": "2026-09-08 12:00: main=ca4beb8b (PR #6-#14 all merged, CI green). Infra stack running: Keycloak+RabbitMQ+OpenBao+pgvector. W08.04 progress: ledger + action-runs both on PostgreSQL (dual-backend contract verified). Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started. 614 tests total."
+>>>>>>> Stashed changes
 }
