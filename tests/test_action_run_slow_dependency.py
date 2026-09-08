@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import time
 
-import pytest
 
 from bridge.decision_provenance import DecisionProvenanceStore
 from bridge.semantic_core import (
