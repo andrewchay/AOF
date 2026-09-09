@@ -23,6 +23,8 @@ env/
 
 # Testing
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 .tox/
@@ -47,6 +49,17 @@ ontologies/
 # Temporary files
 tmp/
 temp/
+
+# Local workspaces and generated browser dependencies/artifacts
+.claude/
+.context/
+workspace-files/
+visualization/
+visualizations/
+web/node_modules/
+web/dist/
+tests/
+test_data/
 
 # Environment files (D05 fix)
 .env

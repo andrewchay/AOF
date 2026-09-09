@@ -17,12 +17,48 @@ if ! $KC get realms/aof --server "$SERVER" >/dev/null 2>&1; then
 fi
 
 if ! $KC get clients -r aof --server "$SERVER" -q clientId=aof-api 2>/dev/null | grep -q aof-api; then
-  CLIENT_UUID=$($KC create clients -r aof --server "$SERVER" -i \
+  $KC create clients -r aof --server "$SERVER" \
     -s clientId=aof-api -s enabled=true -s directAccessGrantsEnabled=true \
-    -s secret=aof-dev-client-secret \
-    -s 'redirectUris=["http://localhost:5173/*","http://localhost:5199/*"]')
+    -s serviceAccountsEnabled=true -s secret=aof-api-secret \
+    -s 'redirectUris=["http://localhost:5173/*","http://localhost:5199/*"]' >/dev/null
   echo "client aof-api created"
 fi
+
+# Keycloak's container does not include Python. Parse the normal kcadm JSON
+# formatting with POSIX tools and fail before constructing an empty admin URL.
+CLIENT_UUID=$($KC get clients -r aof --server "$SERVER" -q clientId=aof-api --fields id |
+  sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+if [ -z "$CLIENT_UUID" ]; then
+  echo "ERROR: aof-api client exists but its UUID could not be resolved" >&2
+  exit 1
+fi
+$KC update "clients/$CLIENT_UUID" -r aof --server "$SERVER" \
+  -s enabled=true -s directAccessGrantsEnabled=true -s serviceAccountsEnabled=true \
+  -s secret=aof-api-secret \
+  -s 'redirectUris=["http://localhost:5173/*","http://localhost:5199/*"]' >/dev/null
+API_CLIENT_UUID=$CLIENT_UUID
+
+if ! $KC get clients -r aof --server "$SERVER" -q clientId=aof-web 2>/dev/null | grep -q aof-web; then
+  $KC create clients -r aof --server "$SERVER" \
+    -s clientId=aof-web -s enabled=true -s publicClient=true \
+    -s standardFlowEnabled=true -s directAccessGrantsEnabled=false \
+    -s 'redirectUris=["http://localhost:5173/*","http://localhost:5199/*"]' \
+    -s 'webOrigins=["http://localhost:5173","http://localhost:5199"]' \
+    -s 'attributes={"pkce.code.challenge.method":"S256"}' >/dev/null
+  echo "public PKCE client aof-web created"
+fi
+WEB_CLIENT_UUID=$($KC get clients -r aof --server "$SERVER" -q clientId=aof-web --fields id |
+  sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+if [ -z "$WEB_CLIENT_UUID" ]; then
+  echo "ERROR: aof-web client exists but its UUID could not be resolved" >&2
+  exit 1
+fi
+$KC update "clients/$WEB_CLIENT_UUID" -r aof --server "$SERVER" \
+  -s enabled=true -s publicClient=true -s standardFlowEnabled=true \
+  -s directAccessGrantsEnabled=false \
+  -s 'redirectUris=["http://localhost:5173/*","http://localhost:5199/*"]' \
+  -s 'webOrigins=["http://localhost:5173","http://localhost:5199"]' \
+  -s 'attributes={"pkce.code.challenge.method":"S256"}' >/dev/null
 
 for role in admin owner editor reviewer publisher operator viewer analyst worker ingestor; do
   $KC create roles -r aof --server "$SERVER" -s name="$role" >/dev/null 2>&1 || true
@@ -34,22 +70,36 @@ for spec in "alice:admin:acme" "bob:viewer:acme" "carol:reviewer:acme" "dave:pub
   if ! $KC get users -r aof --server "$SERVER" -q username="$username" 2>/dev/null | grep -q username; then
     $KC create users -r aof --server "$SERVER" \
       -s username="$username" -s enabled=true \
+      -s firstName="$username" -s lastName="AOF" \
+      -s email="$username@example.invalid" -s emailVerified=true \
+      -s 'requiredActions=[]' \
       -s 'attributes={"aof_tenant":["'"$tenant"'"]}'
-    $KC set-password -r aof --username "$username" --password "$username-dev-pass"
-    $KC add-roles -r aof --server "$SERVER" --uusername "$username" --rolename "$role"
-    $KC add-roles -r aof --server "$SERVER" --uusername "$username" --rolename operator
     echo "user $username created ($role @ $tenant)"
   fi
+  USER_UUID=$($KC get users -r aof --server "$SERVER" -q username="$username" --fields id |
+    sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+  if [ -z "$USER_UUID" ]; then
+    echo "ERROR: user $username exists but its UUID could not be resolved" >&2
+    exit 1
+  fi
+  $KC update "users/$USER_UUID" -r aof --server "$SERVER" \
+    -s enabled=true -s firstName="$username" -s lastName="AOF" \
+    -s email="$username@example.invalid" -s emailVerified=true \
+    -s 'requiredActions=[]' \
+    -s 'attributes={"aof_tenant":["'"$tenant"'"]}' >/dev/null
+  $KC set-password -r aof --username "$username" --new-password "$username-dev-pass"
+  $KC add-roles -r aof --server "$SERVER" --uusername "$username" --rolename "$role" >/dev/null 2>&1 || true
+  $KC add-roles -r aof --server "$SERVER" --uusername "$username" --rolename operator >/dev/null 2>&1 || true
 done
 
-CLIENT_UUID=$($KC get clients -r aof --server "$SERVER" -q clientId=aof-api | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['id'])" 2>/dev/null || \
-  $KC get clients -r aof --server "$SERVER" -q clientId=aof-api | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-if ! $KC get "clients/$CLIENT_UUID/protocol-mappers/models" -r aof --server "$SERVER" 2>/dev/null | grep -q aof_tenant; then
-  $KC create "clients/$CLIENT_UUID/protocol-mappers/models" -r aof --server "$SERVER" \
-    -s name=aof-tenant -s protocol=openid-connect \
-    -s protocolMapper=oidc-usermodel-attribute-mapper \
-    -s 'config={"user.attribute":"aof_tenant","claim.name":"aof_tenant","jsonType.label":"String","access.token.claim":"true","id.token.claim":"true"}'
-  echo "aof_tenant mapper created"
-fi
+for CLIENT_UUID in "$API_CLIENT_UUID" "$WEB_CLIENT_UUID"; do
+  if ! $KC get "clients/$CLIENT_UUID/protocol-mappers/models" -r aof --server "$SERVER" 2>/dev/null | grep -q aof_tenant; then
+    $KC create "clients/$CLIENT_UUID/protocol-mappers/models" -r aof --server "$SERVER" \
+      -s name=aof-tenant -s protocol=openid-connect \
+      -s protocolMapper=oidc-usermodel-attribute-mapper \
+      -s 'config={"user.attribute":"aof_tenant","claim.name":"aof_tenant","jsonType.label":"String","access.token.claim":"true","id.token.claim":"true"}'
+    echo "aof_tenant mapper created for client $CLIENT_UUID"
+  fi
+done
 echo "keycloak provisioning complete"
 INNER

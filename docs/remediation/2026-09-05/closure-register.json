@@ -252,14 +252,15 @@
       "owner_role": "工程负责人",
       "owner_person": null,
       "depends_on_packages": [],
-      "status": "closed",
+      "status": "in_progress",
       "acceptance": "记录 main/internal/工作区提交、文件摘要和差异；隔离 checkout；原脏文件摘要不变",
       "implementation_commit": "n/a (worktree snapshot /tmp/aof-remediation-20260905/main at bfc1e02d)",
       "tests": [],
       "evidence": [
-        "worktree snapshot created; original dirty workspace untouched (git status verified)"
+        "worktree snapshot created; original dirty workspace untouched (git status verified)",
+        "Independent review and a named accountable owner remain required before closure"
       ],
-      "reviewer": "self (bookkeeping only)",
+      "reviewer": null,
       "closed_at": null
     },
     {
@@ -340,11 +341,15 @@
       "owner_role": "工程负责人",
       "owner_person": null,
       "depends_on_packages": [],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "命名实际 IdP、Cognee、SQL、图、向量、MQ、ERP/CRM、KMS 和数据负责人；每项必需能力都有真实验收环境",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "deploy/docker-compose.infra.yml + deploy/keycloak-init.sh + deploy/openbao-init.sh",
+      "tests": [
+        "enterprise-integration CI profile: PostgreSQL + Keycloak + RabbitMQ + OpenBao"
+      ],
+      "evidence": [
+        "2026-09-09 local real-service validation: owner-selected infrastructure stack initialized idempotently and 66 enterprise integration tests passed with zero skips; Cognee, model, graph/vector, ERP/CRM and named data owners remain"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -390,12 +395,18 @@
       "depends_on_packages": [
         "W00"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "OIDC/API credential 与本地主体映射；伪造/过期/错误受众/错误签发方拒绝；agent 不持有身份签名密钥",
-      "implementation_commit": null,
-      "tests": [],
+      "implementation_commit": "c03697b7 + c07a0dc0 + a66bdc32 + b57421fd (merge 0abec177 / 6983e792)",
+      "tests": [
+        "tests/test_oidc_auth.py",
+        "tests/test_oidc_keycloak.py",
+        "tests/test_browser_oidc_security.py"
+      ],
       "evidence": [
-        "Frontend OIDC login delivered (PR #25, merge 6983e792): web/src/api/oidc.ts with password grant login, client.ts prefers Bearer over envelope; production PKCE flow and browser E2E remain"
+        "Real Keycloak JWT verification covers issuer, audience, expiry, signature and claim-to-principal mapping; browser uses authorization-code + S256 PKCE through the public aof-web client. Revocation and service identity remain for closure",
+        "2026-09-09 enterprise profile: selected real-service suite completed 72 passed / 0 skipped against PostgreSQL, Keycloak, RabbitMQ and OpenBao",
+        "Browser authentication has no client secret or resource-owner password grant; callback state is verified and tokens use sessionStorage. Keycloak public-client and PKCE attributes were verified against the real service"
       ],
       "reviewer": null,
       "closed_at": null
@@ -418,10 +429,12 @@
       "acceptance": "匿名读写失败；body 主体不能越权；先例、父链、影响分析和导出不能跨租户",
       "implementation_commit": "3b7a8945",
       "tests": [
-        "tests/test_remediation_regression.py test_d01_* (6 tests)"
+        "tests/test_remediation_regression.py test_d01_* (6 tests)",
+        "tests/test_remediation_regression.py::test_d01_cross_tenant_parent_reference_rejected"
       ],
       "evidence": [
-        "decision API: anonymous 401, body identity overridden, cross-tenant 404, precedent forced tenant"
+        "decision API: anonymous 401, body identity overridden, cross-tenant 404, precedent forced tenant",
+        "Decision lookup, causal chain, impact and audit trail are tenant-scoped before graph construction; cross-tenant decision IDs and parent references are rejected in SQLite and PostgreSQL"
       ],
       "reviewer": null,
       "closed_at": null
@@ -515,10 +528,12 @@
       "acceptance": "tenant/sequence/decision 唯一约束；历史 JSONL 验证后导入；损坏/缺租户/重复记录隔离且有处置证据",
       "implementation_commit": "9930f6af..3c7d6c45 (continuation) + a21666a1",
       "tests": [
-        "tests/test_decision_ledger_repository.py (11 tests)"
+        "tests/test_decision_ledger_repository.py (11 tests)",
+        "tests/test_postgres_ledger_contract.py::test_jsonl_migration_and_quarantine_both_backends"
       ],
       "evidence": [
-        "SQLiteDecisionLedgerRepository: PRIMARY KEY(tenant_id,sequence), UNIQUE(tenant_id,decision_id), BEGIN IMMEDIATE head-lock, idempotent append, quarantine table; JSONL migration with manifest; PostgreSQL backend pending DB environment"
+        "SQLiteDecisionLedgerRepository: PRIMARY KEY(tenant_id,sequence), UNIQUE(tenant_id,decision_id), BEGIN IMMEDIATE head-lock, idempotent append, quarantine table; JSONL migration with manifest; PostgreSQL backend pending DB environment",
+        "PostgreSQL now imports legacy JSONL atomically, supports idempotent re-runs and quarantines corrupt/hash/chain/tenant failures under the same migration contract as SQLite"
       ],
       "reviewer": null,
       "closed_at": null
@@ -567,15 +582,18 @@
       ],
       "status": "in_progress",
       "acceptance": "改写/中间删除/尾截断/替换/重排被检测；受控读取拒绝；独立锚定检测管理员重算链",
-      "implementation_commit": "3dacda14",
+      "implementation_commit": "3dacda14 + f17374fc + b06af2aa",
       "tests": [
         "test_d02_tampered_ledger_read_fails_closed",
         "test_d02_truncated_tail_read_fails_closed",
-        "test_d02_concurrent_writes_keep_chain_valid"
+        "test_d02_concurrent_writes_keep_chain_valid",
+        "tests/test_infra_adapters.py::test_openbao_*",
+        "tests/test_release_anchor_e2e.py"
       ],
       "evidence": [
         "checkpoint sidecar detects tail truncation; verified reads fail closed; independent signing anchor pending KMS decision (W00.05)",
-        "SIGNING ANCHOR DELIVERED (2026-09-07, PR #12 merge 5eed68be): OpenBaoTransitClient implements ExternalSignerClient over the transit HTTP API (ed25519, key material never leaves OpenBao); LedgerAnchor signs ledger checkpoints — test proves a DB admin recomputing the chain FAILS anchor verification; verified against REAL running OpenBao; remaining: production hardening (TLS+scoped policy+W08.06) and integration into the release publish path"
+        "OpenBao transit signing anchor delivered and integrated into the release publish path; real-service tests cover detached signing, unavailable service and post-publication tamper rejection. Production TLS, scoped policy and key rotation remain",
+        "2026-09-09 enterprise profile: selected real-service suite completed 66 passed / 0 skipped against PostgreSQL, Keycloak, RabbitMQ and OpenBao"
       ],
       "reviewer": null,
       "closed_at": null
@@ -776,13 +794,14 @@
       "implementation_commit": "8e503584 + c3bf8954 + fa8ff619",
       "tests": [
         "manual: pnpm install/build/preview smoke",
-        "web/e2e/test_governance_e2e.py (8/8 PASS: login x2, permission denial 403, runtime UI, full governance cycle create->validate->approve->publish with dedicated reviewer/publisher, UI-level denial, console hygiene)"
+        "web/e2e/test_governance_e2e.py (8/8 PASS: login x2, permission denial 403, runtime UI, full governance cycle create->validate->approve->publish with dedicated reviewer/publisher, UI-level denial, console hygiene)",
+        "tests/test_browser_oidc_security.py"
       ],
       "evidence": [
-        "web/ restored from internal (34 files, lockfile committed); clean pnpm install + vue-tsc typecheck + vite build passes; preview + backend smoke 200; security review: browser holds no identity secret, pasted trusted envelope is server-verified; NOT yet done: Playwright E2E flows and production-image static hosting",
         "Playwright browser E2E over backend-hosted production build (same-origin SPA hosting = real deployment shape): login flows, browser-origin permission denial (viewer PUT 403), runtime view render, no uncaught JS errors; remaining: full approve->execute->reconcile E2E cycle with seeded governed release",
-        "FULL governance cycle through the browser UI with separation of duties (admin creates/validates, dedicated reviewer approves, dedicated publisher publishes); viewer sees approve disabled; remaining: production-image static hosting (the backend SPA hosting path exists and is what E2E exercises)",
-        "Frontend OIDC login wired (PR #25): oidc.ts login/logout, Bearer preferred over envelope in client.ts"
+        "Frontend OIDC Bearer login wired in b57421fd (merge 6983e792); production authorization-code + PKCE remains",
+        "MainLayout exposes enterprise login/logout and completes the validated PKCE callback; production Vue type-check and Vite build pass",
+        "2026-09-09 production image serves the frozen Vue build before login while strict API authentication remains enabled; health and readiness return 200 in the non-root read-only container"
       ],
       "reviewer": null,
       "closed_at": null
@@ -801,11 +820,15 @@
         "W00",
         "W01"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "全部公开操作有成功或安全拒绝语义测试；支持profile无临时503/禁用项；历史410只有批准的替代能力",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "services/semantic_middle_layer_api/auth_middleware.py + tests/test_legacy_auth_fail_closed.py",
+      "tests": [
+        "tests/test_legacy_auth_fail_closed.py"
+      ],
+      "evidence": [
+        "Unused legacy auth surface now fails closed: built-in JWT secret removed, unverifiable API keys rejected, password/refresh endpoints return deliberate 410 with OIDC replacement, and request signatures reject stale or future timestamps. Full public operation matrix remains"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -849,11 +872,15 @@
         "W00",
         "W02"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "创建后跨进程读取/更新/删除；角色继承与assignment；数据库失败无成功响应",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "bridge/persistence/sqlite_iam_store.py + bridge/persistence/postgres_iam_store.py",
+      "tests": [
+        "tests/test_iam_pg_contract.py::test_assignment_sequence_supports_mutable_sequence_contract"
+      ],
+      "evidence": [
+        "IAM assignment storage now implements single-item update, insert, slice replacement, negative indexing and deletion atomically on SQLite and PostgreSQL; broader IAM API and authorization-equivalence acceptance remains"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -966,12 +993,12 @@
       ],
       "status": "in_progress",
       "acceptance": "DB和文件事件可按ID/时间/主体/资源分页查询；稳定游标、租户过滤、精确计数",
-      "implementation_commit": "bridge/audit/query.py (existing) + tests/test_audit_query.py",
+      "implementation_commit": "bridge/audit/query.py + 6b82e09a (registered by b456c654)",
       "tests": [
         "tests/test_audit_query.py (6 tests)"
       ],
       "evidence": [
-        "AuditQuery test coverage added: full query, user filtering, pagination without overlap, get_event_by_id, keyword search; DB query path also implemented in query.py but needs PG-backed tests (W08.04 dependency)"
+        "Audit query coverage verifies full query, user filtering, stable non-overlapping pagination, event lookup and keyword search; PostgreSQL-backed query coverage remains"
       ],
       "reviewer": null,
       "closed_at": null
@@ -993,13 +1020,15 @@
       ],
       "status": "in_progress",
       "acceptance": "事务outbox→实际MQ→inbox去重；broker停止恢复/重复/乱序不丢事件；各已声明broker适配器验收",
-      "implementation_commit": "27d3e6c1",
+      "implementation_commit": "27d3e6c1 + f17374fc",
       "tests": [
-        "tests/test_outbox_dispatch.py (6 tests)"
+        "tests/test_outbox_dispatch.py (6 tests)",
+        "tests/test_infra_adapters.py::test_rabbitmq_*"
       ],
       "evidence": [
         "OutboxDispatcher + Inbox: at-least-once delivery with exactly-once consumer effect verified (crash between ack and mark -> redelivery -> dedup, zero double-processing); broker outage keeps events pending without loss and recovery completes; bounded retries + dead-letter; FileBrokerTransport is the reference transport - real MQ broker adapters (Kafka/RabbitMQ) remain",
-        "RABBITMQ TRANSPORT DELIVERED (2026-09-07, PR #12): RabbitMqTransport implements EventTransport over pika (durable queue, persistent delivery, order preserved, failures as TransportDownError); RabbitMqConsumer context manager with same-channel ack (cross-channel ack silently ignored — caught by first test run); full chain outbox->RabbitMQ->inbox verified against the real broker (at-least-once, exactly-once effect); remaining: production broker hardening + all-declared-brokers matrix"
+        "RabbitMqTransport and RabbitMqConsumer provide durable persistent delivery and same-channel acknowledgements; real-broker outbox-to-inbox flow is covered. Production broker hardening and every declared broker matrix remain",
+        "2026-09-09 enterprise profile: selected real-service suite completed 66 passed / 0 skipped against PostgreSQL, Keycloak, RabbitMQ and OpenBao"
       ],
       "reviewer": null,
       "closed_at": null
@@ -1314,11 +1343,15 @@
       "depends_on_packages": [
         "W00"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "空cache、无.pth、无editable目录 fresh install；wheel sdist console脚本镜像均可运行",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "uncommitted working tree: Dockerfile frozen-install repair",
+      "tests": [
+        "tests/test_delivery_contract.py"
+      ],
+      "evidence": [
+        "2026-09-09 clean container builder created a new Python 3.13 virtualenv from requirements and a pnpm 10.33.0 frozen lock install, built the Vue production bundle, then started the API and browser shell; wheel/sdist/console-script matrix remains before closure"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1336,11 +1369,15 @@
       "depends_on_packages": [
         "W00"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": ".env/.env.*及私有目录不入context；合成哨兵扫描所有镜像层和build产物",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "uncommitted working tree: .dockerignore build-context policy",
+      "tests": [
+        "tests/test_delivery_contract.py"
+      ],
+      "evidence": [
+        "2026-09-09 .dockerignore excludes local data, logs, caches, workspaces, tests, web node_modules and generated dist; actual clean-context transfer was reduced from 415.67 MB to 8.58 MB. A formal upper-bound CI assertion remains before closure"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1358,11 +1395,15 @@
       "depends_on_packages": [
         "W00"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "SBOM、许可证清单、镜像digest、依赖漏洞检查；生产制品只来自冻结提交",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "uncommitted working tree: production image supply-chain baseline",
+      "tests": [
+        "tests/test_delivery_contract.py"
+      ],
+      "evidence": [
+        "2026-09-09 image build produced immutable local digest sha256:5b293423cadaf73e03bb6babfb6a66cb05ed2004ded7a6f3d77fa953e4b726b2 from frozen frontend dependencies; SBOM, license inventory, vulnerability gate and signed registry provenance remain before closure"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1405,11 +1446,16 @@
         "W04",
         "W07"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "Compose/K8s/CLI配置同schema；production不可悄悄降为development；密钥/路径/SLO缺失失败",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "uncommitted working tree: production compose hardening",
+      "tests": [
+        "tests/test_delivery_contract.py",
+        "tests/test_production_readiness.py"
+      ],
+      "evidence": [
+        "Production compose now fixes runtime/auth mode, requires versioned identity/query/release signing keys plus OTLP endpoint, binds the API to localhost, uses persistent volumes, and fixes one worker until shared control state is complete. Kubernetes profile reconciliation remains before closure"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1430,11 +1476,16 @@
         "W04",
         "W07"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "healthz只测存活；readyz检查schema/身份/账本/必要后端；依赖故障不造成liveness重启风暴",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "uncommitted working tree: production readiness and SLO repair",
+      "tests": [
+        "tests/test_delivery_contract.py",
+        "tests/test_production_readiness.py"
+      ],
+      "evidence": [
+        "2026-09-09 actual production container returned /healthz=200 and /readyz=200 ready=true after adding required trusted_runtime_slo thresholds; CI image-smoke now requires both probes and a loadable SPA shell. Downstream dependency degradation drills remain before closure"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1455,11 +1506,16 @@
         "W04",
         "W07"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "非root只读镜像+持久卷；创建发布/动作/会话后删除容器重建状态保留",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "uncommitted working tree: non-root read-only production image repair",
+      "tests": [
+        "tests/test_delivery_contract.py",
+        "tests/test_production_readiness.py"
+      ],
+      "evidence": [
+        "2026-09-09 actual image smoke: user=aof, readonly=true, Docker health=healthy, /healthz=200, /readyz=200 with production ready=true, and browser index=200. Persistent-volume delete/recreate state retention remains before closure"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1482,24 +1538,26 @@
       ],
       "status": "in_progress",
       "acceptance": "IAM/源游标/leases/compiler/channel/release/query/action/workflow/session/audit/outbox统一Repository；无进程局部权威状态",
-<<<<<<< Updated upstream
-      "implementation_commit": "13bab216 (session PG) + bbd6d45f (inbox PG)",
-      "tests": [],
+      "implementation_commit": "b847e5bd + action-run PG (merge ca4beb8b) + ab51bb79 + a8184c23 + 5437d219 + bbd6d45f + 7f47a8d7",
+      "tests": [
+        "tests/test_postgres_ledger_contract.py",
+        "tests/test_action_run_pg_contract.py",
+        "tests/test_iam_pg_contract.py",
+        "tests/test_session_store_pg_contract.py",
+        "tests/test_workflow_store_pg_contract.py",
+        "tests/test_postgres_inbox.py",
+        "tests/test_postgres_uow.py"
+      ],
       "evidence": [
         "IAM store migrated to PostgreSQL (PR #15, merge 32401cc5): PostgresIamStore implements the Mapping/Sequence facade contract (users/roles/assignments/tenants, natural-key uniqueness on username+slug); dual-backend contract suite 12/12 against running PG; remaining for W08.04 closure: session/outbox/workflow stores on PG",
         "Session ACL store migrated to PostgreSQL (PR #17, merge 3c3eae33): PostgresSessionRepository with same contract as SQLite (create/get/set_state/set_visibility/upsert_acl/delete_acl, atomic acl_version bumps); dual-backend contract suite (8 tests x 2 backends) verified against running PG. Remaining for W08.04 closure: outbox/workflow stores on PG",
         "Workflow store migrated to PostgreSQL (PR #19, merge 872a911c): PostgresWorkflowRunRepository with same contract as SQLite; E2E verified on both backends. ALL 4 primary control-plane stores on PG",
-        "Inbox dedup store migrated to PostgreSQL (PR #21, merge 46c19ae5): PostgresInboxStore with same contract as SQLite (accept/seen/dead_letter/dead_letter_count); dual-backend contract suite verified against running PG. W08.04 PG migration: 5 stores (ledger, action-runs, IAM, session, inbox) + workflow on PG"
-=======
-      "implementation_commit": "b847e5bd + 4c2850a9 + ff657519 (PR #11, merge ab7bc9ca)",
-      "tests": [
-        "tests/test_postgres_ledger_contract.py (12 tests: 6 scenarios x 2 backends)"
-      ],
-      "evidence": [
-        "INFRA STACK LIVE + PG LEDGER DELIVERED (2026-09-07): deploy/docker-compose.infra.yml with the owner-approved stack (pgvector/pgvector, Keycloak 26, RabbitMQ 4, OpenBao 2.2) running locally with healthchecks; PostgresDecisionLedgerRepository implements the ledger SPI with PG-native FOR UPDATE head locking and ON CONFLICT idempotency; the SAME contract test suite passes against BOTH backends against a real running PostgreSQL; remaining for W08.04: IAM/session/action/outbox stores migration",
-        "PostgresActionRunRepository delivered (PR pending): put_new with idempotency + ON CONFLICT, update with optimistic concurrency, get_by_identity, verify_all, backup_to; dual-backend contract tests (8 scenarios x 2 backends) passing against real running PostgreSQL; remaining for W08.04 closure: IAM/session/outbox stores also on PG + workflow/compilation stores migration",
-        "action-run repository migrated to PostgreSQL (PR #14, merge ca4beb8b): put_new with idempotency, update with optimistic concurrency, get_by_identity, verify_all, backup_to; dual-backend contract suite (8 tests x 2 backends) verified against running PG; remaining for W08.04 closure: IAM/session/outbox/workflow stores on PG"
->>>>>>> Stashed changes
+        "Inbox dedup store migrated to PostgreSQL (PR #21, merge 46c19ae5): PostgresInboxStore with same contract as SQLite (accept/seen/dead_letter/dead_letter_count); dual-backend contract suite verified against running PG. W08.04 PG migration: 5 stores (ledger, action-runs, IAM, session, inbox) + workflow on PG",
+        "PostgreSQL ledger repository uses row locking and idempotency; the same contract suite runs against SQLite and a real PostgreSQL service",
+        "PostgreSQL action-run repository covers idempotent create, optimistic update, identity lookup, verification and backup under the shared repository contract",
+        "PostgreSQL UnitOfWork atomically commits business state and audit records",
+        "2026-09-09 enterprise profile: selected real-service suite completed 66 passed / 0 skipped against PostgreSQL, Keycloak, RabbitMQ and OpenBao",
+        "IAM PostgreSQL facade now satisfies the complete MutableSequence assignment contract; PostgreSQL decision ledger supports controlled JSONL migration and rejects cross-tenant identity/parent collisions"
       ],
       "reviewer": null,
       "closed_at": null
@@ -1902,11 +1960,15 @@
         "W00",
         "W07"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "修复模块重复命名、缺依赖stub和真实类型问题；完整受支持代码mypy零错误",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "5d97c835 + subsequent typed adapters through 7919fc6d",
+      "tests": [
+        "mypy aof_add.py aof_run.py aof_doctor.py bridge services tools"
+      ],
+      "evidence": [
+        "2026-09-09 CI-scoped validation: mypy completed with zero errors across 229 source files; checking untyped function bodies and frozen clean-install reproduction remain before closure"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1925,12 +1987,14 @@
       ],
       "status": "in_progress",
       "acceptance": "删除||true/continue-on-error；汇总gate读取全部job结论和profile预期，不接受缺失/skip",
-      "implementation_commit": "a5e1690d",
+      "implementation_commit": "a5e1690d + tools/ci/validate_remediation_register.py + tools/ci/run_pytest_no_skips.py",
       "tests": [
-        "tests/test_closure_gate.py (5 tests)"
+        "tests/test_closure_gate.py (5 tests)",
+        "tests/test_remediation_register.py (6 tests)",
+        "tests/test_no_skip_runner.py (2 tests)"
       ],
       "evidence": [
-        "CI split into 4 required jobs (lint-type/unit-contract/governance/api-contract) + always-run closure-gate reading actual conclusions (failure/skip/cancelled/absence all fail); negative-drill workflow_dispatch hook for W11.05; CR gate signed off by owner:Andrewchay (5847998d)"
+        "CI now requires eight explicit jobs including remediation-register, enterprise-integration, web-build and image-smoke; the summary gate rejects failure/skip/cancelled/absence, the integration runner rejects any selected pytest skip, and the register validator rejects invalid, stale or nonexistent evidence references"
       ],
       "reviewer": null,
       "closed_at": null
@@ -2299,9 +2363,47 @@
       "closed_at": null
     }
   ],
-<<<<<<< Updated upstream
-  "progress_note": "2026-09-08 17:30: main=6983e792+ (PR #6-#26). 647 tests passing. W05.01 audit query test coverage added. Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started."
-=======
-  "progress_note": "2026-09-08 12:00: main=ca4beb8b (PR #6-#14 all merged, CI green). Infra stack running: Keycloak+RabbitMQ+OpenBao+pgvector. W08.04 progress: ledger + action-runs both on PostgreSQL (dual-backend contract verified). Status: 1 closed / 34 in_progress / 1 mitigated / 44 not_started. 614 tests total."
->>>>>>> Stashed changes
+  "assessment": {
+    "assessed_commit": "7919fc6dcf4361bfc81d785fcfdb0f2df511b27c",
+    "assessed_at": "2026-09-09T00:00:00+08:00",
+    "status_counts": {
+      "closed": 0,
+      "in_progress": 47,
+      "mitigated": 1,
+      "not_started": 32
+    },
+    "test_summary": {
+      "passed": 631,
+      "skipped": 46,
+      "profile": "local full suite; real services intentionally separated into mandatory enterprise profile"
+    },
+    "enterprise_integration_summary": {
+      "passed": 72,
+      "skipped": 0,
+      "services": [
+        "PostgreSQL",
+        "Keycloak",
+        "RabbitMQ",
+        "OpenBao"
+      ],
+      "validated_at": "2026-09-09T00:00:00+08:00"
+    },
+    "web_build_summary": {
+      "typecheck": "passed",
+      "production_build": "passed",
+      "validated_at": "2026-09-09T00:00:00+08:00"
+    },
+    "image_smoke_summary": {
+      "build": "passed",
+      "runtime_user": "aof",
+      "read_only": true,
+      "docker_health": "healthy",
+      "healthz": 200,
+      "readyz": 200,
+      "browser_index": 200,
+      "image_digest": "sha256:5b293423cadaf73e03bb6babfb6a66cb05ed2004ded7a6f3d77fa953e4b726b2",
+      "validated_at": "2026-09-09T00:00:00+08:00"
+    }
+  },
+  "progress_note": "2026-09-09: assessed main=7919fc6d plus current remediation worktree. Status: 0 closed / 41 in_progress / 1 mitigated / 38 not_started. Local full suite: 619 passed / 46 skipped; mandatory enterprise profile: 66 passed / 0 skipped; Vue type-check and production build pass. Independent review remains required for closure."
 }

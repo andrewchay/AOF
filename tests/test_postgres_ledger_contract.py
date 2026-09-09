@@ -12,6 +12,7 @@ without the stack) — CI with the stack always runs them.
 from __future__ import annotations
 
 import socket
+import json
 
 import pytest
 
@@ -40,7 +41,9 @@ def _pg_available() -> bool:
         return False
 
 
-def _make_entry(repo, tenant_id: str, decision_id: str) -> object:
+def _make_entry(
+    repo, tenant_id: str, decision_id: str, parent_decision_ids: list[str] | None = None
+) -> object:
     head = repo.head(tenant_id)
     sequence = (head[0] + 1) if head else 1
     previous_hash = head[1] if head else None
@@ -55,7 +58,7 @@ def _make_entry(repo, tenant_id: str, decision_id: str) -> object:
         "tenant_id": tenant_id,
         "session_id": None,
         "evidence": [],
-        "parent_decision_ids": [],
+        "parent_decision_ids": parent_decision_ids or [],
         "output_entities": [],
         "tags": [],
         "policies": [],
@@ -135,9 +138,52 @@ def test_tenant_chain_isolation_both_backends(repo):
     assert repo.head("tb")[0] == 1
 
 
+def test_cross_tenant_identity_and_parent_are_rejected_both_backends(repo):
+    repo.append(_make_entry(repo, "tenant-a", "decision:shared"))
+    with pytest.raises(LedgerConflictError, match="another tenant"):
+        repo.append(_make_entry(repo, "tenant-b", "decision:shared"))
+    with pytest.raises(LedgerConflictError, match="cross-tenant parent"):
+        repo.append(
+            _make_entry(
+                repo,
+                "tenant-b",
+                "decision:child",
+                parent_decision_ids=["decision:shared"],
+            )
+        )
+
+
 def test_chain_verification_both_backends(repo):
     for i in range(4):
         repo.append(_make_entry(repo, "tv", f"decision:pg-v{i}"))
     result = repo.verify_chain("tv")
     assert result["valid"]
     assert result["entries_checked"] == 4
+
+
+def test_jsonl_migration_and_quarantine_both_backends(repo, tmp_path):
+    decision = {
+        "id": "decision:migrated",
+        "tenant_id": "tenant-m",
+        "recorded_at": "2026-09-09T00:00:00+00:00",
+        "conclusion": "ok",
+    }
+    payload = {"decision": decision, "previous_hash": None}
+    source = tmp_path / "legacy.jsonl"
+    source.write_text(
+        json.dumps({**payload, "integrity": {"hash": _hash(payload)}})
+        + "\n"
+        + "{invalid json\n",
+        encoding="utf-8",
+    )
+
+    first = repo.migrate_from_jsonl(source)
+    assert first["input_lines"] == 2
+    assert first["imported"] == 1
+    assert first["quarantined"] == 1
+    assert first["duplicates"] == 0
+    assert repo.verify_chain("tenant-m")["valid"]
+
+    second = repo.migrate_from_jsonl(source)
+    assert second["imported"] == 0
+    assert second["duplicates"] == 1

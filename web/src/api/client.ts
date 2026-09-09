@@ -8,6 +8,7 @@
  * by the Apache License, Version 2.0.
  */
 import axios, { type AxiosInstance } from 'axios'
+import { getAccessToken } from './oidc'
 
 export const PRINCIPAL_STORAGE_KEY = 'aof.semantic-principal-headers'
 
@@ -38,7 +39,7 @@ const client: AxiosInstance = axios.create({
 
 client.interceptors.request.use((config) => {
   // W01.02: prefer OIDC Bearer token if present
-  const oidcToken = localStorage.getItem('aof.oidc-access-token')
+  const oidcToken = getAccessToken()
   if (oidcToken) {
     config.headers.set('Authorization', `Bearer ${oidcToken}`)
     return config

@@ -131,6 +131,37 @@ def test_d01_cross_tenant_read_not_leaked(decision_client, tmp_path, monkeypatch
     assert same.status_code == 200
 
 
+def test_d01_cross_tenant_parent_reference_rejected(decision_client, tmp_path, monkeypatch):
+    """A tenant cannot create a causal edge to another tenant's decision."""
+    client, verifier = decision_client
+    monkeypatch.setenv('AOF_DECISION_PROVENANCE_FILE', str(tmp_path / 'ledger.jsonl'))
+    created = client.post(
+        '/v1/decisions',
+        json={
+            'agent_id': 'ignored',
+            'decision_type': 'parent',
+            'conclusion': 'tenant a',
+            'rationale': 'r',
+        },
+        headers=_headers(verifier, subject='user-a', tenant='tenant-a'),
+    )
+    parent_id = created.json()['decision']['id']
+
+    child = client.post(
+        '/v1/decisions',
+        json={
+            'agent_id': 'ignored',
+            'decision_type': 'child',
+            'conclusion': 'tenant b',
+            'rationale': 'r',
+            'parent_decision_ids': [parent_id],
+        },
+        headers=_headers(verifier, subject='user-b', tenant='tenant-b'),
+    )
+    assert child.status_code == 422
+    assert 'cross-tenant parent' in child.json()['detail']
+
+
 def test_d01_precedent_search_forced_to_caller_tenant(decision_client, tmp_path, monkeypatch):
     """先例搜索不能通过 body tenant_id 越租户。"""
     client, verifier = decision_client

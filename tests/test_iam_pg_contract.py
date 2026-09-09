@@ -81,6 +81,36 @@ def test_assignment_append_and_iterate(store):
     assert [a.user_id for a in store.assignments] == ["u1", "u2"]
 
 
+def test_assignment_sequence_supports_mutable_sequence_contract(store):
+    from bridge.auth.models import ResourceType, UserRoleAssignment
+
+    def assignment(user_id: str):
+        return UserRoleAssignment(
+            user_id=user_id,
+            role_id="r1",
+            resource_type=ResourceType.DATASET,
+        )
+
+    store.assignments.append(assignment("u1"))
+    store.assignments.append(assignment("u2"))
+    store.assignments.insert(1, assignment("middle"))
+    assert [value.user_id for value in store.assignments] == ["u1", "middle", "u2"]
+
+    store.assignments[-1] = assignment("last")
+    assert store.assignments[-1].user_id == "last"
+
+    store.assignments[1:2] = [assignment("slice-a"), assignment("slice-b")]
+    assert [value.user_id for value in store.assignments] == [
+        "u1",
+        "slice-a",
+        "slice-b",
+        "last",
+    ]
+
+    del store.assignments[1]
+    assert [value.user_id for value in store.assignments] == ["u1", "slice-b", "last"]
+
+
 def test_tenant_slug_unique(store):
     from bridge.persistence.sqlite_iam_store import IamStoreError
     store.tenants["t1"] = _tenant("t1", "acme-corp")

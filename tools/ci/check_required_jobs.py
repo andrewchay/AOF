@@ -29,6 +29,10 @@ REQUIRED_JOBS = (
     'unit-contract',
     'governance',
     'api-contract',
+    'remediation-register',
+    'enterprise-integration',
+    'web-build',
+    'image-smoke',
 )
 
 ACCEPTABLE = {'success'}

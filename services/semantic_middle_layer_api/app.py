@@ -279,6 +279,18 @@ def _auth_strict_mode() -> bool:
 _API_MINIMUM_ANONYMOUS_PATHS = {'/healthz', '/readyz'}
 _API_PUBLIC_PREFIXES = ('/docs', '/openapi.json', '/redoc')
 _API_PUBLIC_PATHS: set[str] = set(_API_MINIMUM_ANONYMOUS_PATHS)
+# The browser shell and its immutable bundles must load before OIDC can start.
+# Keep this list explicit so an unknown API-like path never becomes anonymous.
+_WEB_PUBLIC_PATHS = {
+    '/',
+    '/ingest',
+    '/okf',
+    '/graph',
+    '/ontology',
+    '/runtime',
+    '/agent',
+    '/harness',
+}
 try:
     from bridge.access.operation_registry import load_registry as _load_operation_registry
 
@@ -301,7 +313,12 @@ async def auth_middleware(request: Request, call_next):
     if not _auth_strict_mode():
         return await call_next(request)
     path = request.url.path
-    if path in _API_PUBLIC_PATHS or path.startswith(_API_PUBLIC_PREFIXES):
+    if (
+        path in _API_PUBLIC_PATHS
+        or path in _WEB_PUBLIC_PATHS
+        or path.startswith(_API_PUBLIC_PREFIXES)
+        or path.startswith('/assets/')
+    ):
         return await call_next(request)
 
     # W01.01: authenticate, then authorize against the per-operation policy
@@ -4438,11 +4455,8 @@ async def record_decision(req: DecisionRecordReq, request: Request) -> dict[str,
 @app.get('/v1/decisions/{decision_id}')
 async def get_decision(decision_id: str, request: Request) -> dict[str, Any]:
     principal = _decision_principal(request, 'read')
-    entry = _decision_store().get(decision_id)
+    entry = _decision_store().get(decision_id, tenant_id=principal.tenant_id)
     if entry is None:
-        raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
-    # Tenant isolation: only return decisions belonging to the caller's tenant
-    if entry.get('decision', {}).get('tenant_id') != principal.tenant_id:
         raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
     return entry
 
@@ -4451,13 +4465,12 @@ async def get_decision(decision_id: str, request: Request) -> dict[str, Any]:
 async def decision_causal_chain(decision_id: str, request: Request, direction: str = Query('ancestors'), max_depth: int = Query(8, ge=1, le=50)) -> dict[str, Any]:
     principal = _decision_principal(request, 'read')
     try:
-        result = _decision_store().causal_chain(decision_id, direction=direction, max_depth=max_depth)
-        # Filter nodes to only include caller's tenant
-        result['nodes'] = [
-            node for node in result.get('nodes', [])
-            if node.get('decision', {}).get('tenant_id') == principal.tenant_id
-        ]
-        return result
+        return _decision_store().causal_chain(
+            decision_id,
+            direction=direction,
+            max_depth=max_depth,
+            tenant_id=principal.tenant_id,
+        )
     except HTTPException:
         raise
     except Exception as exc:
@@ -4477,13 +4490,9 @@ async def search_decision_precedents(req: DecisionPrecedentReq, request: Request
 async def decision_impact(req: DecisionImpactReq, request: Request) -> dict[str, Any]:
     principal = _decision_principal(request, 'read')
     try:
-        result = _decision_store().impact(**req.model_dump())
-        # Filter nodes to only include caller's tenant
-        result['nodes'] = [
-            node for node in result.get('nodes', [])
-            if node.get('decision', {}).get('tenant_id') == principal.tenant_id
-        ]
-        return result
+        return _decision_store().impact(
+            **req.model_dump(), tenant_id=principal.tenant_id
+        )
     except HTTPException:
         raise
     except Exception as exc:
@@ -4494,14 +4503,9 @@ async def decision_impact(req: DecisionImpactReq, request: Request) -> dict[str,
 async def decision_audit_trail(decision_id: str, request: Request) -> dict[str, Any]:
     principal = _decision_principal(request, 'read')
     try:
-        result = _decision_store().audit_trail(decision_id)
-        # Filter causal chain nodes to only include caller's tenant
-        if 'causal_chain' in result:
-            result['causal_chain']['nodes'] = [
-                node for node in result['causal_chain'].get('nodes', [])
-                if node.get('decision', {}).get('tenant_id') == principal.tenant_id
-            ]
-        return result
+        return _decision_store().audit_trail(
+            decision_id, tenant_id=principal.tenant_id
+        )
     except HTTPException:
         raise
     except Exception as exc:

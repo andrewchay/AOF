@@ -22,10 +22,16 @@ services:
       - AOF_ROOT=/app/AOF
       # D04/W01.04: production hard gate - runtime mode, auth mode and signing
       # keys are required; compose will fail fast with unset ${VAR:?} placeholders
-      - AOF_RUNTIME_MODE=${AOF_RUNTIME_MODE:?production required}
+      - AOF_RUNTIME_MODE=production
       - AOF_API_AUTH_MODE=strict
       - AOF_SEMANTIC_IDENTITY_SECRET=${AOF_SEMANTIC_IDENTITY_SECRET:?required}
-      - AOF_SEMANTIC_IDENTITY_KEY_ID=${AOF_SEMANTIC_IDENTITY_KEY_ID:-identity-key-default}
+      - AOF_SEMANTIC_IDENTITY_KEY_ID=${AOF_SEMANTIC_IDENTITY_KEY_ID:?versioned key id required}
+      - AOF_QUERY_EVIDENCE_SIGNING_SECRET=${AOF_QUERY_EVIDENCE_SIGNING_SECRET:?required}
+      - AOF_QUERY_EVIDENCE_SIGNING_KEY_ID=${AOF_QUERY_EVIDENCE_SIGNING_KEY_ID:?versioned key id required}
+      - AOF_RELEASE_SIGNING_SECRET=${AOF_RELEASE_SIGNING_SECRET:?required}
+      - AOF_RELEASE_SIGNING_KEY_ID=${AOF_RELEASE_SIGNING_KEY_ID:?versioned key id required}
+      - AOF_OTEL_EXPORTER_OTLP_ENDPOINT=${AOF_OTEL_EXPORTER_OTLP_ENDPOINT:?required}
+      - AOF_SLO_TARGETS_FILE=/app/AOF/config/observability/slo_targets.yaml
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_PROVIDER=${LLM_PROVIDER:-custom}
       - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-chat}
@@ -33,7 +39,9 @@ services:
       - COGNEE_ROOT=${COGNEE_ROOT:-}
       - PYTHONUNBUFFERED=1
       # Production optimizations
-      - UVICORN_WORKERS=2
+      # Keep one worker until every authoritative control state has moved to
+      # PostgreSQL and the multi-replica W08.05 gate is satisfied.
+      - UVICORN_WORKERS=1
       - UVICORN_LOOP=uvloop
     
     volumes:
@@ -42,7 +50,7 @@ services:
       - aof-ontologies:/app/AOF/ontologies
     
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -sf http://localhost:8787/healthz && curl -sf http://localhost:8787/readyz"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8787/healthz', timeout=5).read(); urllib.request.urlopen('http://localhost:8787/readyz', timeout=5).read()"]
       interval: 30s
       timeout: 10s
       retries: 3

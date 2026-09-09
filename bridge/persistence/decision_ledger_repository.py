@@ -210,11 +210,24 @@ class SQLiteDecisionLedgerRepository:
 
         # 2. Idempotency: same decision_id already present?
         existing = connection.execute(
-            "SELECT * FROM decision_entries WHERE tenant_id = ? AND decision_id = ?",
-            (entry.tenant_id, entry.decision_id),
+            "SELECT * FROM decision_entries WHERE decision_id = ?",
+            (entry.decision_id,),
         ).fetchone()
         if existing is not None:
+            if existing["tenant_id"] != entry.tenant_id:
+                raise LedgerConflictError("decision_id is already bound to another tenant")
             return self._row_to_entry(existing)
+
+        parents = entry.payload.get("decision", {}).get("parent_decision_ids", [])
+        for parent_id in parents:
+            parent = connection.execute(
+                "SELECT 1 FROM decision_entries WHERE tenant_id = ? AND decision_id = ?",
+                (entry.tenant_id, parent_id),
+            ).fetchone()
+            if parent is None:
+                raise LedgerConflictError(
+                    f"unknown or cross-tenant parent decision: {parent_id}"
+                )
 
         if entry.sequence != expected_sequence:
             raise LedgerConflictError(

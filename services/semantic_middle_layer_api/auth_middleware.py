@@ -22,7 +22,8 @@ import jwt
 import hashlib
 import hmac
 import logging
-from datetime import datetime, timedelta
+import os
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, Callable, List
 from functools import wraps
 
@@ -45,7 +46,6 @@ logger = logging.getLogger(__name__)
 # ========== 配置 ==========
 
 # JWT 配置
-JWT_SECRET_KEY = "your-secret-key-change-in-production"  # 生产环境应从环境变量读取
 JWT_ALGORITHM = "HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 30
 JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7
@@ -77,6 +77,13 @@ class ExpiredTokenError(AuthError):
 class InvalidAPIKeyError(AuthError):
     """无效 API Key"""
     pass
+
+
+def _jwt_secret() -> str:
+    secret = os.environ.get("JWT_SECRET_KEY", "")
+    if len(secret) < 32:
+        raise AuthError("legacy JWT signing is disabled: JWT_SECRET_KEY must be at least 32 characters")
+    return secret
 
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
@@ -146,7 +153,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     def _verify_jwt_token(self, token: str) -> Dict[str, Any]:
         """验证 JWT Token"""
         try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            payload = jwt.decode(token, _jwt_secret(), algorithms=[JWT_ALGORITHM])
             
             # 检查过期时间
             exp = payload.get("exp")
@@ -172,24 +179,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         if not api_key.startswith(API_KEY_PREFIX):
             raise InvalidAPIKeyError("Invalid API key format")
         
-        # 这里应该查询数据库验证 API Key 的有效性
-        # 简化示例：假设 API Key 有效
-        parts = api_key.split("_")
-        if len(parts) >= 3:
-            tenant_id = parts[1]
-            # 从数据库查询 API Key 对应的用户
-            if self.rbac:
-                # TODO: 实现 API Key 到用户的映射查询
-                user = await self.rbac.get_user_by_username(f"api_{tenant_id}")
-                if user:
-                    return {
-                        "user_id": user.id,
-                        "username": user.username,
-                        "tenant_id": tenant_id,
-                        "auth_method": "api_key",
-                    }
-        
-        raise InvalidAPIKeyError("Invalid API key")
+        # A tenant name embedded in a key is not proof of identity. This
+        # legacy middleware has no credential repository, so it must reject
+        # every key instead of treating a syntactically valid string as valid.
+        raise InvalidAPIKeyError("API key authentication requires a configured credential store")
     
     def _verify_session_token(self, session_token: str) -> Dict[str, Any]:
         """验证 Session Token"""
@@ -227,7 +220,7 @@ class TokenManager:
             "type": "access",
         }
         
-        return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+        return jwt.encode(payload, _jwt_secret(), algorithm=JWT_ALGORITHM)
     
     @staticmethod
     def create_refresh_token(user_id: str, expires_delta: Optional[timedelta] = None) -> str:
@@ -244,12 +237,12 @@ class TokenManager:
             "type": "refresh",
         }
         
-        return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+        return jwt.encode(payload, _jwt_secret(), algorithm=JWT_ALGORITHM)
     
     @staticmethod
     def decode_token(token: str) -> Dict[str, Any]:
-        """解码 Token（不验证签名）"""
-        return jwt.decode(token, options={"verify_signature": False})
+        """Decode and verify a legacy token."""
+        return jwt.decode(token, _jwt_secret(), algorithms=[JWT_ALGORITHM])
 
 
 # ========== 依赖注入函数 ==========
@@ -427,8 +420,9 @@ class RequestSigner:
         """验证请求签名"""
         # 检查时间戳
         try:
-            request_time = datetime.fromtimestamp(int(timestamp))
-            if datetime.utcnow() - request_time > timedelta(seconds=max_age_seconds):
+            request_time = datetime.fromtimestamp(int(timestamp), tz=timezone.utc)
+            age = abs(datetime.now(timezone.utc) - request_time)
+            if age > timedelta(seconds=max_age_seconds):
                 return False
         except (ValueError, TypeError):
             return False
@@ -479,58 +473,23 @@ class UserInfoResponse(BaseModel):
 
 
 @auth_router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest, rbac: RBACManager = Depends(lambda: None)):
-    """用户登录（示例实现）"""
-    # TODO: 验证用户名密码
-    # 这里简化处理，实际应从数据库验证
-    
-    # 假设验证通过
-    user_id = "user_123"
-    tenant_id = "tenant_456"
-    
-    # 生成 Token
-    access_token = TokenManager.create_access_token(
-        user_id=user_id,
-        username=request.username,
-        tenant_id=tenant_id,
-    )
-    refresh_token = TokenManager.create_refresh_token(user_id=user_id)
-    
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        expires_in=JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
+async def login(request: LoginRequest):
+    """Retired local-password endpoint; interactive users authenticate at the IdP."""
+    del request
+    raise HTTPException(
+        status_code=410,
+        detail="Local password login is retired; use OIDC authorization code with PKCE",
     )
 
 
 @auth_router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(refresh_token: str):
-    """刷新访问 Token"""
-    try:
-        payload = jwt.decode(refresh_token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        
-        if payload.get("type") != "refresh":
-            raise HTTPException(status_code=401, detail="Invalid token type")
-        
-        user_id = payload.get("sub")
-        
-        # 生成新的访问 Token
-        access_token = TokenManager.create_access_token(
-            user_id=user_id,
-            username="",  # 应从数据库查询
-        )
-        new_refresh_token = TokenManager.create_refresh_token(user_id=user_id)
-        
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=new_refresh_token,
-            expires_in=JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
-        )
-        
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Refresh token has expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    """Retired local refresh endpoint; token lifecycle belongs to the IdP."""
+    del refresh_token
+    raise HTTPException(
+        status_code=410,
+        detail="Local refresh tokens are retired; use the configured OIDC provider",
+    )
 
 
 @auth_router.get("/me", response_model=UserInfoResponse)
