@@ -97,6 +97,9 @@ jobs:
       - name: API documentation drift
         run: python tools/export_openapi.py --check
 
+      - name: Capability inventory drift
+        run: python tools/ci/generate_capability_inventory.py --check
+
   remediation-register:
     runs-on: ubuntu-latest
     steps:

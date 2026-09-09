@@ -31,7 +31,6 @@ import asyncio
 import json
 import os
 import sys
-import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Awaitable, Callable
@@ -138,21 +137,25 @@ class McpServer:
     async def _handle_tool_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         tool = self.tools.get(name)
         if not tool:
-            return {
-                "content": [{"type": "text", "text": f"Error: Unknown tool: {name}"}],
-                "isError": True,
-            }
+            return _mcp_error("tool_not_found", f"unknown MCP tool: {name}")
 
         try:
-            result = await tool.handler(arguments)
+            if not isinstance(arguments, dict):
+                raise McpRequestError("tool arguments must be an object")
+            principal = _authorize_mcp_call(name, arguments)
+            _validate_mcp_arguments(tool, arguments)
+            bound_arguments = _bind_mcp_identity(name, arguments, principal)
+            result = await tool.handler(bound_arguments)
             text = json.dumps(result, ensure_ascii=False, indent=2, default=str)
             return {"content": [{"type": "text", "text": text}], "isError": False}
+        except McpAuthenticationError as exc:
+            return _mcp_error("authentication_required", str(exc))
+        except McpAuthorizationError as exc:
+            return _mcp_error("operation_not_permitted", str(exc))
+        except McpRequestError as exc:
+            return _mcp_error("invalid_arguments", str(exc))
         except Exception as e:
-            traceback_str = traceback.format_exc()
-            return {
-                "content": [{"type": "text", "text": f"Error: {e}\n{traceback_str}"}],
-                "isError": True,
-            }
+            return _mcp_error("tool_execution_failed", str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -167,6 +170,146 @@ def _load_spec() -> dict[str, Any]:
     if p.exists():
         return json.loads(p.read_text(encoding="utf-8"))
     return {}
+
+
+class McpAuthenticationError(PermissionError):
+    """The MCP request has no valid, active signed principal."""
+
+
+class McpAuthorizationError(PermissionError):
+    """The signed principal cannot perform the requested MCP operation."""
+
+
+class McpRequestError(ValueError):
+    """The authenticated MCP request does not satisfy the tool contract."""
+
+
+_MCP_IDENTITY_FIELDS: dict[str, dict[str, str]] = {
+    "aof_record_decision": {"agent_id": "subject", "tenant_id": "tenant"},
+    "aof_decision_audit_trail": {"tenant_id": "tenant"},
+    "aof_find_decision_precedents": {"tenant_id": "tenant"},
+    "aof_ontology_create_draft": {"created_by": "create"},
+    "aof_ontology_validate_draft": {"actor": "validate"},
+    "aof_ontology_waive_finding": {"actor": "waive"},
+    "aof_ontology_approve_draft": {"approver": "approve"},
+    "aof_ontology_request_changes": {"reviewer": "request_changes"},
+    "aof_ontology_publish_draft": {"actor": "publish"},
+    "aof_datalog_reason": {"agent_id": "reason"},
+    "aof_publish_datalog_ruleset": {"actor": "publish"},
+    "aof_run_datalog_ruleset": {"agent_id": "reason"},
+}
+
+_MCP_PASSTHROUGH_PRINCIPAL_HEADERS = {
+    "aof_semantic_query",
+    "aof_semantic_query_replay",
+    "aof_semantic_query_get_run",
+    "aof_semantic_compile_plan",
+    "aof_semantic_compile_evaluate",
+    "aof_semantic_compile_run",
+    "aof_semantic_compile_replay",
+    "aof_semantic_compile_approve_promotion",
+    "aof_semantic_compile_promote",
+    "aof_semantic_compile_rollback",
+    "aof_semantic_compile_get_run",
+    "aof_semantic_compile_get_channel",
+}
+
+
+def _mcp_error(code: str, detail: str) -> dict[str, Any]:
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": json.dumps({"code": code, "detail": detail}, ensure_ascii=False),
+            }
+        ],
+        "isError": True,
+    }
+
+
+def _validate_mcp_arguments(tool: McpTool, arguments: Any) -> None:
+    missing = [
+        field
+        for field in tool.input_schema.get("required", [])
+        if field not in arguments
+    ]
+    if missing:
+        raise McpRequestError(f"missing required arguments: {sorted(missing)}")
+
+
+def _authorize_mcp_call(name: str, arguments: dict[str, Any]):
+    from bridge.access.operation_registry import load_registry
+    from bridge.access.policy import PolicyDenied, authorize
+    from bridge.access.revocations import RevocationRegistry
+    from bridge.semantic_core.identity import PrincipalVerificationError, SignedPrincipalVerifier
+
+    operation = load_registry().get(f"mcp:{name}")
+    if operation is None or operation.public or operation.policy is None:
+        raise McpAuthorizationError("MCP operation is absent from the governed registry")
+    headers = arguments.get("principal_headers")
+    if not isinstance(headers, dict):
+        raise McpAuthenticationError("principal_headers must contain signed principal headers")
+    secret = os.environ.get("AOF_SEMANTIC_IDENTITY_SECRET", "").encode("utf-8")
+    if not secret:
+        raise McpAuthenticationError("identity verifier is not configured")
+    try:
+        principal = SignedPrincipalVerifier(
+            key_id=os.environ.get("AOF_SEMANTIC_IDENTITY_KEY_ID", "identity-key-default"),
+            secret=secret,
+        ).verify({str(key): str(value) for key, value in headers.items()})
+    except PrincipalVerificationError as exc:
+        raise McpAuthenticationError(str(exc)) from exc
+    revocations = RevocationRegistry()
+    if revocations.is_revoked("subject", principal.subject):
+        raise McpAuthenticationError("signed principal subject is revoked")
+    if revocations.is_revoked("tenant", principal.tenant_id):
+        raise McpAuthenticationError("signed principal tenant is revoked")
+    try:
+        authorize(operation.policy, principal.roles)
+    except PolicyDenied as exc:
+        raise McpAuthorizationError(str(exc)) from exc
+    return principal
+
+
+def _bind_mcp_identity(name: str, arguments: dict[str, Any], principal) -> dict[str, Any]:
+    payload = dict(arguments)
+    if name not in _MCP_PASSTHROUGH_PRINCIPAL_HEADERS:
+        payload.pop("principal_headers", None)
+    for field, action in _MCP_IDENTITY_FIELDS.get(name, {}).items():
+        if field in payload:
+            raise McpAuthorizationError(f"{field} is derived from the signed principal")
+        try:
+            if action == "tenant":
+                payload[field] = principal.tenant_id
+            elif action == "subject":
+                payload[field] = principal.subject
+            else:
+                payload[field] = principal.actor_for(action)
+        except Exception as exc:
+            raise McpAuthorizationError(str(exc)) from exc
+    return payload
+
+
+def _secure_mcp_schemas(server: McpServer) -> None:
+    principal_schema = {
+        "type": "object",
+        "description": "Identity-gateway signed X-AOF principal headers.",
+    }
+    for name, tool in server.tools.items():
+        schema = tool.input_schema
+        properties = schema.setdefault("properties", {})
+        identity_fields = _MCP_IDENTITY_FIELDS.get(name, {})
+        for field in identity_fields:
+            properties.pop(field, None)
+        properties["principal_headers"] = principal_schema
+        required = [
+            field
+            for field in schema.setdefault("required", [])
+            if field not in identity_fields
+        ]
+        if "principal_headers" not in required:
+            required.append("principal_headers")
+        schema["required"] = required
 
 
 async def _tool_hybrid_search(args: dict[str, Any]) -> dict[str, Any]:
@@ -363,7 +506,9 @@ async def _tool_record_decision(args: dict[str, Any]) -> dict[str, Any]:
 async def _tool_decision_audit_trail(args: dict[str, Any]) -> dict[str, Any]:
     """Return a causally complete, integrity-checked compliance trail."""
     from bridge.decision_provenance import DecisionProvenanceStore
-    return DecisionProvenanceStore().audit_trail(args["decision_id"])
+    return DecisionProvenanceStore().audit_trail(
+        args["decision_id"], tenant_id=args["tenant_id"]
+    )
 
 
 async def _tool_find_decision_precedents(args: dict[str, Any]) -> dict[str, Any]:
@@ -1158,6 +1303,11 @@ def build_server() -> McpServer:
 
     _register_semantic_compiler_tools(server)
     _register_semantic_query_tools(server)
+    _secure_mcp_schemas(server)
+
+    from bridge.access.operation_registry import validate_mcp_server
+
+    validate_mcp_server(server)
 
     return server
 

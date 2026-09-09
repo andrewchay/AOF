@@ -26,6 +26,10 @@ P0–P2 提供来源到签名 release 的仓库级基线。P3–P6 已增加受�
 
 ---
 
+<!-- capability-inventory:start -->
+当前交付面由能力清单自动生成：**178 个 HTTP 操作 / 169 个 HTTP 路径 / 37 个 MCP 工具 / 3 个 CLI 入口 / 9 个 UI 路由**。详见 [`config/capabilities/capability-manifest.json`](config/capabilities/capability-manifest.json)。
+<!-- capability-inventory:end -->
+
 ## 历史功能与兼容能力
 
 AOF 是一个**企业级知识工程平台**，支持从多源数据中自动构建、管理和分析知识图谱。基于 Cognee 知识图谱引擎，提供完整的数据摄取、本体构建、智能搜索、图谱分析和**企业级安全**能力。
@@ -116,7 +120,7 @@ AOF 是一个**企业级知识工程平台**，支持从多源数据中自动构
 └─────────────────────────────────────────────────────────────────┘
                               │
 ┌─────────────────────────────────────────────────────────────────┐
-│                        API 层 (51 端点)                          │
+│                        API 层（见自动清单）                          │
 ├─────────────────────────────────────────────────────────────────┤
 │  Ingest │ Sync │ Analytics │ Search │ Visualize │ Tasks │ Audit │
 └─────────────────────────────────────────────────────────────────┘
@@ -386,7 +390,7 @@ python -m pytest tests/test_tasks.py -v
 python -m pytest tests/ --cov=bridge --cov-report=html
 ```
 
-**当前测试状态**: 203 tests ✅ 全部通过
+**当前测试状态**：以 CI 全量与企业零跳过门禁为准
 
 ---
 
@@ -394,7 +398,7 @@ python -m pytest tests/ --cov=bridge --cov-report=html
 
 | 指标 | 数值 |
 |------|------|
-| API 端点 | 51 |
+| API 操作 | 178（自动生成） |
 | Bridge 模块 | 20+ |
 | 搜索类型 | 14 |
 | 社区算法 | 3 |

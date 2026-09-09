@@ -1,20 +1,297 @@
 {
-  "schema_version": "aof.capability-manifest/v1",
-  "generated_from": "config/capabilities/operations.json",
-  "baseline_commit": "bfc1e02d + codex/remediation-b0-security-baseline",
+  "schema_version": "aof.capability-manifest/v3",
+  "generated_from": [
+    "config/capabilities/operations.json",
+    "aof_*.py",
+    "web/src/router/index.ts",
+    ".github/workflows/ci.yml",
+    "requirements*.txt and requirements/*.in",
+    "services/**/requirements*.txt",
+    "web/package.json and web/pnpm-lock.yaml",
+    "deploy/docker-compose*.yml and services/**/docker-compose*.yml",
+    "services/semantic_middle_layer_api/Dockerfile"
+  ],
+  "summary": {
+    "http_operations": 178,
+    "http_paths": 169,
+    "mcp_tools": 37,
+    "cli_entry_points": 3,
+    "ui_routes": 9,
+    "dependency_manifests": 8,
+    "deployment_profiles": 7
+  },
+  "surfaces": {
+    "cli": [
+      "aof_add.py",
+      "aof_doctor.py",
+      "aof_run.py"
+    ],
+    "ui_routes": [
+      "/",
+      "",
+      "ingest",
+      "okf",
+      "graph",
+      "ontology",
+      "runtime",
+      "agent",
+      "harness"
+    ],
+    "dependency_profiles": [
+      {
+        "path": "requirements/cognee.in",
+        "ecosystem": "python",
+        "source_digest": "sha256:a09082f71a0517085c1e28918bdf2530edd4cdcc9c04630060bcdbb78fd51266",
+        "declared_dependencies": [
+          "cognee",
+          "fastembed",
+          "instructor",
+          "kuzu",
+          "lancedb",
+          "litellm"
+        ],
+        "dependency_count": 6
+      },
+      {
+        "path": "requirements/core.in",
+        "ecosystem": "python",
+        "source_digest": "sha256:6a94a89c311422c911202e9b1043141c4cad5b0122def27b65eb3228c63ef449",
+        "declared_dependencies": [
+          "aiofiles",
+          "aiosqlite",
+          "anyio",
+          "fastapi",
+          "httpx",
+          "networkx",
+          "openai",
+          "pika",
+          "psycopg[binary]",
+          "pydantic",
+          "pyjwt[crypto]",
+          "python_dotenv",
+          "pyyaml",
+          "rdflib",
+          "sqlalchemy",
+          "starlette",
+          "structlog",
+          "tenacity",
+          "uvicorn"
+        ],
+        "dependency_count": 19
+      },
+      {
+        "path": "requirements/dev.in",
+        "ecosystem": "python",
+        "source_digest": "sha256:58eadd08f17a3749aea493a316a2d8f7be5baad7db1ee0a0ba79bec1999d7fde",
+        "declared_dependencies": [
+          "black",
+          "coverage",
+          "fakeredis",
+          "mypy",
+          "pytest",
+          "pytest_asyncio",
+          "pytest_cov",
+          "ruff"
+        ],
+        "dependency_count": 8
+      },
+      {
+        "path": "requirements/observability.in",
+        "ecosystem": "python",
+        "source_digest": "sha256:471bd15ba3fcd4d2aba423def94c12eca117dcf0269d9ff2895c79ad6118521f",
+        "declared_dependencies": [],
+        "dependency_count": 0
+      },
+      {
+        "path": "requirements-dev.txt",
+        "ecosystem": "python",
+        "source_digest": "sha256:f1a0c341a9750b8b3116e23895ae5d3dc437e15f2e8cff02bce46eb03c613550",
+        "declared_dependencies": [
+          "PyYAML",
+          "SQLAlchemy",
+          "black",
+          "cryptography",
+          "fastapi",
+          "httpx",
+          "mypy",
+          "networkx",
+          "pika",
+          "psycopg[binary]",
+          "pydantic",
+          "pyjwt[crypto]",
+          "pytest",
+          "pytest-asyncio",
+          "pytest-cov",
+          "rdflib",
+          "ruff"
+        ],
+        "dependency_count": 17
+      },
+      {
+        "path": "services/semantic_middle_layer_api/requirements.txt",
+        "ecosystem": "python",
+        "source_digest": "sha256:f83f0332a0483e984a2665750f2b37b3b7427ca2fb438e019bc60c0ffb239289",
+        "declared_dependencies": [
+          "fastapi",
+          "httpx",
+          "openai",
+          "opentelemetry-api",
+          "opentelemetry-exporter-otlp",
+          "opentelemetry-sdk",
+          "pydantic",
+          "pyyaml",
+          "rdflib",
+          "uvicorn[standard]"
+        ],
+        "dependency_count": 10
+      },
+      {
+        "path": "web/package.json",
+        "ecosystem": "node",
+        "source_digest": "sha256:5cb9e28f10ed4f6a868cc23c0c2f67a549ee1bac9c9335e999fe89868ecdeba1",
+        "declared_dependencies": [
+          "@element-plus/icons-vue",
+          "@types/node",
+          "@vitejs/plugin-vue",
+          "@vue/tsconfig",
+          "axios",
+          "element-plus",
+          "pinia",
+          "typescript",
+          "vis-data",
+          "vis-network",
+          "vite",
+          "vue",
+          "vue-router",
+          "vue-tsc"
+        ],
+        "dependency_count": 14
+      },
+      {
+        "path": "web/pnpm-lock.yaml",
+        "ecosystem": "node-lock",
+        "source_digest": "sha256:0e2992eabf66913d9615c4473ba855bad654426920d67399e0d06bf277fc135d",
+        "declared_dependencies": [
+          "@element-plus/icons-vue",
+          "axios",
+          "element-plus",
+          "pinia",
+          "vis-data",
+          "vis-network",
+          "vue",
+          "vue-router"
+        ],
+        "dependency_count": 8
+      }
+    ],
+    "deployment_profiles": [
+      {
+        "profile_id": "deploy/docker-compose.infra.yml",
+        "kind": "docker-compose",
+        "source": "deploy/docker-compose.infra.yml",
+        "source_digest": "sha256:eee3576377d5bf9aa816dba9d4e8a6d00ac27a05a71b41ad44b966fcc5c27ced",
+        "services": [
+          "keycloak",
+          "openbao",
+          "postgres",
+          "rabbitmq"
+        ]
+      },
+      {
+        "profile_id": "services/semantic_middle_layer_api/docker-compose.dev.yml",
+        "kind": "docker-compose",
+        "source": "services/semantic_middle_layer_api/docker-compose.dev.yml",
+        "source_digest": "sha256:6c61a900de78ac840b7b6504a6444e329c68e4e72fa8ece53d3acdf4e2054bd9",
+        "services": [
+          "aof-semantic-api"
+        ]
+      },
+      {
+        "profile_id": "services/semantic_middle_layer_api/docker-compose.observability.yml",
+        "kind": "docker-compose",
+        "source": "services/semantic_middle_layer_api/docker-compose.observability.yml",
+        "source_digest": "sha256:5f277b469767a35d6619a302bbf2c0ad02ea1b0b73b2f598b0ba859f68cb2ede",
+        "services": [
+          "alertmanager",
+          "aof-semantic-api",
+          "jaeger",
+          "prometheus"
+        ]
+      },
+      {
+        "profile_id": "services/semantic_middle_layer_api/docker-compose.prod.yml",
+        "kind": "docker-compose",
+        "source": "services/semantic_middle_layer_api/docker-compose.prod.yml",
+        "source_digest": "sha256:184e32f6dcd2f965ce38ebcdd4689080e63ac37789ac504ab33000f246fb0513",
+        "services": [
+          "aof-semantic-api",
+          "nginx"
+        ]
+      },
+      {
+        "profile_id": "services/semantic_middle_layer_api/docker-compose.yml",
+        "kind": "docker-compose",
+        "source": "services/semantic_middle_layer_api/docker-compose.yml",
+        "source_digest": "sha256:d2308900cbb5a40d2f5c1a584e744e2a07a7b026c4a543438dd5800247a5e83d",
+        "services": [
+          "aof-semantic-api"
+        ]
+      },
+      {
+        "profile_id": "ci-required-jobs",
+        "kind": "ci-workflow",
+        "source": ".github/workflows/ci.yml",
+        "source_digest": "sha256:771c1d9a834ced74651a63af39e3b1956f72407b6b67f7eac3edd31abe07e880",
+        "jobs": [
+          "api-contract",
+          "closure-gate",
+          "enterprise-integration",
+          "governance",
+          "image-smoke",
+          "lint-type",
+          "negative-drill",
+          "remediation-register",
+          "unit-contract",
+          "web-build"
+        ]
+      },
+      {
+        "profile_id": "production-image",
+        "kind": "container-image",
+        "source": "services/semantic_middle_layer_api/Dockerfile",
+        "source_digest": "sha256:f48a7aabe523f68128cda129c56d9ad7ab75b2ccdf71331cf9b3e5fecfbd9221"
+      }
+    ]
+  },
   "capabilities": [
+    {
+      "capability_id": "cap:access",
+      "domain": "access",
+      "entry_points": 2,
+      "classifications": [
+        "governed"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "governed",
+      "migration_path": "classify before production enablement",
+      "test_coverage": "operation registry validation"
+    },
     {
       "capability_id": "cap:agentic",
       "domain": "agentic",
-      "entry_points": 7,
+      "entry_points": 10,
       "classifications": [
+        "governed",
         "legacy"
       ],
       "data_ownership": "agentic runs/sessions",
       "owner_role": "领域集成负责人",
       "owner_person": null,
       "related_findings": "D09/K02",
-      "profile": "legacy",
+      "profile": "mixed",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "registry validation + strict gate"
     },
@@ -64,6 +341,21 @@
       "test_coverage": "registry validation + strict gate"
     },
     {
+      "capability_id": "cap:context",
+      "domain": "context",
+      "entry_points": 3,
+      "classifications": [
+        "governed"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "governed",
+      "migration_path": "classify before production enablement",
+      "test_coverage": "operation registry validation"
+    },
+    {
       "capability_id": "cap:datasets",
       "domain": "datasets",
       "entry_points": 4,
@@ -89,7 +381,7 @@
       "owner_role": "安全后端负责人",
       "owner_person": null,
       "related_findings": "D01/D02",
-      "profile": "reference-local",
+      "profile": "governed",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "per-endpoint principal tests"
     },
@@ -179,7 +471,7 @@
       "owner_role": "工程负责人",
       "owner_person": null,
       "related_findings": "tbd",
-      "profile": "legacy",
+      "profile": "diagnostic",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "per-endpoint principal tests"
     },
@@ -209,22 +501,22 @@
       "owner_role": "产品工程负责人",
       "owner_person": null,
       "related_findings": "D03",
-      "profile": "reference-local",
+      "profile": "governed",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "per-endpoint principal tests"
     },
     {
       "capability_id": "cap:mcp-tools",
       "domain": "mcp-tools",
-      "entry_points": 29,
+      "entry_points": 37,
       "classifications": [
-        "legacy"
+        "governed"
       ],
       "data_ownership": "MCP tool surface",
       "owner_role": "产品工程负责人",
       "owner_person": null,
       "related_findings": "D01/D03",
-      "profile": "legacy",
+      "profile": "governed",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "registry validation + strict gate"
     },
@@ -239,7 +531,7 @@
       "owner_role": "工程负责人",
       "owner_person": null,
       "related_findings": "tbd",
-      "profile": "legacy",
+      "profile": "diagnostic",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "per-endpoint principal tests"
     },
@@ -284,7 +576,7 @@
       "owner_role": "SRE负责人",
       "owner_person": null,
       "related_findings": "D04/D11",
-      "profile": "legacy",
+      "profile": "diagnostic",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "per-endpoint principal tests"
     },
@@ -314,7 +606,7 @@
       "owner_role": "工程负责人",
       "owner_person": null,
       "related_findings": "tbd",
-      "profile": "legacy",
+      "profile": "diagnostic",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "per-endpoint principal tests"
     },
@@ -345,7 +637,7 @@
       "owner_role": "产品工程负责人",
       "owner_person": null,
       "related_findings": "D03",
-      "profile": "reference-local",
+      "profile": "mixed",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "per-endpoint principal tests"
     },
@@ -393,6 +685,21 @@
       "profile": "legacy",
       "migration_path": "per-operation policy matrix (W01.01 continuation)",
       "test_coverage": "registry validation + strict gate"
+    },
+    {
+      "capability_id": "cap:web-shell",
+      "domain": "web-shell",
+      "entry_points": 1,
+      "classifications": [
+        "static-hosting"
+      ],
+      "data_ownership": "tbd",
+      "owner_role": "工程负责人",
+      "owner_person": null,
+      "related_findings": "tbd",
+      "profile": "static-hosting",
+      "migration_path": "classify before production enablement",
+      "test_coverage": "operation registry validation"
     }
   ]
 }

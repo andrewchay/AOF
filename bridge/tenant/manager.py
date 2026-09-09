@@ -16,11 +16,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 import re
 from datetime import datetime
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+from typing import Awaitable, Callable, Optional, Dict, Any, List
 from enum import Enum
 import logging
 
@@ -118,6 +119,29 @@ class Tenant:
         }
 
 
+class QuotaExceededError(RuntimeError):
+    """A tenant quota cannot accommodate a requested reservation."""
+
+
+@dataclass(frozen=True)
+class TenantUsage:
+    """Usage measured from authoritative dataset and graph repositories."""
+
+    dataset_count: int
+    total_nodes: int
+    total_edges: int
+
+    @classmethod
+    def from_value(cls, value: "TenantUsage | Dict[str, Any]") -> "TenantUsage":
+        if isinstance(value, cls):
+            return value
+        return cls(
+            dataset_count=int(value["dataset_count"]),
+            total_nodes=int(value["total_nodes"]),
+            total_edges=int(value.get("total_edges", 0)),
+        )
+
+
 class TenantManager:
     """租户管理器
     
@@ -137,10 +161,16 @@ class TenantManager:
         rbac_manager: Optional[RBACManager] = None,
         nebula_pool=None,
         store_path=None,  # W04.01: durable SQLite store (reference-local)
+        usage_provider: Optional[
+            Callable[[str], Awaitable[TenantUsage | Dict[str, Any]]]
+        ] = None,
     ):
         self.db = db_session
         self.rbac = rbac_manager
         self.nebula_pool = nebula_pool
+        self.usage_provider = usage_provider
+        self._quota_lock = asyncio.Lock()
+        self._quota_reservations: Dict[str, tuple[str, str, int]] = {}
 
         # 存储：db_session > store_path（SQLite 持久化） > 内存 dict
         if store_path is not None:
@@ -278,10 +308,14 @@ class TenantManager:
         if config:
             tenant.config = config
         if status:
+            if status in {TenantStatus.SUSPENDED, TenantStatus.DELETED}:
+                self._sync_access_revocation(tenant_id, status)
             tenant.status = status
         
         tenant.updated_at = datetime.utcnow()
         await self._persist_tenant(tenant)
+        if status == TenantStatus.ACTIVE:
+            self._sync_access_revocation(tenant_id, status)
         
         return tenant
     
@@ -294,6 +328,7 @@ class TenantManager:
         tenant = await self.get_tenant(tenant_id)
         if not tenant:
             return False
+        self._sync_access_revocation(tenant_id, TenantStatus.DELETED)
         
         if hard_delete:
             # 物理删除：删除 GraphSpace、数据、角色等
@@ -305,12 +340,14 @@ class TenantManager:
             # 软删除
             tenant.status = TenantStatus.DELETED
             await self._update_tenant_status(tenant_id, TenantStatus.DELETED)
-        
         logger.info(f"Deleted tenant: {tenant_id} (hard={hard_delete})")
         return True
     
     async def suspend_tenant(self, tenant_id: str, reason: Optional[str] = None) -> bool:
         """暂停租户（禁止访问但保留数据）"""
+        if await self.get_tenant(tenant_id) is None:
+            return False
+        self._sync_access_revocation(tenant_id, TenantStatus.SUSPENDED, reason=reason)
         success = await self._update_tenant_status(tenant_id, TenantStatus.SUSPENDED)
         if success:
             logger.warning(f"Suspended tenant: {tenant_id}, reason: {reason}")
@@ -318,7 +355,28 @@ class TenantManager:
     
     async def activate_tenant(self, tenant_id: str) -> bool:
         """激活已暂停的租户"""
-        return await self._update_tenant_status(tenant_id, TenantStatus.ACTIVE)
+        success = await self._update_tenant_status(tenant_id, TenantStatus.ACTIVE)
+        if success:
+            self._sync_access_revocation(tenant_id, TenantStatus.ACTIVE)
+        return success
+
+    @staticmethod
+    def _sync_access_revocation(
+        tenant_id: str,
+        status: TenantStatus,
+        *,
+        reason: Optional[str] = None,
+    ) -> None:
+        """Keep lifecycle state and request-time revocation checks atomic in meaning."""
+        from bridge.access.revocations import RevocationRegistry
+
+        registry = RevocationRegistry()
+        if status in {TenantStatus.SUSPENDED, TenantStatus.DELETED}:
+            registry.revoke(
+                'tenant', tenant_id, reason=reason or f'tenant status changed to {status.value}'
+            )
+        elif status == TenantStatus.ACTIVE:
+            registry.unrevoke('tenant', tenant_id)
     
     # ========== 配额管理 ==========
     
@@ -333,6 +391,10 @@ class TenantManager:
         Returns:
             (是否允许, 配额信息)
         """
+        if requested_amount <= 0:
+            return False, {"error": "requested_amount must be positive"}
+        if self.usage_provider is not None:
+            await self.update_usage_stats(tenant_id)
         tenant = await self.get_tenant(tenant_id)
         if not tenant:
             return False, {"error": "Tenant not found"}
@@ -341,41 +403,111 @@ class TenantManager:
             return False, {"error": f"Tenant is {tenant.status.value}"}
         
         config = tenant.config
-        
-        # 检查具体配额
+        reserved = sum(
+            amount
+            for reserved_tenant, reserved_resource, amount in self._quota_reservations.values()
+            if reserved_tenant == tenant_id and reserved_resource == resource_type
+        )
+
         if resource_type == "dataset":
             current = tenant.dataset_count
             limit = config.max_datasets
-            if current + requested_amount > limit:
-                return False, {
-                    "resource": "dataset",
-                    "current": current,
-                    "requested": requested_amount,
-                    "limit": limit,
-                    "available": max(0, limit - current),
-                }
-        
         elif resource_type == "graph_nodes":
             current = tenant.total_nodes
             limit = config.max_graph_nodes
-            if current + requested_amount > limit:
-                return False, {
-                    "resource": "graph_nodes",
-                    "current": current,
-                    "requested": requested_amount,
-                    "limit": limit,
-                    "available": max(0, limit - current),
-                }
-        
-        return True, {"status": "ok"}
-    
-    async def update_usage_stats(self, tenant_id: str) -> None:
-        """更新租户使用统计"""
-        # TODO: 从 NebulaGraph 和数据库统计实际使用量
-        pass
+        elif resource_type == "concurrent_query":
+            current = 0
+            limit = config.max_concurrent_queries
+        else:
+            return False, {"error": f"Unknown quota resource: {resource_type}"}
+
+        available = max(0, limit - current - reserved)
+        if requested_amount > available:
+            return False, {
+                "resource": resource_type,
+                "current": current,
+                "reserved": reserved,
+                "requested": requested_amount,
+                "limit": limit,
+                "available": available,
+            }
+        return True, {
+            "status": "ok",
+            "resource": resource_type,
+            "current": current,
+            "reserved": reserved,
+            "requested": requested_amount,
+            "limit": limit,
+            "available_after": available - requested_amount,
+        }
+
+    async def reserve_quota(
+        self, tenant_id: str, resource_type: str, requested_amount: int = 1
+    ) -> str:
+        """Atomically reserve capacity before starting resource creation or work."""
+        async with self._quota_lock:
+            allowed, detail = await self.check_quota(
+                tenant_id, resource_type, requested_amount
+            )
+            if not allowed:
+                raise QuotaExceededError(str(detail.get("error") or detail))
+            reservation_id = f"quota-{uuid.uuid4().hex}"
+            self._quota_reservations[reservation_id] = (
+                tenant_id, resource_type, requested_amount
+            )
+            return reservation_id
+
+    async def release_quota(self, reservation_id: str) -> bool:
+        """Release a reservation after failure, cancellation, or query completion."""
+        async with self._quota_lock:
+            return self._quota_reservations.pop(reservation_id, None) is not None
+
+    async def commit_quota(self, reservation_id: str) -> bool:
+        """Commit created durable resources and release their reservation."""
+        async with self._quota_lock:
+            reservation = self._quota_reservations.get(reservation_id)
+            if reservation is None:
+                return False
+            tenant_id, resource_type, amount = reservation
+            tenant = await self.get_tenant(tenant_id)
+            if tenant is None:
+                raise QuotaExceededError("Tenant not found while committing quota")
+            if resource_type == "dataset":
+                tenant.dataset_count += amount
+            elif resource_type == "graph_nodes":
+                tenant.total_nodes += amount
+            elif resource_type == "concurrent_query":
+                raise QuotaExceededError(
+                    "concurrent_query reservations must be released after execution"
+                )
+            else:
+                raise QuotaExceededError(f"Unknown quota resource: {resource_type}")
+            tenant.updated_at = datetime.utcnow()
+            await self._persist_tenant(tenant)
+            self._quota_reservations.pop(reservation_id, None)
+            return True
+
+    async def update_usage_stats(self, tenant_id: str) -> TenantUsage:
+        """Refresh counters from an authoritative repository usage provider."""
+        if self.usage_provider is None:
+            raise RuntimeError("authoritative tenant usage provider is not configured")
+        tenant = await self.get_tenant(tenant_id)
+        if tenant is None:
+            raise ValueError("Tenant not found")
+        usage = TenantUsage.from_value(await self.usage_provider(tenant_id))
+        if min(usage.dataset_count, usage.total_nodes, usage.total_edges) < 0:
+            raise ValueError("authoritative tenant usage cannot be negative")
+        tenant.dataset_count = usage.dataset_count
+        tenant.total_nodes = usage.total_nodes
+        tenant.total_edges = usage.total_edges
+        tenant.updated_at = datetime.utcnow()
+        await self._persist_tenant(tenant)
+        return usage
     
     async def get_usage_report(self, tenant_id: str) -> Dict[str, Any]:
         """获取租户使用报告"""
+        if self.usage_provider is not None:
+            await self.update_usage_stats(tenant_id)
         tenant = await self.get_tenant(tenant_id)
         if not tenant:
             return {"error": "Tenant not found"}
@@ -386,6 +518,9 @@ class TenantManager:
             "tenant_id": tenant_id,
             "tenant_name": tenant.name,
             "status": tenant.status.value,
+            "usage_source": (
+                "authoritative" if self.usage_provider is not None else "persisted_snapshot"
+            ),
             "datasets": {
                 "used": tenant.dataset_count,
                 "limit": config.max_datasets,

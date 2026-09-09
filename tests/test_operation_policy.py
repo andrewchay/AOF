@@ -167,10 +167,27 @@ def test_admin_only_surface_blocks_viewer(strict_client):
     assert resp.status_code == 403
 
 
-def test_read_policy_allows_viewer_on_get(strict_client):
+def test_dynamic_admin_policy_blocks_viewer(strict_client):
     client, verifier = strict_client
     viewer = verifier.sign_headers(subject="v", tenant_id="acme", roles=["viewer"])
 
     resp = client.get("/v1/access/revocations/subject/nobody", headers=viewer)
-    assert resp.status_code == 200
-    assert resp.json()["revoked"] is False
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "operation_not_permitted"
+
+
+def test_dynamic_read_policy_allows_viewer(strict_client):
+    client, verifier = strict_client
+    viewer = verifier.sign_headers(subject="v", tenant_id="acme", roles=["viewer"])
+
+    resp = client.get("/v1/artifacts/not-present", headers=viewer)
+    assert resp.status_code == 404
+
+
+def test_unknown_authenticated_operation_fails_closed(strict_client):
+    client, verifier = strict_client
+    admin = verifier.sign_headers(subject="a", tenant_id="acme", roles=["admin"])
+
+    resp = client.get("/v1/undeclared-operation", headers=admin)
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "operation_not_registered"

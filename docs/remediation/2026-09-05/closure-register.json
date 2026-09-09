@@ -479,11 +479,21 @@
       "depends_on_packages": [
         "W00"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "同主体同操作 REST/MCP/SDK 结果等价；工具参数不能构造任意 actor/tenant",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_mcp_authorization.py (7 tests)",
+        "tests/test_operation_registry.py (9 tests)",
+        "tests/test_operation_policy.py (11 tests)",
+        "tests/test_trusted_query_execution.py (24 tests)"
+      ],
+      "evidence": [
+        "37 exposed MCP tools exactly match 37 governed registry entries; phantom aof entry removed",
+        "MCP transport verifies signed principals, enforces per-tool policies, strips protected actor/tenant parameters, and binds identity server-side",
+        "dynamic REST path templates now resolve to their registered per-operation policy; undeclared authenticated paths fail closed",
+        "remaining: SDK parity and full same-subject REST/MCP result matrix require completion"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -501,11 +511,20 @@
       "depends_on_packages": [
         "W00"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "停用租户、撤销角色后执行前重新检查；缓存/队列不保留授权；创建审批执行主体策略有效",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_mcp_authorization.py::test_revocation_takes_effect_on_next_mcp_call",
+        "tests/test_request_revocation.py (2 tests)",
+        "tests/test_iam_sqlite_persistence.py::test_tenant_lifecycle_persists_across_instances",
+        "tests/test_task_reauthorization.py (8 tests)"
+      ],
+      "evidence": [
+        "REST and MCP recheck persistent subject and tenant revocations on every authenticated call",
+        "tenant suspend/delete writes tenant revocation and activate removes it; queued tasks retain execution-time reauthorization",
+        "remaining: durable role-revocation propagation and complete create/approve/execute subject-policy matrix"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -693,11 +712,21 @@
         "W00",
         "W01"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "缺失模块及原测试归并；鉴权/持久化/质量门/来源许可通过；真实调用无 ModuleNotFoundError",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_harness_trainer.py (15 tests)",
+        "tests/test_training_data_models.py (16 tests)",
+        "tests/test_training_data_pipeline.py (9 tests)",
+        "tests/test_training_data_quality.py (11 tests)",
+        "tests/test_training_data_raw.py (13 tests)"
+      ],
+      "evidence": [
+        "restored harness and training-data regression coverage: 64 tests passed",
+        "restored exporter is Ruff-clean and mypy-clean",
+        "remaining: authoritative source-license review and live backend exercise"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -715,11 +744,25 @@
         "W00",
         "W01"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "10个缺失内部导入归零；exporter/hybrid/graph doctor/markdown 接口及MCP功能成功",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_graph_retrieval.py (27 tests)",
+        "tests/test_hybrid_search.py (36 tests)",
+        "tests/test_rag_api.py (6 tests)",
+        "tests/test_rag_service.py (8 tests)",
+        "tests/test_okf_api.py (7 tests)",
+        "tests/test_okf_service.py (12 tests)",
+        "tests/test_okf_exporter.py (9 tests)",
+        "tests/test_knowledge_lint.py (7 tests)"
+      ],
+      "evidence": [
+        "restored OKF, RAG, markdown exporter, knowledge lint, hybrid search, and graph retrieval source paths",
+        "112 recovered component and API tests passed; restored exporter package is Ruff-clean and mypy-clean",
+        "production image imports restored markdown, OKF, and RAG modules and exposes all 37 governed MCP tools",
+        "remaining: live Cognee-backed MCP and markdown export acceptance run"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -946,11 +989,20 @@
         "W00",
         "W02"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "管理员授权、无自提权；实际使用量聚合；并发预留/归还配额，失败不泄露",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_tenant_quota_controls.py (4 tests)",
+        "tests/test_tenant_manager.py (21 tests)",
+        "tests/test_iam_sqlite_persistence.py (7 tests)"
+      ],
+      "evidence": [
+        "quota checks refresh from an injected authoritative usage provider instead of a no-op counter refresh",
+        "unknown resources and nonpositive amounts fail closed; atomic in-process reservations prevent concurrent oversubscription",
+        "failed or cancelled work releases capacity; successful durable resource creation commits usage before releasing reservation",
+        "remaining: governed administrator API, production repository usage adapter, and multi-replica transactional reservation"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1048,11 +1100,20 @@
         "W02",
         "W04"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "JSON/CSV/HTML/PDF有实际数据；注入、转义和CSV公式防护；阈值规则告警含证据、误报口径",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_audit_reports.py (2 tests)",
+        "tests/test_audit_query.py (6 tests)",
+        "tests/test_audit_logger.py (21 tests)"
+      ],
+      "evidence": [
+        "JSON, CSV, HTML, and dependency-free PDF reports contain queried audit events",
+        "CSV formula injection and HTML active-content injection are neutralized",
+        "security thresholds are configurable and alerts include observed values, evidence IDs or event windows, plus false-positive handling notes",
+        "remaining: production threshold calibration, alert delivery integration, and independent report review"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1117,11 +1178,18 @@
         "W02",
         "W04"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "鉴权错/限流/超时/无数据/未配置/不支持明确分类；已启用必需后端失败阻止就绪",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_mcp_authorization.py::test_missing_identity_and_insufficient_role_fail_closed",
+        "tests/test_mcp_authorization.py::test_handler_failure_is_stable_and_does_not_leak_traceback",
+        "tests/test_error_surface.py (2 tests)"
+      ],
+      "evidence": [
+        "MCP transport now returns stable authentication_required, operation_not_permitted, and tool_execution_failed codes without traceback leakage",
+        "remaining: complete rate-limit, timeout, no-data, unconfigured, unsupported, and readiness dependency classification matrix"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -2037,11 +2105,21 @@
         "W00",
         "W07"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "全量unit/integration/REST/MCP/browser/镜像/K8s；入口覆盖不靠schema；合同对抗100%通过",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "local full suite: 820 passed, 46 skipped",
+        "recovered OKF/RAG/graph/training slice: 176 passed",
+        "MCP/REST policy and revocation slice: 56 passed"
+      ],
+      "evidence": [
+        "MCP registry parity validates real exposed tool objects rather than schema-only route declarations",
+        "Ruff passed; CI mypy scope passed for 230 files; exporter package mypy passed for 6 files",
+        "production image built and passed non-root read-only healthz, readyz, and browser-index smoke",
+        "zero-skip enterprise profile passed 72 tests against PostgreSQL, Keycloak, RabbitMQ, and OpenBao",
+        "remaining: browser interaction, Kubernetes, and full contract-adversarial closure"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -2109,11 +2187,20 @@
         "W08",
         "W10"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "REST/MCP/CLI/UI/依赖/部署profile同源；README端点数字与产物自动一致",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_capability_inventory.py (2 tests)",
+        "tests/test_operation_registry.py (9 tests)"
+      ],
+      "evidence": [
+        "generated capability manifest v3 derives 178 HTTP operations, 37 MCP tools, 3 CLI entry points, and 9 UI routes from authoritative source registries",
+        "8 dependency manifests include source digests and declared package inventories; 7 deployment profiles are derived from Compose services, CI jobs, and the production Dockerfile",
+        "README capability totals are generated from the same manifest; stale hard-coded 51-endpoint and 203-test claims were removed",
+        "CI runs the capability inventory generator in check mode and fails when generated artifacts or documented totals drift",
+        "remaining: reconcile wider manuals and runbooks and replace remaining tbd ownership metadata through accountable human review"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -2364,18 +2451,18 @@
     }
   ],
   "assessment": {
-    "assessed_commit": "7919fc6dcf4361bfc81d785fcfdb0f2df511b27c",
-    "assessed_at": "2026-09-09T00:00:00+08:00",
+    "assessed_commit": "b8e37504a208ad32f165b44b4b176368dfa31dab",
+    "assessed_at": "2026-09-09T11:54:00+08:00",
     "status_counts": {
       "closed": 0,
-      "in_progress": 47,
+      "in_progress": 56,
       "mitigated": 1,
-      "not_started": 32
+      "not_started": 23
     },
     "test_summary": {
-      "passed": 631,
+      "passed": 828,
       "skipped": 46,
-      "profile": "local full suite; real services intentionally separated into mandatory enterprise profile"
+      "profile": "local full suite on working tree; real services intentionally separated into mandatory enterprise profile"
     },
     "enterprise_integration_summary": {
       "passed": 72,
@@ -2386,7 +2473,8 @@
         "RabbitMQ",
         "OpenBao"
       ],
-      "validated_at": "2026-09-09T00:00:00+08:00"
+      "validated_at": "2026-09-09T11:14:00+08:00",
+      "iam_contract_recheck": "14 passed, 0 skipped after tenant quota changes at 2026-09-09T11:42:00+08:00"
     },
     "web_build_summary": {
       "typecheck": "passed",
@@ -2401,9 +2489,11 @@
       "healthz": 200,
       "readyz": 200,
       "browser_index": 200,
-      "image_digest": "sha256:5b293423cadaf73e03bb6babfb6a66cb05ed2004ded7a6f3d77fa953e4b726b2",
-      "validated_at": "2026-09-09T00:00:00+08:00"
-    }
+      "image_digest": "sha256:4ac6743e952d34ed0930907798a60204c3c218f46c3d95b1a68d4890fd0a3539",
+      "packaged_capabilities": "exporters import passed; 37 MCP tools registered",
+      "validated_at": "2026-09-09T11:52:00+08:00"
+    },
+    "working_tree_included": true
   },
-  "progress_note": "2026-09-09: assessed main=7919fc6d plus current remediation worktree. Status: 0 closed / 41 in_progress / 1 mitigated / 38 not_started. Local full suite: 619 passed / 46 skipped; mandatory enterprise profile: 66 passed / 0 skipped; Vue type-check and production build pass. Independent review remains required for closure."
+  "progress_note": "2026-09-09: assessed commit b8e37504 plus current remediation worktree. Status: 0 closed / 56 in_progress / 1 mitigated / 23 not_started. Local full suite: 828 passed / 46 skipped; mandatory enterprise profile: 72 passed / 0 skipped, with the 14-test IAM contract rechecked after quota changes. Vue type-check and production build pass. Capability manifest v3 derives 8 dependency manifests and 7 deployment profiles from authoritative files. Current production image sha256:4ac6743e952d34ed0930907798a60204c3c218f46c3d95b1a68d4890fd0a3539 is healthy as non-root on a read-only root filesystem, and packages exporters plus 37 MCP tools. Independent review remains required for closure."
 }

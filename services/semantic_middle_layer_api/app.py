@@ -302,10 +302,32 @@ except Exception as _reg_exc:  # pragma: no cover - fail-closed fallback
 
 # W01.01: per-operation authorization policies (from the registry)
 _API_OPERATION_POLICIES: dict = {}
+_API_TEMPLATE_OPERATION_POLICIES: list[tuple[str, Any, Any]] = []
 try:
     _API_OPERATION_POLICIES = dict(_load_operation_registry())
+    from starlette.routing import compile_path as _compile_operation_path
+
+    _API_TEMPLATE_OPERATION_POLICIES = [
+        (_op.method, _compile_operation_path(_op.path)[0], _op)
+        for _op in _API_OPERATION_POLICIES.values()
+        if '{' in _op.path and not _op.public and _op.method != 'TOOL'
+    ]
 except Exception as _pol_exc:  # pragma: no cover
     logger.warning('operation policies unavailable: %s', _pol_exc)
+
+
+def _registered_http_operation(method: str, path: str):
+    operation = _API_OPERATION_POLICIES.get(f'{method.lower()}:{path}')
+    if operation is not None:
+        return operation
+    return next(
+        (
+            candidate
+            for registered_method, pattern, candidate in _API_TEMPLATE_OPERATION_POLICIES
+            if registered_method == method and pattern.fullmatch(path)
+        ),
+        None,
+    )
 
 
 @app.middleware('http')
@@ -332,8 +354,16 @@ async def auth_middleware(request: Request, call_next):
 
     from bridge.access.policy import PolicyDenied, authorize
 
-    operation = _API_OPERATION_POLICIES.get(f"{request.method.lower()}:{path}")
-    if operation is not None and operation.policy is not None:
+    operation = _registered_http_operation(request.method, path)
+    if operation is None:
+        return JSONResponse(
+            status_code=403,
+            content={
+                'code': 'operation_not_registered',
+                'detail': 'request operation is absent from the governed registry',
+            },
+        )
+    if operation.policy is not None:
         try:
             authorize(operation.policy, principal.roles)
         except PolicyDenied as exc:
@@ -4414,13 +4444,14 @@ def _decision_principal(request: Request, action: str = 'read'):
         # W01.02: map OIDC claims to a SemanticPrincipal-compatible return
         from bridge.semantic_core.identity import SemanticPrincipal
 
-        return SemanticPrincipal(
+        principal = SemanticPrincipal(
             subject=oidc_principal.subject,
             tenant_id=oidc_principal.tenant_id,
             roles=oidc_principal.roles,
             issued_at=int(time.time()),
             key_id='oidc',
         )
+        return _require_active_principal(principal)
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
     if not secret:
@@ -4431,9 +4462,21 @@ def _decision_principal(request: Request, action: str = 'read'):
     )
     try:
         principal = verifier.verify(request.headers)
-        return principal
+        return _require_active_principal(principal)
     except PrincipalVerificationError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+def _require_active_principal(principal):
+    """Recheck persistent revocations on every authenticated request."""
+    from bridge.access.revocations import RevocationRegistry
+
+    registry = RevocationRegistry()
+    if registry.is_revoked('subject', principal.subject):
+        raise HTTPException(status_code=401, detail='signed principal subject is revoked')
+    if registry.is_revoked('tenant', principal.tenant_id):
+        raise HTTPException(status_code=401, detail='signed principal tenant is revoked')
+    return principal
 
 
 @app.post('/v1/decisions', status_code=201)
