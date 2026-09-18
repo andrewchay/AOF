@@ -108,7 +108,7 @@
       {
         "path": "requirements-dev.txt",
         "ecosystem": "python",
-        "source_digest": "sha256:f1a0c341a9750b8b3116e23895ae5d3dc437e15f2e8cff02bce46eb03c613550",
+        "source_digest": "sha256:a683e95683fe5b2d8cbe8df29b7186b90f3a19dc9e0a5be93c96000db13ff9dc",
         "declared_dependencies": [
           "PyYAML",
           "SQLAlchemy",
@@ -116,6 +116,7 @@
           "cryptography",
           "fastapi",
           "httpx",
+          "mcp",
           "mypy",
           "networkx",
           "pika",
@@ -128,7 +129,7 @@
           "rdflib",
           "ruff"
         ],
-        "dependency_count": 17
+        "dependency_count": 18
       },
       {
         "path": "services/semantic_middle_layer_api/requirements.txt",

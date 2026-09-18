@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -65,7 +66,7 @@ def _docs() -> list[dict]:
 
 async def _run(tmp: Path, coro):
     params = StdioServerParameters(
-        command=str(PROJECT_ROOT / ".venv/bin/python"),
+        command=sys.executable,
         args=[str(PROJECT_ROOT / "mcp_server_sdk.py")],
         cwd=str(PROJECT_ROOT),
         env={

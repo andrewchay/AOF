@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -40,7 +41,7 @@ def _principal_headers(role: str = "admin") -> dict[str, str]:
 
 async def _run_client(coro):
     params = StdioServerParameters(
-        command=str(PROJECT_ROOT / ".venv/bin/python"),
+        command=sys.executable,
         args=[str(PROJECT_ROOT / "mcp_server_sdk.py")],
         cwd=str(PROJECT_ROOT),
         env={
