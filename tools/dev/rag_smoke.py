@@ -60,7 +60,7 @@ def main() -> int:
 
     from fastapi.testclient import TestClient
 
-    import app as app_mod
+    import app as app_mod  # type: ignore[import-not-found]
 
     cases = [
         ("用例1: 魔女会", {"query": "魔女会", "limit": 5}),
