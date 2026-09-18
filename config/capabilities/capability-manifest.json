@@ -57,13 +57,14 @@
       {
         "path": "requirements/core.in",
         "ecosystem": "python",
-        "source_digest": "sha256:6a94a89c311422c911202e9b1043141c4cad5b0122def27b65eb3228c63ef449",
+        "source_digest": "sha256:375e4270e9ddfc9d93702b6c3e04e65b68cbbf5ba8ded77799f87849e48ee6de",
         "declared_dependencies": [
           "aiofiles",
           "aiosqlite",
           "anyio",
           "fastapi",
           "httpx",
+          "mcp",
           "networkx",
           "openai",
           "pika",
@@ -79,7 +80,7 @@
           "tenacity",
           "uvicorn"
         ],
-        "dependency_count": 19
+        "dependency_count": 20
       },
       {
         "path": "requirements/dev.in",
