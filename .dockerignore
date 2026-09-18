@@ -31,6 +31,9 @@ htmlcov/
 
 # Documentation (keep only necessary)
 docs/internal/methodology/*.html
+# Remediation evidence is a source/review artifact. Excluding it prevents the
+# image digest recorded in the register from changing the image itself.
+docs/remediation/
 
 # Logs (mount as volume instead)
 logs/

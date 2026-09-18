@@ -1020,11 +1020,20 @@
         "W00",
         "W02"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "旧ID映射、未知成员隔离、恢复后撤权不回滚、首次管理员引导无默认密码",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_iam_migration.py (5 tests)",
+        "tests/test_iam_pg_contract.py::test_governed_legacy_migration_contract (SQLite and PostgreSQL)"
+      ],
+      "evidence": [
+        "legacy tenant, user, and role identifiers require explicit unique target mappings and the migration report binds the canonical source digest",
+        "unknown members, cross-tenant assignments, live-revoked subjects, and legacy superuser elevation are persisted to a digest-addressed quarantine ledger",
+        "live revocation authority wins over restored legacy assignments, so rerunning migration cannot resurrect revoked access",
+        "initial administrator bootstrap uses an expiring one-time token stored only as a digest; no default or plaintext password is created",
+        "the same migration contract passed on SQLite and PostgreSQL; remaining: rehearse against an approved production legacy snapshot and obtain independent IAM review"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1370,7 +1379,7 @@
       "implementation_commit": "2967fc79",
       "tests": [],
       "evidence": [
-        "requirements/locks/reference-local.lock (154 pkgs frozen), core/dev/cognee .in profiles; fresh-install validation and enterprise profile lock pending"
+        "requirements/locks/reference-local.lock (153 pkgs frozen) explicitly excludes optional Cognee; core/dev/cognee .in profiles are separated, with Cognee pinned to the production profile version; fresh-install validation and enterprise profile lock remain pending"
       ],
       "reviewer": null,
       "closed_at": null
@@ -1389,11 +1398,23 @@
       "depends_on_packages": [
         "W00"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "锁定实际可安装的官方包或可复现fork提交；CLI/REST/MCP ontology集成真实通过",
-      "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "implementation_commit": "uncommitted working tree: Cognee 1.5.4 compatibility and image gate",
+      "tests": [
+        "tests/test_cognee_compatibility_contract.py (3 tests)",
+        "tests/test_memify_feedback_loop.py",
+        "tools/ci/check_cognee_compatibility.py (executed inside production image)",
+        "tools/ci/check_capability_profile.py --profile production (executed inside production image)"
+      ],
+      "evidence": [
+        "all Docker, Compose, requirements, and production capability declarations are pinned to official Cognee 1.5.4; the reference-local lock excludes the optional distribution",
+        "production image sha256:f316102d85ec35a83a1883ff09f03508aed1767e6554579caf5f013be6468f39 installed cognee[neo4j] 1.5.4 from PyPI in a clean Python 3.13 environment with no editable source, including Neo4j driver 5.28.5.0",
+        "the in-image compatibility gate imported Cognee add/cognify/search, the Neo4jAdapter, plus every internal AOF-used search, user, data, memify, pipeline, ontology, relational, and visualization API with zero failures",
+        "AOF feedback integration was migrated from the removed save_interaction symbol to Cognee 1.5.4 memify(data, dataset)",
+        "2026-09-09 live preflight: LLM request passed, Neo4j TCP was reachable, its authenticated server rejected the anonymous handshake as expected, and the configured ontology file exists; GRAPH_DATABASE_PASSWORD and the embedding model, endpoint, key, and dimensions remain empty",
+        "remaining: fill the missing Neo4j and embedding credentials, then execute representative CLI, REST, and MCP ontology data flows"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -1418,7 +1439,7 @@
         "tests/test_delivery_contract.py"
       ],
       "evidence": [
-        "2026-09-09 clean container builder created a new Python 3.13 virtualenv from requirements and a pnpm 10.33.0 frozen lock install, built the Vue production bundle, then started the API and browser shell; wheel/sdist/console-script matrix remains before closure"
+        "2026-09-09 clean container builder created a new Python 3.13 virtualenv from requirements, installed official cognee[neo4j] 1.5.4 with no editable source, completed its API and Neo4j adapter compatibility gate, and built the frozen Vue production bundle; two consecutive local builds with unchanged inputs and without dynamic provenance produced stable image digest sha256:f316102d85ec35a83a1883ff09f03508aed1767e6554579caf5f013be6468f39; remediation evidence is excluded from the runtime context to prevent digest self-reference; signed CI provenance and wheel/sdist/console-script matrix remain before closure"
       ],
       "reviewer": null,
       "closed_at": null
@@ -1489,11 +1510,25 @@
       "depends_on_packages": [
         "W00"
       ],
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "开发未启用可选依赖可明确skip；完整profile所有启用集成零skip且readiness验证",
       "implementation_commit": null,
-      "tests": [],
-      "evidence": [],
+      "tests": [
+        "tests/test_capability_status.py (6 tests)",
+        "tests/test_production_readiness.py::test_selected_capability_profile_is_part_of_readiness",
+        "tests/test_production_readiness.py::test_disabled_development_optional_dependency_is_reported",
+        "tools/ci/check_capability_profile.py --profile enterprise"
+      ],
+      "evidence": [
+        "versioned development, enterprise, and production profiles declare required and optional integrations, enable flags, and concrete probes",
+        "disabled optional capabilities report disabled_optional with a nonblocking reason; an enabled optional or required unavailable capability blocks readiness",
+        "ProductionReadiness includes the selected profile states and fails closed for unavailable enabled capabilities or invalid profiles",
+        "enterprise profile live probes passed for PostgreSQL, Keycloak, RabbitMQ, and OpenBao while Cognee was explicitly disabled_optional",
+        "CI runs both the zero-skip enterprise pytest profile and the live capability readiness checker",
+        "production image capability profile passed with required Cognee 1.5.4 and the OpenTelemetry OTLP exporter both ready",
+        "production container returned healthz=200, readyz=200 ready=true, and browser index=200 as non-root user aof with a read-only root and writable production data volumes",
+        "remaining: independent review and the W07.02 representative CLI, REST, and MCP ontology data-flow runs"
+      ],
       "reviewer": null,
       "closed_at": null
     },
@@ -2196,7 +2231,7 @@
       ],
       "evidence": [
         "generated capability manifest v3 derives 178 HTTP operations, 37 MCP tools, 3 CLI entry points, and 9 UI routes from authoritative source registries",
-        "8 dependency manifests include source digests and declared package inventories; 7 deployment profiles are derived from Compose services, CI jobs, and the production Dockerfile",
+        "8 dependency manifests include source digests and declared package inventories; 7 deployment profiles and 3 required/optional integration profiles are derived from Compose, CI, the production Dockerfile, and the versioned profile source",
         "README capability totals are generated from the same manifest; stale hard-coded 51-endpoint and 203-test claims were removed",
         "CI runs the capability inventory generator in check mode and fails when generated artifacts or documented totals drift",
         "remaining: reconcile wider manuals and runbooks and replace remaining tbd ownership metadata through accountable human review"
@@ -2451,21 +2486,21 @@
     }
   ],
   "assessment": {
-    "assessed_commit": "b8e37504a208ad32f165b44b4b176368dfa31dab",
-    "assessed_at": "2026-09-09T11:54:00+08:00",
+    "assessed_commit": "31231ca095c76905e1caa4a8b515cfcf6e12fb26",
+    "assessed_at": "2026-09-09T14:48:00+08:00",
     "status_counts": {
       "closed": 0,
-      "in_progress": 56,
+      "in_progress": 59,
       "mitigated": 1,
-      "not_started": 23
+      "not_started": 20
     },
     "test_summary": {
-      "passed": 828,
-      "skipped": 46,
+      "passed": 847,
+      "skipped": 47,
       "profile": "local full suite on working tree; real services intentionally separated into mandatory enterprise profile"
     },
     "enterprise_integration_summary": {
-      "passed": 72,
+      "passed": 74,
       "skipped": 0,
       "services": [
         "PostgreSQL",
@@ -2473,8 +2508,8 @@
         "RabbitMQ",
         "OpenBao"
       ],
-      "validated_at": "2026-09-09T11:14:00+08:00",
-      "iam_contract_recheck": "14 passed, 0 skipped after tenant quota changes at 2026-09-09T11:42:00+08:00"
+      "validated_at": "2026-09-09T13:23:00+08:00",
+      "iam_contract_recheck": "16 passed, 0 skipped after governed IAM migration was added"
     },
     "web_build_summary": {
       "typecheck": "passed",
@@ -2482,18 +2517,18 @@
       "validated_at": "2026-09-09T00:00:00+08:00"
     },
     "image_smoke_summary": {
-      "build": "passed",
+      "build": "passed-current-working-tree",
       "runtime_user": "aof",
       "read_only": true,
       "docker_health": "healthy",
       "healthz": 200,
       "readyz": 200,
       "browser_index": 200,
-      "image_digest": "sha256:4ac6743e952d34ed0930907798a60204c3c218f46c3d95b1a68d4890fd0a3539",
-      "packaged_capabilities": "exporters import passed; 37 MCP tools registered",
-      "validated_at": "2026-09-09T11:52:00+08:00"
+      "image_digest": "sha256:f316102d85ec35a83a1883ff09f03508aed1767e6554579caf5f013be6468f39",
+      "packaged_capabilities": "cognee[neo4j] 1.5.4 AOF API and Neo4j adapter compatibility gates passed; production Cognee and OTLP capability probes passed; 37 MCP tools registered",
+      "validated_at": "2026-09-09T16:22:30+08:00"
     },
     "working_tree_included": true
   },
-  "progress_note": "2026-09-09: assessed commit b8e37504 plus current remediation worktree. Status: 0 closed / 56 in_progress / 1 mitigated / 23 not_started. Local full suite: 828 passed / 46 skipped; mandatory enterprise profile: 72 passed / 0 skipped, with the 14-test IAM contract rechecked after quota changes. Vue type-check and production build pass. Capability manifest v3 derives 8 dependency manifests and 7 deployment profiles from authoritative files. Current production image sha256:4ac6743e952d34ed0930907798a60204c3c218f46c3d95b1a68d4890fd0a3539 is healthy as non-root on a read-only root filesystem, and packages exporters plus 37 MCP tools. Independent review remains required for closure."
+  "progress_note": "2026-09-09: assessed commit 31231ca0 plus current IAM migration, capability-profile, and Cognee compatibility worktree. Status: 0 closed / 59 in_progress / 1 mitigated / 20 not_started. Local full suite: 847 passed / 47 skipped; mandatory enterprise pytest profile: 74 passed / 0 skipped, and live capability probes passed for PostgreSQL, Keycloak, RabbitMQ, and OpenBao. Capability manifest v3 derives 8 dependency manifests, 7 deployment profiles, and 3 integration profiles. Production image sha256:f316102d85ec35a83a1883ff09f03508aed1767e6554579caf5f013be6468f39 clean-installed official cognee[neo4j] 1.5.4 and Neo4j driver 5.28.5.0, passed every AOF-used Cognee API and Neo4j adapter import, passed the production capability profile, and returned healthz/readyz/browser 200 as non-root with a read-only root; two consecutive local builds with unchanged inputs produced the same digest. The LLM request passed, Neo4j TCP was reachable, and the ontology input exists. GRAPH_DATABASE_PASSWORD and the embedding model, endpoint, API key, and dimensions remain empty, so representative production-configured CLI, REST, and MCP ontology data flows, signed CI provenance, and independent review remain required for closure."
 }

@@ -20,6 +20,11 @@ def test_image_builds_the_browser_and_runs_as_non_root():
     assert "urllib.request" in dockerfile
 
 
+def test_image_excludes_self_referential_remediation_evidence():
+    dockerignore = (ROOT / ".dockerignore").read_text().splitlines()
+    assert "docs/remediation/" in dockerignore
+
+
 def test_production_compose_requires_every_readiness_secret():
     compose = (ROOT / "services/semantic_middle_layer_api/docker-compose.prod.yml").read_text()
     for variable in (
