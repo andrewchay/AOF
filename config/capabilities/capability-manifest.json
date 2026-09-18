@@ -108,7 +108,7 @@
       {
         "path": "requirements-dev.txt",
         "ecosystem": "python",
-        "source_digest": "sha256:a683e95683fe5b2d8cbe8df29b7186b90f3a19dc9e0a5be93c96000db13ff9dc",
+        "source_digest": "sha256:fd0a5d42a49685b165399257e2a51d6054abe0b1664b8a1a37b944de89b36958",
         "declared_dependencies": [
           "PyYAML",
           "SQLAlchemy",
