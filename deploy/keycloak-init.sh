@@ -9,12 +9,40 @@ docker exec -i aof-infra-keycloak-1 sh -s << 'INNER'
 set -eu
 KC="/opt/keycloak/bin/kcadm.sh"
 SERVER="http://localhost:8080"
-$KC config credentials --server "$SERVER" --realm master --user admin --password kc-dev-only >/dev/null 2>&1
+
+# The compose service has no healthcheck, so `docker compose up --wait`
+# returns while start-dev is still initializing; the first kcadm call then
+# fails and `set -e` aborts the whole script with no diagnostics. Poll until
+# the admin login actually succeeds (max ~120s).
+READY=0
+i=0
+while [ "$i" -lt 60 ]; do
+  if $KC config credentials --server "$SERVER" --realm master --user admin --password kc-dev-only >/dev/null 2>&1; then
+    READY=1
+    break
+  fi
+  i=$((i + 1))
+  sleep 2
+done
+if [ "$READY" -ne 1 ]; then
+  echo "ERROR: keycloak did not become ready at $SERVER within 120s" >&2
+  exit 1
+fi
 
 if ! $KC get realms/aof --server "$SERVER" >/dev/null 2>&1; then
   $KC create realms --server "$SERVER" -s realm=aof -s enabled=true -s displayName="AOF Governance"
   echo "realm aof created"
 fi
+
+# Keycloak 26 enables the declarative user profile by default: user attributes
+# not declared in the realm profile are silently dropped, and declared fields
+# without edit permissions reject admin writes. Provision the profile so the
+# aof_tenant claim below actually persists, and allow unmanaged attributes
+# for ad-hoc extensions. Without this the OIDC token has no aof_tenant claim
+# and tenant resolution falls back to the realm name.
+USER_PROFILE='{"attributes":[{"name":"username","displayName":"${username}","validations":{"length":{"min":3,"max":255},"username-prohibited-characters":{},"up-username-not-idn-homograph":{}},"permissions":{"view":["admin","user"],"edit":["admin","user"]},"multivalued":false},{"name":"email","displayName":"${email}","validations":{"email":{},"length":{"max":255}},"required":{"roles":["user"]},"permissions":{"view":["admin","user"],"edit":["admin","user"]},"multivalued":false},{"name":"firstName","displayName":"${firstName}","validations":{"length":{"max":255},"person-name-prohibited-characters":{}},"permissions":{"view":["admin","user"],"edit":["admin","user"]},"multivalued":false},{"name":"lastName","displayName":"${lastName}","validations":{"length":{"max":255},"person-name-prohibited-characters":{}},"permissions":{"view":["admin","user"],"edit":["admin","user"]},"multivalued":false},{"name":"aof_tenant","displayName":"AOF Tenant","permissions":{"view":["admin","user"],"edit":["admin"]},"multivalued":true}],"unmanagedAttributePolicy":"ENABLED"}'
+printf '%s' "$USER_PROFILE" | $KC update users/profile -r aof --server "$SERVER" -f - >/dev/null
+echo "user profile declares aof_tenant"
 
 if ! $KC get clients -r aof --server "$SERVER" -q clientId=aof-api 2>/dev/null | grep -q aof-api; then
   $KC create clients -r aof --server "$SERVER" \

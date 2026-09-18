@@ -21,6 +21,7 @@ OPERATIONS = ROOT / "config" / "capabilities" / "operations.json"
 MANIFEST = ROOT / "config" / "capabilities" / "capability-manifest.json"
 README = ROOT / "README.md"
 UI_ROUTER = ROOT / "web" / "src" / "router" / "index.ts"
+INTEGRATION_PROFILES = ROOT / "config" / "capabilities" / "integration-profiles.json"
 START = "<!-- capability-inventory:start -->"
 END = "<!-- capability-inventory:end -->"
 
@@ -159,6 +160,26 @@ def build_inventory() -> dict[str, Any]:
     ui_routes = re.findall(r"^\s*path:\s*'([^']*)'", route_source, flags=re.MULTILINE)
     dependencies = _dependency_profiles()
     deployments = _deployment_profiles()
+    integration_document = json.loads(INTEGRATION_PROFILES.read_text(encoding="utf-8"))
+    integration_profiles = [
+        {
+            "profile_id": profile_id,
+            "capabilities": [
+                {
+                    "id": item["id"],
+                    "required": bool(item.get("required", False)),
+                    "enabled_env": item.get("enabled_env"),
+                    "default_enabled": bool(item.get("default_enabled", False)),
+                    "probe_type": item.get("probe", {}).get("type"),
+                    "distribution": item.get("probe", {}).get("distribution"),
+                    "version": item.get("probe", {}).get("version"),
+                    "reject_editable": bool(item.get("probe", {}).get("reject_editable", False)),
+                }
+                for item in definition.get("capabilities", [])
+            ],
+        }
+        for profile_id, definition in sorted(integration_document["profiles"].items())
+    ]
     return {
         "schema_version": "aof.capability-manifest/v3",
         "generated_from": [
@@ -171,6 +192,7 @@ def build_inventory() -> dict[str, Any]:
             "web/package.json and web/pnpm-lock.yaml",
             "deploy/docker-compose*.yml and services/**/docker-compose*.yml",
             "services/semantic_middle_layer_api/Dockerfile",
+            "config/capabilities/integration-profiles.json",
         ],
         "summary": {
             "http_operations": len(rest),
@@ -180,12 +202,14 @@ def build_inventory() -> dict[str, Any]:
             "ui_routes": len(ui_routes),
             "dependency_manifests": len(dependencies),
             "deployment_profiles": len(deployments),
+            "integration_profiles": len(integration_profiles),
         },
         "surfaces": {
             "cli": cli,
             "ui_routes": ui_routes,
             "dependency_profiles": dependencies,
             "deployment_profiles": deployments,
+            "integration_profiles": integration_profiles,
         },
         "capabilities": capabilities,
     }

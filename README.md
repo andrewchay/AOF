@@ -27,7 +27,7 @@ P0–P2 提供来源到签名 release 的仓库级基线。P3–P6 已增加受�
 ---
 
 <!-- capability-inventory:start -->
-当前交付面由能力清单自动生成：**178 个 HTTP 操作 / 169 个 HTTP 路径 / 37 个 MCP 工具 / 3 个 CLI 入口 / 9 个 UI 路由**。详见 [`config/capabilities/capability-manifest.json`](config/capabilities/capability-manifest.json)。
+当前交付面由能力清单自动生成：**178 个 HTTP 操作 / 169 个 HTTP 路径 / 38 个 MCP 工具 / 3 个 CLI 入口 / 9 个 UI 路由**。详见 [`config/capabilities/capability-manifest.json`](config/capabilities/capability-manifest.json)。
 <!-- capability-inventory:end -->
 
 ## 历史功能与兼容能力

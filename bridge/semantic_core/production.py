@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,7 @@ class ReadinessReport:
     ready: bool
     findings: tuple[ReadinessFinding, ...]
     report_digest: str
+    capabilities: tuple[dict[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -42,6 +44,7 @@ class ReadinessReport:
             "ready": self.ready,
             "findings": [item.to_dict() for item in self.findings],
             "report_digest": self.report_digest,
+            "capabilities": list(self.capabilities),
         }
 
 
@@ -79,6 +82,7 @@ class ProductionReadiness:
         mode = str(environment.get("AOF_RUNTIME_MODE", "development")).strip().lower()
         runtime_capabilities = dict(capabilities or cls._runtime_capabilities())
         findings: list[ReadinessFinding] = []
+        capability_states: tuple[dict[str, Any], ...] = ()
         if mode not in {"development", "test", "production"}:
             findings.append(
                 ReadinessFinding(
@@ -165,18 +169,52 @@ class ProductionReadiness:
                         "AOF_AGENTIC_RUN_DATABASE must be an absolute durable path",
                     )
                 )
+        selected_profile = str(environment.get("AOF_CAPABILITY_PROFILE", "")).strip()
+        if selected_profile:
+            try:
+                from bridge.capability_status import evaluate_capability_profile
+
+                profile_path = str(
+                    environment.get("AOF_CAPABILITY_PROFILE_FILE", "")
+                ).strip()
+                if profile_path:
+                    capability_report = evaluate_capability_profile(
+                        selected_profile,
+                        environment,
+                        profile_file=profile_path,
+                    )
+                else:
+                    capability_report = evaluate_capability_profile(
+                        selected_profile,
+                        environment,
+                    )
+                capability_states = tuple(
+                    item.to_dict() for item in capability_report.capabilities
+                )
+                for state in capability_report.capabilities:
+                    if state.blocking:
+                        findings.append(
+                            ReadinessFinding(
+                                f"capability_{state.capability_id}_{state.status}",
+                                state.reason,
+                            )
+                        )
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                findings.append(ReadinessFinding("capability_profile_invalid", str(exc)))
         findings.sort(key=lambda item: item.code)
         payload = {
             "api_version": "aof.production-readiness/v1",
             "mode": mode,
             "ready": not findings,
             "findings": [item.to_dict() for item in findings],
+            "capabilities": list(capability_states),
         }
         return ReadinessReport(
             mode=mode,
             ready=not findings,
             findings=tuple(findings),
             report_digest=content_digest(payload),
+            capabilities=capability_states,
         )
 
     @staticmethod

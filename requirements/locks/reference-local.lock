@@ -24,7 +24,6 @@ certifi==2026.2.25
 cffi==2.0.0
 charset_normalizer==3.4.6
 click==8.4.2
-cognee==0.5.5
 coloredlogs==15.0.1
 coverage==7.13.5
 cryptography==46.0.6
@@ -157,3 +156,7 @@ websockets==15.0.1
 wrapt==2.1.2
 yarl==1.23.0
 zipp==3.23.0
+mcp==2.2.0
+opentelemetry-api==1.44.0
+sse-starlette==3.4.11
+truststore==0.10.4

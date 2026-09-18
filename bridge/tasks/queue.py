@@ -192,6 +192,14 @@ class TaskQueue:
             if item[2] != task_id
         ]
         heapq.heapify(self._queue)
+
+        # 排队中取消（执行器未启动）：补记 CANCELLED 结果，与执行中取消路径一致
+        if task_id not in self._running_tasks:
+            self._results[task_id] = TaskResult(
+                task_id=task_id,
+                status=TaskStatus.CANCELLED,
+                error_message="cancelled while queued",
+            )
         
         if self.redis:
             await self._persist_task(task)
@@ -350,6 +358,16 @@ class TaskQueue:
     
     async def _execute_task(self, task: Task) -> None:
         """执行任务"""
+        # 排队期间被取消：直接记录，不启动执行器
+        if task.status == TaskStatus.CANCELLED:
+            result = TaskResult(
+                task_id=task.id,
+                status=TaskStatus.CANCELLED,
+                error_message="cancelled before start",
+            )
+            self._results[task.id] = result
+            return
+
         task.status = TaskStatus.RUNNING
         task.started_at = datetime.utcnow()
         task.worker_id = f"worker-{asyncio.current_task().get_name()}"
@@ -376,43 +394,63 @@ class TaskQueue:
             else:
                 result_data = await executor(task)
             
-            # 成功
-            task.status = TaskStatus.SUCCESS
-            task.completed_at = datetime.utcnow()
-            task.progress = 100.0
-            
-            result = TaskResult(
-                task_id=task.id,
-                status=TaskStatus.SUCCESS,
-                data=result_data,
-            )
-            
-            logger.info(f"Task completed: {task.id}")
+            # 成功。协作型执行器可能读到 CANCELLED 后正常返回，
+            # 此时不得将 cancel() 已写入的终态覆盖回 SUCCESS。
+            if task.status == TaskStatus.CANCELLED:
+                result = TaskResult(
+                    task_id=task.id,
+                    status=TaskStatus.CANCELLED,
+                    error_message="cancelled during execution",
+                )
+            else:
+                task.status = TaskStatus.SUCCESS
+                task.completed_at = datetime.utcnow()
+                task.progress = 100.0
+                
+                result = TaskResult(
+                    task_id=task.id,
+                    status=TaskStatus.SUCCESS,
+                    data=result_data,
+                )
+                
+                logger.info(f"Task completed: {task.id}")
             
         except asyncio.TimeoutError:
-            task.status = TaskStatus.TIMEOUT
-            task.completed_at = datetime.utcnow()
-            result = TaskResult(
-                task_id=task.id,
-                status=TaskStatus.TIMEOUT,
-                error_message="Task timeout",
-            )
+            if task.status != TaskStatus.CANCELLED:
+                task.status = TaskStatus.TIMEOUT
+                task.completed_at = datetime.utcnow()
+                result = TaskResult(
+                    task_id=task.id,
+                    status=TaskStatus.TIMEOUT,
+                    error_message="Task timeout",
+                )
+            else:
+                result = TaskResult(
+                    task_id=task.id,
+                    status=TaskStatus.CANCELLED,
+                    error_message="cancelled before timeout",
+                )
             logger.warning(f"Task timeout: {task.id}")
             
         except Exception as e:
-            # 失败
-            task.status = TaskStatus.FAILURE
-            task.completed_at = datetime.utcnow()
-            
+            # 已取消的任务不得被异常分支覆盖回 FAILURE。
             import traceback
-            result = TaskResult(
-                task_id=task.id,
-                status=TaskStatus.FAILURE,
-                error_message=str(e),
-                error_traceback=traceback.format_exc(),
-            )
-            
-            logger.error(f"Task failed: {task.id}, error={e}")
+            if task.status != TaskStatus.CANCELLED:
+                task.status = TaskStatus.FAILURE
+                task.completed_at = datetime.utcnow()
+                result = TaskResult(
+                    task_id=task.id,
+                    status=TaskStatus.FAILURE,
+                    error_message=str(e),
+                    error_traceback=traceback.format_exc(),
+                )
+                logger.error(f"Task failed: {task.id}, error={e}")
+            else:
+                result = TaskResult(
+                    task_id=task.id,
+                    status=TaskStatus.CANCELLED,
+                    error_message="cancelled before failure",
+                )
         
         # 存储结果
         self._results[task.id] = result

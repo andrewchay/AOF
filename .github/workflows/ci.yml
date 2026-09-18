@@ -153,6 +153,9 @@ jobs:
             tests/test_oidc_keycloak.py \
             tests/test_release_anchor_e2e.py
 
+      - name: Verify enabled enterprise capabilities are ready
+        run: python tools/ci/check_capability_profile.py --profile enterprise
+
       - name: Show dependency logs on failure
         if: failure()
         run: docker compose -f deploy/docker-compose.infra.yml logs --no-color
