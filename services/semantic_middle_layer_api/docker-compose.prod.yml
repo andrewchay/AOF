@@ -10,7 +10,7 @@ services:
       dockerfile: services/semantic_middle_layer_api/Dockerfile
       args:
         INSTALL_COGNEE: "1"
-        COGNEE_PIP_SPEC: "cognee==0.1.45"  # Pin version for production
+        COGNEE_PIP_SPEC: "cognee[neo4j]==1.5.4"  # Must match the selected graph backend
     image: aof-semantic-api:${VERSION:-latest}
     container_name: aof-semantic-api-prod
     restart: always
@@ -23,6 +23,7 @@ services:
       # D04/W01.04: production hard gate - runtime mode, auth mode and signing
       # keys are required; compose will fail fast with unset ${VAR:?} placeholders
       - AOF_RUNTIME_MODE=production
+      - AOF_CAPABILITY_PROFILE=production
       - AOF_API_AUTH_MODE=strict
       - AOF_SEMANTIC_IDENTITY_SECRET=${AOF_SEMANTIC_IDENTITY_SECRET:?required}
       - AOF_SEMANTIC_IDENTITY_KEY_ID=${AOF_SEMANTIC_IDENTITY_KEY_ID:?versioned key id required}

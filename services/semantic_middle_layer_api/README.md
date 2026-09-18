@@ -103,7 +103,7 @@ LLM_ENDPOINT=https://api.deepseek.com/v1
 docker-compose build
 
 # 带构建参数
-docker-compose build --build-arg COGNEE_PIP_SPEC="cognee==0.1.45"
+docker-compose build --build-arg COGNEE_PIP_SPEC="cognee[neo4j]==1.5.4"
 ```
 
 ### 镜像特性

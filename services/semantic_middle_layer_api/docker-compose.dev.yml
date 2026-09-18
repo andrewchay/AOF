@@ -10,7 +10,7 @@ services:
       dockerfile: services/semantic_middle_layer_api/Dockerfile
       args:
         INSTALL_COGNEE: "1"
-        COGNEE_PIP_SPEC: "cognee"
+        COGNEE_PIP_SPEC: "cognee[neo4j]==1.5.4"
     image: aof-semantic-api:dev
     container_name: aof-semantic-api-dev
     

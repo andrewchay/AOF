@@ -6,7 +6,7 @@ FROM python:3.13-slim AS builder
 
 # Build arguments
 ARG INSTALL_COGNEE=1
-ARG COGNEE_PIP_SPEC=cognee
+ARG COGNEE_PIP_SPEC=cognee[neo4j]==1.5.4
 ARG PIP_INDEX_URL=https://pypi.org/simple
 
 # Create virtual environment
@@ -60,6 +60,9 @@ WORKDIR $APP_HOME
 # Copy application code
 COPY --chown=aof:aof . $APP_HOME
 COPY --from=web-builder --chown=aof:aof /web/dist $APP_HOME/web/dist
+RUN if [ "$INSTALL_COGNEE" = "1" ]; then \
+      python tools/ci/check_cognee_compatibility.py; \
+    fi
 RUN mkdir -p "$APP_HOME/data" "$APP_HOME/logs" "$APP_HOME/ontologies" && \
     chown -R aof:aof "$APP_HOME/data" "$APP_HOME/logs" "$APP_HOME/ontologies"
 
