@@ -47,6 +47,13 @@ def test_manifest_counts_real_rest_mcp_cli_and_ui_surfaces():
         source = ROOT / profile["source"]
         assert source.is_file()
         assert profile["source_digest"] == "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest()
+    integration_profiles = manifest["surfaces"]["integration_profiles"]
+    assert {item["profile_id"] for item in integration_profiles} == {
+        "development",
+        "enterprise",
+        "production",
+    }
+    assert manifest["summary"]["integration_profiles"] == len(integration_profiles)
 
 
 def test_inventory_and_readme_are_regeneratable_without_drift():

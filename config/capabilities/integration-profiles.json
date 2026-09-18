@@ -1,0 +1,19 @@
+{
+  "schema_version": "aof.integration-profiles/v1",
+  "profiles": {
+    "development": {"capabilities": [
+      {"id": "cognee", "required": false, "enabled_env": "AOF_ENABLE_COGNEE", "default_enabled": false, "probe": {"type": "python_import", "module": "cognee"}}
+    ]},
+    "enterprise": {"capabilities": [
+      {"id": "postgres", "required": true, "probe": {"type": "tcp", "host": "127.0.0.1", "port": 5433}},
+      {"id": "keycloak", "required": true, "probe": {"type": "http", "url": "http://127.0.0.1:8081/realms/aof/.well-known/openid-configuration", "accepted_status": [200]}},
+      {"id": "rabbitmq", "required": true, "probe": {"type": "tcp", "host": "127.0.0.1", "port": 5673}},
+      {"id": "openbao", "required": true, "probe": {"type": "http", "url": "http://127.0.0.1:8200/v1/sys/health", "accepted_status": [200, 429, 472, 473]}},
+      {"id": "cognee", "required": false, "enabled_env": "AOF_ENABLE_COGNEE", "default_enabled": false, "probe": {"type": "python_import", "module": "cognee"}}
+    ]},
+    "production": {"capabilities": [
+      {"id": "cognee", "required": true, "probe": {"type": "python_import", "module": "cognee", "distribution": "cognee", "version": "1.5.4", "reject_editable": true}},
+      {"id": "otel_exporter", "required": true, "probe": {"type": "python_import", "module": "opentelemetry.exporter.otlp.proto.http.trace_exporter"}}
+    ]}
+  }
+}

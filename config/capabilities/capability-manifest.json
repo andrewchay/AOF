@@ -9,7 +9,8 @@
     "services/**/requirements*.txt",
     "web/package.json and web/pnpm-lock.yaml",
     "deploy/docker-compose*.yml and services/**/docker-compose*.yml",
-    "services/semantic_middle_layer_api/Dockerfile"
+    "services/semantic_middle_layer_api/Dockerfile",
+    "config/capabilities/integration-profiles.json"
   ],
   "summary": {
     "http_operations": 178,
@@ -18,7 +19,8 @@
     "cli_entry_points": 3,
     "ui_routes": 9,
     "dependency_manifests": 8,
-    "deployment_profiles": 7
+    "deployment_profiles": 7,
+    "integration_profiles": 3
   },
   "surfaces": {
     "cli": [
@@ -41,9 +43,9 @@
       {
         "path": "requirements/cognee.in",
         "ecosystem": "python",
-        "source_digest": "sha256:a09082f71a0517085c1e28918bdf2530edd4cdcc9c04630060bcdbb78fd51266",
+        "source_digest": "sha256:e4f48801c2a64d6aedd45cf900cf0ffc30e8eb836c7ce73ecdd91824732f4235",
         "declared_dependencies": [
-          "cognee",
+          "cognee[neo4j]",
           "fastembed",
           "instructor",
           "kuzu",
@@ -201,7 +203,7 @@
         "profile_id": "services/semantic_middle_layer_api/docker-compose.dev.yml",
         "kind": "docker-compose",
         "source": "services/semantic_middle_layer_api/docker-compose.dev.yml",
-        "source_digest": "sha256:6c61a900de78ac840b7b6504a6444e329c68e4e72fa8ece53d3acdf4e2054bd9",
+        "source_digest": "sha256:b30514658c4bb62d59e135649628e7dc596f2966f7a6d88dec5c910aebb70242",
         "services": [
           "aof-semantic-api"
         ]
@@ -210,7 +212,7 @@
         "profile_id": "services/semantic_middle_layer_api/docker-compose.observability.yml",
         "kind": "docker-compose",
         "source": "services/semantic_middle_layer_api/docker-compose.observability.yml",
-        "source_digest": "sha256:5f277b469767a35d6619a302bbf2c0ad02ea1b0b73b2f598b0ba859f68cb2ede",
+        "source_digest": "sha256:d64659bef2673239ff5761a697153dacfbaa46c012859f338d43a7cb9306930c",
         "services": [
           "alertmanager",
           "aof-semantic-api",
@@ -222,7 +224,7 @@
         "profile_id": "services/semantic_middle_layer_api/docker-compose.prod.yml",
         "kind": "docker-compose",
         "source": "services/semantic_middle_layer_api/docker-compose.prod.yml",
-        "source_digest": "sha256:184e32f6dcd2f965ce38ebcdd4689080e63ac37789ac504ab33000f246fb0513",
+        "source_digest": "sha256:e4b8754e41effa14def9bfcd300d8ac62e7b0746e3546d0e2e3758c875f39a08",
         "services": [
           "aof-semantic-api",
           "nginx"
@@ -232,7 +234,7 @@
         "profile_id": "services/semantic_middle_layer_api/docker-compose.yml",
         "kind": "docker-compose",
         "source": "services/semantic_middle_layer_api/docker-compose.yml",
-        "source_digest": "sha256:d2308900cbb5a40d2f5c1a584e744e2a07a7b026c4a543438dd5800247a5e83d",
+        "source_digest": "sha256:09a9b0cb9027c2e950748481a0099c61b89994ae8341b2f4e7dd3a95c348467b",
         "services": [
           "aof-semantic-api"
         ]
@@ -241,7 +243,7 @@
         "profile_id": "ci-required-jobs",
         "kind": "ci-workflow",
         "source": ".github/workflows/ci.yml",
-        "source_digest": "sha256:771c1d9a834ced74651a63af39e3b1956f72407b6b67f7eac3edd31abe07e880",
+        "source_digest": "sha256:cc37d22672b29742c15b09941b0c5a234bca4f6694d37438016cfcde829dc54b",
         "jobs": [
           "api-contract",
           "closure-gate",
@@ -259,7 +261,104 @@
         "profile_id": "production-image",
         "kind": "container-image",
         "source": "services/semantic_middle_layer_api/Dockerfile",
-        "source_digest": "sha256:f48a7aabe523f68128cda129c56d9ad7ab75b2ccdf71331cf9b3e5fecfbd9221"
+        "source_digest": "sha256:3e2135096ad64e34cdf1b923053a96f6c5775a714f3b1a6c12524c98e4d913e8"
+      }
+    ],
+    "integration_profiles": [
+      {
+        "profile_id": "development",
+        "capabilities": [
+          {
+            "id": "cognee",
+            "required": false,
+            "enabled_env": "AOF_ENABLE_COGNEE",
+            "default_enabled": false,
+            "probe_type": "python_import",
+            "distribution": null,
+            "version": null,
+            "reject_editable": false
+          }
+        ]
+      },
+      {
+        "profile_id": "enterprise",
+        "capabilities": [
+          {
+            "id": "postgres",
+            "required": true,
+            "enabled_env": null,
+            "default_enabled": false,
+            "probe_type": "tcp",
+            "distribution": null,
+            "version": null,
+            "reject_editable": false
+          },
+          {
+            "id": "keycloak",
+            "required": true,
+            "enabled_env": null,
+            "default_enabled": false,
+            "probe_type": "http",
+            "distribution": null,
+            "version": null,
+            "reject_editable": false
+          },
+          {
+            "id": "rabbitmq",
+            "required": true,
+            "enabled_env": null,
+            "default_enabled": false,
+            "probe_type": "tcp",
+            "distribution": null,
+            "version": null,
+            "reject_editable": false
+          },
+          {
+            "id": "openbao",
+            "required": true,
+            "enabled_env": null,
+            "default_enabled": false,
+            "probe_type": "http",
+            "distribution": null,
+            "version": null,
+            "reject_editable": false
+          },
+          {
+            "id": "cognee",
+            "required": false,
+            "enabled_env": "AOF_ENABLE_COGNEE",
+            "default_enabled": false,
+            "probe_type": "python_import",
+            "distribution": null,
+            "version": null,
+            "reject_editable": false
+          }
+        ]
+      },
+      {
+        "profile_id": "production",
+        "capabilities": [
+          {
+            "id": "cognee",
+            "required": true,
+            "enabled_env": null,
+            "default_enabled": false,
+            "probe_type": "python_import",
+            "distribution": "cognee",
+            "version": "1.5.4",
+            "reject_editable": true
+          },
+          {
+            "id": "otel_exporter",
+            "required": true,
+            "enabled_env": null,
+            "default_enabled": false,
+            "probe_type": "python_import",
+            "distribution": null,
+            "version": null,
+            "reject_editable": false
+          }
+        ]
       }
     ]
   },
