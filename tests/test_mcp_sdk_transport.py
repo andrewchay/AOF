@@ -91,7 +91,8 @@ def test_sdk_transport_protocol_and_auth():
             "aof_list_datasets", {"principal_headers": _principal_headers()}
         )
         collected["authorized_ok"] = not result.is_error
-        data = json.loads(result.content[0].text)
+        collected["authorized_payload"] = json.loads(result.content[0].text)
+        data = collected["authorized_payload"]
         collected["datasets_returned"] = "datasets" in data
 
     asyncio.run(_run_client(scenario))
@@ -103,5 +104,5 @@ def test_sdk_transport_protocol_and_auth():
     assert collected["no_principal_code"] == "authentication_required"
     assert collected["forged_principal_is_error"] is True
     assert collected["forged_principal_code"] == "authentication_required"
-    assert collected["authorized_ok"] is True
+    assert collected["authorized_ok"] is True, collected["authorized_payload"]
     assert collected["datasets_returned"] is True
