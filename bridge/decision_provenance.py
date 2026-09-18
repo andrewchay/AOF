@@ -221,10 +221,15 @@ class _JSONLLedgerBackend:
             existing = {item["decision"]["id"] for item in entries}
             if decision.id in existing:
                 raise DecisionProvenanceError(f"decision already exists: {decision.id}")
-            unknown = sorted(set(decision.parent_decision_ids) - existing)
+            same_tenant = {
+                item["decision"]["id"]
+                for item in entries
+                if item["decision"].get("tenant_id") == decision.tenant_id
+            }
+            unknown = sorted(set(decision.parent_decision_ids) - same_tenant)
             if unknown:
                 raise DecisionProvenanceError(
-                    f"unknown parent decision(s): {', '.join(unknown)}"
+                    f"unknown or cross-tenant parent decision(s): {', '.join(unknown)}"
                 )
             previous_hash = entries[-1]["integrity"]["hash"] if entries else None
             payload = {"decision": decision.to_dict(), "previous_hash": previous_hash}
@@ -422,21 +427,40 @@ class DecisionProvenanceStore:
         )
         return self._backend.record(decision)
 
-    def get(self, decision_id: str) -> dict[str, Any] | None:
+    def get(
+        self, decision_id: str, *, tenant_id: str | None = None
+    ) -> dict[str, Any] | None:
         entries = self._entries_verified()
         return next(
-            (entry for entry in entries if entry["decision"]["id"] == decision_id),
+            (
+                entry
+                for entry in entries
+                if entry["decision"]["id"] == decision_id
+                and (
+                    tenant_id is None
+                    or entry["decision"].get("tenant_id") == tenant_id
+                )
+            ),
             None,
         )
 
     def causal_chain(
-        self, decision_id: str, direction: str = "ancestors", max_depth: int = 8
+        self,
+        decision_id: str,
+        direction: str = "ancestors",
+        max_depth: int = 8,
+        *,
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         if direction not in {"ancestors", "descendants"}:
             raise DecisionProvenanceError("direction must be ancestors or descendants")
         if not 1 <= max_depth <= 50:
             raise DecisionProvenanceError("max_depth must be between 1 and 50")
-        entries = self._entries_verified()
+        entries = [
+            entry
+            for entry in self._entries_verified()
+            if tenant_id is None or entry["decision"].get("tenant_id") == tenant_id
+        ]
         by_id = {entry["decision"]["id"]: entry for entry in entries}
         if decision_id not in by_id:
             raise DecisionProvenanceError(f"decision not found: {decision_id}")
@@ -457,6 +481,8 @@ class DecisionProvenanceStore:
                 else children.get(current, [])
             )
             for other in sorted(neighbors):
+                if other not in by_id:
+                    continue
                 edges.append(
                     {
                         "from": current if direction == "descendants" else other,
@@ -508,9 +534,14 @@ class DecisionProvenanceStore:
             reverse=True,
         )[:limit]
 
-    def impact(self, decision_id: str, max_depth: int = 8) -> dict[str, Any]:
+    def impact(
+        self, decision_id: str, max_depth: int = 8, *, tenant_id: str | None = None
+    ) -> dict[str, Any]:
         chain = self.causal_chain(
-            decision_id, direction="descendants", max_depth=max_depth
+            decision_id,
+            direction="descendants",
+            max_depth=max_depth,
+            tenant_id=tenant_id,
         )
         outputs = []
         for entry in chain["nodes"]:
@@ -524,9 +555,18 @@ class DecisionProvenanceStore:
             "affected_decision_count": max(0, len(chain["nodes"]) - 1),
         }
 
-    def audit_trail(self, decision_id: str) -> dict[str, Any]:
-        chain = self.causal_chain(decision_id, direction="ancestors", max_depth=50)
+    def audit_trail(
+        self, decision_id: str, *, tenant_id: str | None = None
+    ) -> dict[str, Any]:
+        chain = self.causal_chain(
+            decision_id,
+            direction="ancestors",
+            max_depth=50,
+            tenant_id=tenant_id,
+        )
         integrity = self.verify_integrity()
+        if tenant_id is not None:
+            integrity = {"valid": bool(integrity.get("valid"))}
         return {
             "@context": PROV_CONTEXT,
             "@id": decision_id,

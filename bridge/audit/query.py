@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
+from html import escape as html_escape
 import json
 from pathlib import Path
 
@@ -113,6 +114,15 @@ class ActivitySummary:
     top_resources: List[Dict[str, Any]] = field(default_factory=list)
     error_count: int = 0
     avg_duration_ms: float = 0.0
+
+
+@dataclass(frozen=True)
+class SecurityThresholds:
+    """Auditable alert thresholds; callers may tune them for their environment."""
+
+    failed_login_count: int = 10
+    failed_action_count: int = 5
+    max_anomalies: int = 100
 
 
 class AuditQuery:
@@ -467,7 +477,9 @@ class AuditQuery:
         
         query = select(
             DBAuditLog.action,
-            func.count(DBAuditLog.id).label('fail_count')
+            func.count(DBAuditLog.id).label('fail_count'),
+            func.min(DBAuditLog.timestamp).label('first_seen'),
+            func.max(DBAuditLog.timestamp).label('last_seen'),
         ).where(
             and_(
                 DBAuditLog.status == 'failure',
@@ -486,7 +498,14 @@ class AuditQuery:
         rows = result.all()
         
         return [
-            {"action": row.action, "fail_count": row.fail_count}
+            {
+                "action": row.action,
+                "fail_count": row.fail_count,
+                "evidence": {
+                    "first_seen": row.first_seen.isoformat(),
+                    "last_seen": row.last_seen.isoformat(),
+                },
+            }
             for row in rows
         ]
     
@@ -581,7 +600,8 @@ class AuditQuery:
         if not self.log_file or not Path(self.log_file).exists():
             return []
         
-        action_counts = {}
+        action_counts: dict[str, int] = {}
+        action_evidence: dict[str, list[dict[str, str]]] = {}
         
         with open(self.log_file, 'r', encoding='utf-8') as f:
             for line in f:
@@ -601,13 +621,21 @@ class AuditQuery:
                     
                     action = data.get('action', 'unknown')
                     action_counts[action] = action_counts.get(action, 0) + 1
+                    action_evidence.setdefault(action, []).append({
+                        "event_id": str(data.get("event_id", "")),
+                        "timestamp": timestamp.isoformat(),
+                    })
                     
                 except (json.JSONDecodeError, ValueError):
                     continue
         
         # 过滤并排序
         result = [
-            {"action": action, "fail_count": count}
+            {
+                "action": action,
+                "fail_count": count,
+                "evidence": {"events": action_evidence[action][:20]},
+            }
             for action, count in action_counts.items()
             if count >= min_count
         ]
@@ -697,8 +725,14 @@ class AuditQuery:
 class AuditReportGenerator:
     """审计报告生成器"""
     
-    def __init__(self, query: AuditQuery):
+    def __init__(
+        self,
+        query: AuditQuery,
+        *,
+        security_thresholds: SecurityThresholds | None = None,
+    ):
         self.query = query
+        self.security_thresholds = security_thresholds or SecurityThresholds()
     
     async def generate_compliance_report(
         self,
@@ -706,7 +740,7 @@ class AuditReportGenerator:
         end_date: datetime,
         tenant_id: Optional[str] = None,
         format: ReportFormat = ReportFormat.JSON
-    ) -> str:
+    ) -> str | bytes:
         """生成合规报告"""
         filter = AuditQueryFilter(
             start_time=start_date,
@@ -724,6 +758,8 @@ class AuditReportGenerator:
             return self._generate_csv_report(result)
         elif format == ReportFormat.HTML:
             return self._generate_html_report(result, start_date, end_date)
+        elif format == ReportFormat.PDF:
+            return self._generate_pdf_report(result, start_date, end_date)
         else:
             raise ValueError(f"Unsupported format: {format}")
     
@@ -760,7 +796,10 @@ class AuditReportGenerator:
         start_time = end_time - timedelta(days=days)
         
         # 获取失败操作
-        failed_actions = await self.query.get_failed_actions(hours=24)
+        thresholds = self.security_thresholds
+        failed_actions = await self.query.get_failed_actions(
+            hours=24, min_count=thresholds.failed_action_count
+        )
         
         # 获取登录事件
         login_filter = AuditQueryFilter(
@@ -786,6 +825,37 @@ class AuditReportGenerator:
                     "client_ip": event.client_ip,
                 })
         
+        alerts = []
+        if failed_logins >= thresholds.failed_login_count:
+            alerts.append({
+                "rule_id": "failed-login-count",
+                "severity": "high",
+                "threshold": {"operator": ">=", "value": thresholds.failed_login_count},
+                "observed": failed_logins,
+                "evidence_event_ids": [
+                    event.event_id
+                    for event in login_result.events
+                    if event.status == "failure"
+                ][:20],
+                "false_positive_notes": (
+                    "Expected load tests and identity-provider migration retries must be "
+                    "correlated by request_id before escalation."
+                ),
+            })
+        for failure in failed_actions:
+            alerts.append({
+                "rule_id": "repeated-action-failure",
+                "severity": "medium",
+                "threshold": {"operator": ">=", "value": thresholds.failed_action_count},
+                "observed": failure["fail_count"],
+                "action": failure["action"],
+                "evidence": failure.get("evidence", {}),
+                "false_positive_notes": (
+                    "Known dependency outages and planned negative drills should be matched "
+                    "to change records before escalation."
+                ),
+            })
+
         return {
             "report_period_days": days,
             "period_start": start_time.isoformat(),
@@ -799,7 +869,13 @@ class AuditReportGenerator:
                 ),
             },
             "high_risk_operations": failed_actions,
-            "detected_anomalies": anomalies[:100],  # 最多100条
+            "detected_anomalies": anomalies[:thresholds.max_anomalies],
+            "alerts": alerts[:thresholds.max_anomalies],
+            "thresholds": {
+                "failed_login_count": thresholds.failed_login_count,
+                "failed_action_count": thresholds.failed_action_count,
+                "max_anomalies": thresholds.max_anomalies,
+            },
             "recommendations": self._generate_security_recommendations(
                 failed_logins, failed_actions
             ),
@@ -813,7 +889,7 @@ class AuditReportGenerator:
         """生成安全建议"""
         recommendations = []
         
-        if failed_logins > 10:
+        if failed_logins >= self.security_thresholds.failed_login_count:
             recommendations.append(
                 "检测到大量登录失败，建议检查是否存在暴力破解攻击"
             )
@@ -866,18 +942,11 @@ class AuditReportGenerator:
         
         # 数据
         for event in result.events:
-            writer.writerow([
-                event.event_id,
-                event.timestamp.isoformat(),
-                event.user_id,
-                event.username,
-                event.action,
-                event.status,
-                event.resource_type,
-                event.resource_id,
-                event.client_ip,
-                event.duration_ms,
-            ])
+            writer.writerow([self._csv_cell(value) for value in [
+                event.event_id, event.timestamp.isoformat(), event.user_id,
+                event.username, event.action, event.status, event.resource_type,
+                event.resource_id, event.client_ip, event.duration_ms,
+            ]])
         
         return output.getvalue()
     
@@ -889,6 +958,8 @@ class AuditReportGenerator:
     ) -> str:
         """生成 HTML 格式报告"""
         # 简化版 HTML 报告
+        period_start = html_escape(start_date.isoformat())
+        period_end = html_escape(end_date.isoformat())
         html = f"""
 <!DOCTYPE html>
 <html>
@@ -906,7 +977,7 @@ class AuditReportGenerator:
 <body>
     <h1>AOF Audit Report</h1>
     <div class="summary">
-        <p><strong>Period:</strong> {start_date.isoformat()} to {end_date.isoformat()}</p>
+        <p><strong>Period:</strong> {period_start} to {period_end}</p>
         <p><strong>Total Events:</strong> {result.total_count}</p>
         <p><strong>Generated:</strong> {datetime.utcnow().isoformat()}</p>
     </div>
@@ -921,13 +992,17 @@ class AuditReportGenerator:
         </tr>
 """
         for event in result.events[:1000]:  # 最多显示1000条
+            user = html_escape(str(event.username or event.user_id or 'N/A'))
+            action = html_escape(str(event.action))
+            status = html_escape(str(event.status))
+            resource = html_escape(f"{event.resource_type}:{event.resource_id or '*'}")
             html += f"""
         <tr>
             <td>{event.timestamp.isoformat()}</td>
-            <td>{event.username or event.user_id or 'N/A'}</td>
-            <td>{event.action}</td>
-            <td>{event.status}</td>
-            <td>{event.resource_type}:{event.resource_id or '*'}</td>
+            <td>{user}</td>
+            <td>{action}</td>
+            <td>{status}</td>
+            <td>{resource}</td>
             <td>{event.duration_ms or 'N/A'}</td>
         </tr>
 """
@@ -938,3 +1013,74 @@ class AuditReportGenerator:
 </html>
 """
         return html
+
+    @staticmethod
+    def _csv_cell(value: Any) -> Any:
+        """Prevent spreadsheet programs from evaluating exported audit data."""
+        if not isinstance(value, str):
+            return value
+        stripped = value.lstrip()
+        if stripped.startswith(("=", "+", "-", "@", "\t", "\r")):
+            return "'" + value
+        return value
+
+    def _generate_pdf_report(
+        self,
+        result: AuditQueryResult,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> bytes:
+        """Generate a dependency-free PDF containing the report's actual event rows."""
+        lines = [
+            "AOF Audit Report",
+            f"Period: {start_date.isoformat()} to {end_date.isoformat()}",
+            f"Total Events: {result.total_count}",
+        ]
+        for event in result.events[:48]:
+            lines.append(
+                " | ".join(
+                    str(value or "N/A")
+                    for value in (
+                        event.event_id,
+                        event.timestamp.isoformat(),
+                        event.username or event.user_id,
+                        event.action,
+                        event.status,
+                        f"{event.resource_type}:{event.resource_id or '*'}",
+                    )
+                )
+            )
+        text_commands = ["BT", "/F1 8 Tf", "36 806 Td"]
+        for index, line in enumerate(lines):
+            if index:
+                text_commands.append("0 -15 Td")
+            safe = line.encode("latin-1", "replace").decode("latin-1")
+            safe = safe.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+            text_commands.append(f"({safe[:150]}) Tj")
+        text_commands.append("ET")
+        stream = "\n".join(text_commands).encode("latin-1")
+        objects = [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] "
+            b"/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+        ]
+        document = bytearray(b"%PDF-1.4\n")
+        offsets = [0]
+        for number, obj in enumerate(objects, start=1):
+            offsets.append(len(document))
+            document.extend(f"{number} 0 obj\n".encode())
+            document.extend(obj)
+            document.extend(b"\nendobj\n")
+        xref = len(document)
+        document.extend(f"xref\n0 {len(objects) + 1}\n".encode())
+        document.extend(b"0000000000 65535 f \n")
+        for offset in offsets[1:]:
+            document.extend(f"{offset:010d} 00000 n \n".encode())
+        document.extend(
+            f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
+            f"startxref\n{xref}\n%%EOF\n".encode()
+        )
+        return bytes(document)

@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import json
+
 from bridge.semantic_core.production import ProductionReadiness
 
 
@@ -181,3 +183,75 @@ def test_production_readiness_rejects_relative_agentic_database(tmp_path) -> Non
     assert [item.code for item in report.findings] == [
         "production_agentic_database_not_absolute"
     ]
+
+
+def test_selected_capability_profile_is_part_of_readiness(tmp_path) -> None:
+    profile = tmp_path / "profiles.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema_version": "aof.integration-profiles/v1",
+                "profiles": {
+                    "test-profile": {
+                        "capabilities": [
+                            {
+                                "id": "missing_backend",
+                                "required": True,
+                                "probe": {
+                                    "type": "python_import",
+                                    "module": "module_that_cannot_exist_aof",
+                                },
+                            }
+                        ]
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = ProductionReadiness.evaluate(
+        {
+            "AOF_RUNTIME_MODE": "development",
+            "AOF_CAPABILITY_PROFILE": "test-profile",
+            "AOF_CAPABILITY_PROFILE_FILE": str(profile),
+        }
+    )
+    assert report.ready is False
+    assert [item.code for item in report.findings] == [
+        "capability_missing_backend_unavailable"
+    ]
+    assert report.to_dict()["capabilities"][0]["blocking"] is True
+
+
+def test_disabled_development_optional_dependency_is_reported(tmp_path) -> None:
+    profile = tmp_path / "profiles.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema_version": "aof.integration-profiles/v1",
+                "profiles": {
+                    "development": {
+                        "capabilities": [
+                            {
+                                "id": "optional_backend",
+                                "required": False,
+                                "enabled_env": "ENABLE_OPTIONAL",
+                                "default_enabled": False,
+                                "probe": {"type": "python_import", "module": "missing"},
+                            }
+                        ]
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = ProductionReadiness.evaluate(
+        {
+            "AOF_RUNTIME_MODE": "development",
+            "AOF_CAPABILITY_PROFILE": "development",
+            "AOF_CAPABILITY_PROFILE_FILE": str(profile),
+        }
+    )
+    assert report.ready is True
+    assert report.to_dict()["capabilities"][0]["status"] == "disabled_optional"

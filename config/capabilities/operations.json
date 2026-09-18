@@ -3633,42 +3633,17 @@
       }
     },
     {
-      "operation_id": "mcp:aof",
-      "method": "TOOL",
-      "path": "aof",
-      "classification": "legacy",
-      "public": false,
-      "auth": "signed-principal",
-      "policy": {
-        "action": "write",
-        "allowed_roles": [
-          "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
-        ]
-      }
-    },
-    {
       "operation_id": "mcp:aof_datalog_reason",
       "method": "TOOL",
       "path": "aof_datalog_reason",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "execute",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "reasoner"
         ]
       }
     },
@@ -3676,18 +3651,25 @@
       "operation_id": "mcp:aof_dataset_status",
       "method": "TOOL",
       "path": "aof_dataset_status",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3696,18 +3678,25 @@
       "operation_id": "mcp:aof_decision_audit_trail",
       "method": "TOOL",
       "path": "aof_decision_audit_trail",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3716,14 +3705,13 @@
       "operation_id": "mcp:aof_document_parse",
       "method": "TOOL",
       "path": "aof_document_parse",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
           "editor",
           "ingestor",
           "operator",
@@ -3736,18 +3724,25 @@
       "operation_id": "mcp:aof_enhanced_search",
       "method": "TOOL",
       "path": "aof_enhanced_search",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3756,19 +3751,16 @@
       "operation_id": "mcp:aof_export_markdown",
       "method": "TOOL",
       "path": "aof_export_markdown",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
           "editor",
-          "ingestor",
           "operator",
-          "owner",
-          "worker"
+          "owner"
         ]
       }
     },
@@ -3776,18 +3768,25 @@
       "operation_id": "mcp:aof_find_decision_precedents",
       "method": "TOOL",
       "path": "aof_find_decision_precedents",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3796,18 +3795,25 @@
       "operation_id": "mcp:aof_graph_analytics",
       "method": "TOOL",
       "path": "aof_graph_analytics",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3816,18 +3822,25 @@
       "operation_id": "mcp:aof_health_check",
       "method": "TOOL",
       "path": "aof_health_check",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3836,18 +3849,25 @@
       "operation_id": "mcp:aof_hybrid_search",
       "method": "TOOL",
       "path": "aof_hybrid_search",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3856,18 +3876,25 @@
       "operation_id": "mcp:aof_list_datasets",
       "method": "TOOL",
       "path": "aof_list_datasets",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3876,18 +3903,25 @@
       "operation_id": "mcp:aof_okf_get_concept",
       "method": "TOOL",
       "path": "aof_okf_get_concept",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3896,18 +3930,25 @@
       "operation_id": "mcp:aof_okf_index",
       "method": "TOOL",
       "path": "aof_okf_index",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3916,18 +3957,25 @@
       "operation_id": "mcp:aof_okf_lint",
       "method": "TOOL",
       "path": "aof_okf_lint",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3936,18 +3984,25 @@
       "operation_id": "mcp:aof_okf_search_concepts",
       "method": "TOOL",
       "path": "aof_okf_search_concepts",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -3956,19 +4011,14 @@
       "operation_id": "mcp:aof_ontology_approve_draft",
       "method": "TOOL",
       "path": "aof_ontology_approve_draft",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "reviewer"
         ]
       }
     },
@@ -3976,19 +4026,15 @@
       "operation_id": "mcp:aof_ontology_create_draft",
       "method": "TOOL",
       "path": "aof_ontology_create_draft",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
           "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "owner"
         ]
       }
     },
@@ -3996,19 +4042,14 @@
       "operation_id": "mcp:aof_ontology_publish_draft",
       "method": "TOOL",
       "path": "aof_ontology_publish_draft",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "publisher"
         ]
       }
     },
@@ -4016,19 +4057,14 @@
       "operation_id": "mcp:aof_ontology_request_changes",
       "method": "TOOL",
       "path": "aof_ontology_request_changes",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "reviewer"
         ]
       }
     },
@@ -4036,19 +4072,14 @@
       "operation_id": "mcp:aof_ontology_validate_draft",
       "method": "TOOL",
       "path": "aof_ontology_validate_draft",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "validator"
         ]
       }
     },
@@ -4056,19 +4087,14 @@
       "operation_id": "mcp:aof_ontology_waive_finding",
       "method": "TOOL",
       "path": "aof_ontology_waive_finding",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "risk-owner"
         ]
       }
     },
@@ -4076,19 +4102,14 @@
       "operation_id": "mcp:aof_publish_datalog_ruleset",
       "method": "TOOL",
       "path": "aof_publish_datalog_ruleset",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "publisher"
         ]
       }
     },
@@ -4096,18 +4117,25 @@
       "operation_id": "mcp:aof_rag_retrieve",
       "method": "TOOL",
       "path": "aof_rag_retrieve",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -4116,16 +4144,13 @@
       "operation_id": "mcp:aof_record_decision",
       "method": "TOOL",
       "path": "aof_record_decision",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "execute",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
           "operator",
           "owner",
           "worker"
@@ -4136,19 +4161,14 @@
       "operation_id": "mcp:aof_run_datalog_ruleset",
       "method": "TOOL",
       "path": "aof_run_datalog_ruleset",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "execute",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "reasoner"
         ]
       }
     },
@@ -4156,19 +4176,16 @@
       "operation_id": "mcp:aof_semantic_query",
       "method": "TOOL",
       "path": "aof_semantic_query",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "execute",
         "allowed_roles": [
           "admin",
           "analyst",
-          "editor",
-          "ingestor",
           "operator",
-          "owner",
-          "worker"
+          "owner"
         ]
       }
     },
@@ -4176,18 +4193,25 @@
       "operation_id": "mcp:aof_semantic_query_get_run",
       "method": "TOOL",
       "path": "aof_semantic_query_get_run",
-      "classification": "legacy",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
-        "action": "write",
+        "action": "read",
         "allowed_roles": [
           "admin",
           "analyst",
+          "compiler",
           "editor",
           "ingestor",
           "operator",
           "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
           "worker"
         ]
       }
@@ -4196,19 +4220,175 @@
       "operation_id": "mcp:aof_semantic_query_replay",
       "method": "TOOL",
       "path": "aof_semantic_query_replay",
-      "classification": "legacy",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "execute",
+        "allowed_roles": [
+          "admin",
+          "analyst",
+          "operator",
+          "owner"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_semantic_compile_get_run",
+      "method": "TOOL",
+      "path": "aof_semantic_compile_get_run",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "read",
+        "allowed_roles": [
+          "admin",
+          "analyst",
+          "compiler",
+          "editor",
+          "ingestor",
+          "operator",
+          "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
+          "worker"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_semantic_compile_get_channel",
+      "method": "TOOL",
+      "path": "aof_semantic_compile_get_channel",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "read",
+        "allowed_roles": [
+          "admin",
+          "analyst",
+          "compiler",
+          "editor",
+          "ingestor",
+          "operator",
+          "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
+          "worker"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_semantic_compile_plan",
+      "method": "TOOL",
+      "path": "aof_semantic_compile_plan",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "execute",
+        "allowed_roles": [
+          "admin",
+          "compiler"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_semantic_compile_evaluate",
+      "method": "TOOL",
+      "path": "aof_semantic_compile_evaluate",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "execute",
+        "allowed_roles": [
+          "admin",
+          "compiler"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_semantic_compile_run",
+      "method": "TOOL",
+      "path": "aof_semantic_compile_run",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "execute",
+        "allowed_roles": [
+          "admin",
+          "compiler"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_semantic_compile_replay",
+      "method": "TOOL",
+      "path": "aof_semantic_compile_replay",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "execute",
+        "allowed_roles": [
+          "admin",
+          "compiler"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_semantic_compile_approve_promotion",
+      "method": "TOOL",
+      "path": "aof_semantic_compile_approve_promotion",
+      "classification": "governed",
       "public": false,
       "auth": "signed-principal",
       "policy": {
         "action": "write",
         "allowed_roles": [
           "admin",
-          "analyst",
-          "editor",
-          "ingestor",
-          "operator",
-          "owner",
-          "worker"
+          "reviewer"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_semantic_compile_promote",
+      "method": "TOOL",
+      "path": "aof_semantic_compile_promote",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "write",
+        "allowed_roles": [
+          "admin",
+          "publisher"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_semantic_compile_rollback",
+      "method": "TOOL",
+      "path": "aof_semantic_compile_rollback",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "write",
+        "allowed_roles": [
+          "admin",
+          "publisher"
         ]
       }
     },

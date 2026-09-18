@@ -9,10 +9,13 @@
  -->
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { beginLogin, completeLogin, consumeReturnTo, isLoggedIn, logout } from '@/api/oidc'
 
 const route = useRoute()
 const router = useRouter()
+const authenticated = ref(isLoggedIn())
 
 const menuItems = [
   { path: '/', title: '资产总览', icon: 'Odometer' },
@@ -30,6 +33,27 @@ const currentTitle = computed(() => menuItems.find((m) => m.path === route.path)
 function navigate(path: string) {
   router.push(path)
 }
+
+async function signIn() {
+  await beginLogin(window.location.href)
+}
+
+function signOut() {
+  logout()
+  authenticated.value = false
+}
+
+onMounted(async () => {
+  const callback = new URL(window.location.href)
+  if (!callback.searchParams.has('code')) return
+  try {
+    await completeLogin(callback.href)
+    authenticated.value = true
+    window.history.replaceState({}, '', consumeReturnTo())
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'OIDC 登录失败')
+  }
+})
 </script>
 
 <template>
@@ -52,6 +76,8 @@ function navigate(path: string) {
         <div class="header-title">{{ currentTitle }}</div>
         <div class="header-right">
           <el-tag size="small" type="info">Agent-Ready Knowledge Asset Engine</el-tag>
+          <el-button v-if="authenticated" size="small" @click="signOut">退出登录</el-button>
+          <el-button v-else size="small" type="primary" @click="signIn">企业账号登录</el-button>
         </div>
       </el-header>
 
@@ -120,6 +146,11 @@ function navigate(path: string) {
 .header-title {
   font-size: 16px;
   font-weight: 600;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .app-main {
   background: #f5f7fa;

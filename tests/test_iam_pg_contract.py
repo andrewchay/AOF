@@ -81,6 +81,36 @@ def test_assignment_append_and_iterate(store):
     assert [a.user_id for a in store.assignments] == ["u1", "u2"]
 
 
+def test_assignment_sequence_supports_mutable_sequence_contract(store):
+    from bridge.auth.models import ResourceType, UserRoleAssignment
+
+    def assignment(user_id: str):
+        return UserRoleAssignment(
+            user_id=user_id,
+            role_id="r1",
+            resource_type=ResourceType.DATASET,
+        )
+
+    store.assignments.append(assignment("u1"))
+    store.assignments.append(assignment("u2"))
+    store.assignments.insert(1, assignment("middle"))
+    assert [value.user_id for value in store.assignments] == ["u1", "middle", "u2"]
+
+    store.assignments[-1] = assignment("last")
+    assert store.assignments[-1].user_id == "last"
+
+    store.assignments[1:2] = [assignment("slice-a"), assignment("slice-b")]
+    assert [value.user_id for value in store.assignments] == [
+        "u1",
+        "slice-a",
+        "slice-b",
+        "last",
+    ]
+
+    del store.assignments[1]
+    assert [value.user_id for value in store.assignments] == ["u1", "slice-b", "last"]
+
+
 def test_tenant_slug_unique(store):
     from bridge.persistence.sqlite_iam_store import IamStoreError
     store.tenants["t1"] = _tenant("t1", "acme-corp")
@@ -95,3 +125,30 @@ def test_delete_and_len(store):
     del store.users["u1"]
     assert len(store.users) == 1
     assert store.users.get("u1") is None
+
+
+def test_governed_legacy_migration_contract(store, tmp_path):
+    from bridge.access.iam_migration import IamMigrationService
+    from bridge.access.revocations import RevocationRegistry
+
+    service = IamMigrationService(
+        target_store=store,
+        quarantine_path=tmp_path / "migration.sqlite",
+        revocations=RevocationRegistry(tmp_path / "revocations.sqlite"),
+    )
+    report = service.migrate(
+        {
+            "schema_version": "aof.legacy-iam/v1",
+            "tenants": [{"id": "old-t", "name": "Acme", "slug": "acme-migration", "status": "active"}],
+            "users": [{"id": "old-u", "username": "migrated-user", "tenant_id": "old-t"}],
+            "roles": [{"id": "old-r", "name": "Viewer", "role_type": "viewer", "tenant_id": "old-t"}],
+            "assignments": [{"user_id": "old-u", "role_id": "old-r", "resource_type": "dataset"}],
+        },
+        tenant_ids={"old-t": "new-t"},
+        user_ids={"old-u": "new-u"},
+        role_ids={"old-r": "new-r"},
+    )
+    assert report.assignments_migrated == 1
+    assert store.users["new-u"].tenant_id == "new-t"
+    assert store.roles["new-r"].tenant_id == "new-t"
+    assert store.assignments[0].user_id == "new-u"

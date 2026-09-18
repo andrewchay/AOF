@@ -1,5 +1,5 @@
 # Cognee integration
-cognee==0.5.5
+cognee[neo4j]==1.5.4
 fastembed==0.6.0
 instructor==1.14.5
 kuzu==0.11.3

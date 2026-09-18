@@ -34,9 +34,13 @@ def test_all_satisfied_passes():
         '--job', 'unit-contract=success',
         '--job', 'governance=success',
         '--job', 'api-contract=success',
+        '--job', 'remediation-register=success',
+        '--job', 'enterprise-integration=success',
+        '--job', 'web-build=success',
+        '--job', 'image-smoke=success',
     )
     assert code == 0
-    assert 'all 4 required jobs succeeded' in out
+    assert 'all 8 required jobs succeeded' in out
 
 
 def test_missing_job_fails():
@@ -44,6 +48,10 @@ def test_missing_job_fails():
     assert code == 1
     assert 'MISSING' in out
     assert 'governance' in out and 'api-contract' in out
+    assert 'remediation-register' in out
+    assert 'enterprise-integration' in out
+    assert 'web-build' in out
+    assert 'image-smoke' in out
 
 
 def test_failure_and_skipped_and_cancelled_fail():
@@ -53,6 +61,10 @@ def test_failure_and_skipped_and_cancelled_fail():
             '--job', 'unit-contract=success',
             '--job', 'governance=success',
             '--job', f'api-contract={bad}',
+            '--job', 'remediation-register=success',
+            '--job', 'enterprise-integration=success',
+            '--job', 'web-build=success',
+            '--job', 'image-smoke=success',
         )
         assert code == 1, f'{bad} must not satisfy the gate'
         assert bad in out
@@ -64,6 +76,10 @@ def test_non_required_jobs_are_noted_not_blocking():
         '--job', 'unit-contract=success',
         '--job', 'governance=success',
         '--job', 'api-contract=success',
+        '--job', 'remediation-register=success',
+        '--job', 'enterprise-integration=success',
+        '--job', 'web-build=success',
+        '--job', 'image-smoke=success',
         '--job', 'experimental-thing=skipped',
     )
     assert code == 0

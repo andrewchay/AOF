@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 
@@ -97,3 +99,33 @@ def test_unregistered_route_is_rejected():
     with pytest.raises(OperationRegistryError) as exc:
         validate_fastapi_app(app)
     assert '/v1/totally-new-undeclared-endpoint' in str(exc.value)
+
+
+def test_mcp_registry_exactly_matches_exposed_tools():
+    import mcp_server
+
+    from bridge.access.operation_registry import validate_mcp_server
+
+    validate_mcp_server(mcp_server.build_server())
+
+
+def test_mcp_registry_rejects_phantom_and_missing_tools(tmp_path):
+    import mcp_server
+
+    from bridge.access.operation_registry import OperationRegistryError, validate_mcp_server
+
+    registry_path = tmp_path / 'operations.json'
+    registry_path.write_text(json.dumps({
+        'operations': [{
+            'operation_id': 'mcp:phantom',
+            'method': 'TOOL',
+            'path': 'phantom',
+            'classification': 'governed',
+            'public': False,
+            'auth': 'signed-principal',
+            'policy': {'action': 'read', 'allowed_roles': ['viewer']},
+        }],
+    }), encoding='utf-8')
+
+    with pytest.raises(OperationRegistryError, match='MCP operation registry mismatch'):
+        validate_mcp_server(mcp_server.build_server(), registry_path)

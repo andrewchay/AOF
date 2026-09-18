@@ -125,6 +125,35 @@ def validate_fastapi_app(app: Any, path: str | Path | None = None) -> None:
         )
 
 
+def validate_mcp_server(server: Any, path: str | Path | None = None) -> None:
+    """Assert exact parity between exposed MCP tools and governed registry entries."""
+    registry = load_registry(path)
+    exposed = set(server.tools)
+    registered = {
+        operation.path
+        for operation in registry.values()
+        if operation.method == "TOOL"
+    }
+    missing = sorted(exposed - registered)
+    phantom = sorted(registered - exposed)
+    malformed = sorted(
+        operation.operation_id
+        for operation in registry.values()
+        if operation.method == "TOOL"
+        and (
+            operation.operation_id != f"mcp:{operation.path}"
+            or operation.public
+            or operation.auth != "signed-principal"
+            or operation.policy is None
+        )
+    )
+    if missing or phantom or malformed:
+        raise OperationRegistryError(
+            "MCP operation registry mismatch: "
+            f"missing={missing}, phantom={phantom}, malformed={malformed}"
+        )
+
+
 def validate_retired_endpoints(app: Any, path: str | Path | None = None) -> None:
     """Retired operations must keep answering 410 via their handler."""
     registry = load_registry(path)

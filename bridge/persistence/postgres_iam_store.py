@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterator, MutableMapping, MutableSequence
+from collections.abc import Callable, Iterator, MutableMapping, MutableSequence
 from typing import Any
 
 import psycopg
@@ -123,25 +123,20 @@ class _PgSequenceView(MutableSequence):
         for r in rows:
             yield _decode(json.loads(r["payload"]))  # type: ignore[call-overload,index,override,assignment,operator]
 
-    def __getitem__(self, index: int) -> Any:  # type: ignore[call-overload,index,override,assignment,operator]
+    def __getitem__(self, index: int | slice) -> Any:  # type: ignore[call-overload,index,override,assignment,operator]
         return list(self)[index]
 
-    def __setitem__(self, index, value) -> None:
-        if isinstance(index, slice):
-            with self._store._connect() as conn:
-                conn.execute("DELETE FROM iam_assignments")
-                for obj in value:
-                    conn.execute(
-                        "INSERT INTO iam_assignments(payload) VALUES (%s)",
-                        (json.dumps(_encode(obj), ensure_ascii=False),),
-                    )
-            return
-        raise NotImplementedError("single-item assignment is not supported")
+    def __setitem__(self, index: int | slice, value: Any) -> None:
+        def mutate(rows: list[Any]) -> None:
+            rows[index] = value
 
-    def __delitem__(self, index: int) -> None:  # type: ignore[call-overload,index,override,assignment,operator]
-        rows = list(self)
-        del rows[index]
-        self[:] = rows
+        self._mutate(mutate)
+
+    def __delitem__(self, index: int | slice) -> None:  # type: ignore[call-overload,index,override,assignment,operator]
+        def mutate(rows: list[Any]) -> None:
+            del rows[index]
+
+        self._mutate(mutate)
 
     def append(self, obj: Any) -> None:
         with self._store._connect() as conn:
@@ -151,7 +146,26 @@ class _PgSequenceView(MutableSequence):
             )
 
     def insert(self, index: int, value: Any) -> None:
-        raise NotImplementedError
+        def mutate(rows: list[Any]) -> None:
+            rows.insert(index, value)
+
+        self._mutate(mutate)
+
+    def _mutate(self, operation: Callable[[list[Any]], None]) -> None:
+        """Apply one list mutation while holding an exclusive table lock."""
+        with self._store._connect() as conn:
+            conn.execute("LOCK TABLE iam_assignments IN EXCLUSIVE MODE")
+            encoded: Any = conn.execute(
+                "SELECT payload FROM iam_assignments ORDER BY seq"
+            ).fetchall()
+            rows = [_decode(json.loads(row["payload"])) for row in encoded]
+            operation(rows)
+            conn.execute("DELETE FROM iam_assignments")
+            with conn.cursor() as cursor:
+                cursor.executemany(
+                    "INSERT INTO iam_assignments(payload) VALUES (%s)",
+                    [(json.dumps(_encode(obj), ensure_ascii=False),) for obj in rows],
+                )
 
 
 class PostgresIamStore:

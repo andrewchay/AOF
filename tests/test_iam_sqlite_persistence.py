@@ -68,7 +68,8 @@ async def test_role_persists_with_permissions(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_tenant_lifecycle_persists_across_instances(tmp_path):
+async def test_tenant_lifecycle_persists_across_instances(tmp_path, monkeypatch):
+    monkeypatch.setenv('AOF_REVOCATIONS_FILE', str(tmp_path / 'revocations.sqlite'))
     m1 = TenantManager(store_path=tmp_path / 'iam.db')
     tenant = await m1.create_tenant('Acme Corp', slug='acme-corp')
     await m1.suspend_tenant(tenant.id, reason='contract paused')
@@ -78,6 +79,13 @@ async def test_tenant_lifecycle_persists_across_instances(tmp_path):
     assert fetched is not None
     assert fetched.slug == 'acme-corp'
     assert fetched.status == TenantStatus.SUSPENDED
+
+    from bridge.access.revocations import RevocationRegistry
+
+    revocations = RevocationRegistry()
+    assert revocations.is_revoked('tenant', tenant.id)
+    assert await m2.activate_tenant(tenant.id) is True
+    assert revocations.is_revoked('tenant', tenant.id) is False
 
 
 @pytest.mark.asyncio

@@ -279,6 +279,18 @@ def _auth_strict_mode() -> bool:
 _API_MINIMUM_ANONYMOUS_PATHS = {'/healthz', '/readyz'}
 _API_PUBLIC_PREFIXES = ('/docs', '/openapi.json', '/redoc')
 _API_PUBLIC_PATHS: set[str] = set(_API_MINIMUM_ANONYMOUS_PATHS)
+# The browser shell and its immutable bundles must load before OIDC can start.
+# Keep this list explicit so an unknown API-like path never becomes anonymous.
+_WEB_PUBLIC_PATHS = {
+    '/',
+    '/ingest',
+    '/okf',
+    '/graph',
+    '/ontology',
+    '/runtime',
+    '/agent',
+    '/harness',
+}
 try:
     from bridge.access.operation_registry import load_registry as _load_operation_registry
 
@@ -290,10 +302,32 @@ except Exception as _reg_exc:  # pragma: no cover - fail-closed fallback
 
 # W01.01: per-operation authorization policies (from the registry)
 _API_OPERATION_POLICIES: dict = {}
+_API_TEMPLATE_OPERATION_POLICIES: list[tuple[str, Any, Any]] = []
 try:
     _API_OPERATION_POLICIES = dict(_load_operation_registry())
+    from starlette.routing import compile_path as _compile_operation_path
+
+    _API_TEMPLATE_OPERATION_POLICIES = [
+        (_op.method, _compile_operation_path(_op.path)[0], _op)
+        for _op in _API_OPERATION_POLICIES.values()
+        if '{' in _op.path and not _op.public and _op.method != 'TOOL'
+    ]
 except Exception as _pol_exc:  # pragma: no cover
     logger.warning('operation policies unavailable: %s', _pol_exc)
+
+
+def _registered_http_operation(method: str, path: str):
+    operation = _API_OPERATION_POLICIES.get(f'{method.lower()}:{path}')
+    if operation is not None:
+        return operation
+    return next(
+        (
+            candidate
+            for registered_method, pattern, candidate in _API_TEMPLATE_OPERATION_POLICIES
+            if registered_method == method and pattern.fullmatch(path)
+        ),
+        None,
+    )
 
 
 @app.middleware('http')
@@ -301,7 +335,12 @@ async def auth_middleware(request: Request, call_next):
     if not _auth_strict_mode():
         return await call_next(request)
     path = request.url.path
-    if path in _API_PUBLIC_PATHS or path.startswith(_API_PUBLIC_PREFIXES):
+    if (
+        path in _API_PUBLIC_PATHS
+        or path in _WEB_PUBLIC_PATHS
+        or path.startswith(_API_PUBLIC_PREFIXES)
+        or path.startswith('/assets/')
+    ):
         return await call_next(request)
 
     # W01.01: authenticate, then authorize against the per-operation policy
@@ -315,8 +354,16 @@ async def auth_middleware(request: Request, call_next):
 
     from bridge.access.policy import PolicyDenied, authorize
 
-    operation = _API_OPERATION_POLICIES.get(f"{request.method.lower()}:{path}")
-    if operation is not None and operation.policy is not None:
+    operation = _registered_http_operation(request.method, path)
+    if operation is None:
+        return JSONResponse(
+            status_code=403,
+            content={
+                'code': 'operation_not_registered',
+                'detail': 'request operation is absent from the governed registry',
+            },
+        )
+    if operation.policy is not None:
         try:
             authorize(operation.policy, principal.roles)
         except PolicyDenied as exc:
@@ -4397,13 +4444,14 @@ def _decision_principal(request: Request, action: str = 'read'):
         # W01.02: map OIDC claims to a SemanticPrincipal-compatible return
         from bridge.semantic_core.identity import SemanticPrincipal
 
-        return SemanticPrincipal(
+        principal = SemanticPrincipal(
             subject=oidc_principal.subject,
             tenant_id=oidc_principal.tenant_id,
             roles=oidc_principal.roles,
             issued_at=int(time.time()),
             key_id='oidc',
         )
+        return _require_active_principal(principal)
 
     secret = os.environ.get('AOF_SEMANTIC_IDENTITY_SECRET', '').encode('utf-8')
     if not secret:
@@ -4414,9 +4462,21 @@ def _decision_principal(request: Request, action: str = 'read'):
     )
     try:
         principal = verifier.verify(request.headers)
-        return principal
+        return _require_active_principal(principal)
     except PrincipalVerificationError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+def _require_active_principal(principal):
+    """Recheck persistent revocations on every authenticated request."""
+    from bridge.access.revocations import RevocationRegistry
+
+    registry = RevocationRegistry()
+    if registry.is_revoked('subject', principal.subject):
+        raise HTTPException(status_code=401, detail='signed principal subject is revoked')
+    if registry.is_revoked('tenant', principal.tenant_id):
+        raise HTTPException(status_code=401, detail='signed principal tenant is revoked')
+    return principal
 
 
 @app.post('/v1/decisions', status_code=201)
@@ -4438,11 +4498,8 @@ async def record_decision(req: DecisionRecordReq, request: Request) -> dict[str,
 @app.get('/v1/decisions/{decision_id}')
 async def get_decision(decision_id: str, request: Request) -> dict[str, Any]:
     principal = _decision_principal(request, 'read')
-    entry = _decision_store().get(decision_id)
+    entry = _decision_store().get(decision_id, tenant_id=principal.tenant_id)
     if entry is None:
-        raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
-    # Tenant isolation: only return decisions belonging to the caller's tenant
-    if entry.get('decision', {}).get('tenant_id') != principal.tenant_id:
         raise HTTPException(status_code=404, detail=f'decision not found: {decision_id}')
     return entry
 
@@ -4451,13 +4508,12 @@ async def get_decision(decision_id: str, request: Request) -> dict[str, Any]:
 async def decision_causal_chain(decision_id: str, request: Request, direction: str = Query('ancestors'), max_depth: int = Query(8, ge=1, le=50)) -> dict[str, Any]:
     principal = _decision_principal(request, 'read')
     try:
-        result = _decision_store().causal_chain(decision_id, direction=direction, max_depth=max_depth)
-        # Filter nodes to only include caller's tenant
-        result['nodes'] = [
-            node for node in result.get('nodes', [])
-            if node.get('decision', {}).get('tenant_id') == principal.tenant_id
-        ]
-        return result
+        return _decision_store().causal_chain(
+            decision_id,
+            direction=direction,
+            max_depth=max_depth,
+            tenant_id=principal.tenant_id,
+        )
     except HTTPException:
         raise
     except Exception as exc:
@@ -4477,13 +4533,9 @@ async def search_decision_precedents(req: DecisionPrecedentReq, request: Request
 async def decision_impact(req: DecisionImpactReq, request: Request) -> dict[str, Any]:
     principal = _decision_principal(request, 'read')
     try:
-        result = _decision_store().impact(**req.model_dump())
-        # Filter nodes to only include caller's tenant
-        result['nodes'] = [
-            node for node in result.get('nodes', [])
-            if node.get('decision', {}).get('tenant_id') == principal.tenant_id
-        ]
-        return result
+        return _decision_store().impact(
+            **req.model_dump(), tenant_id=principal.tenant_id
+        )
     except HTTPException:
         raise
     except Exception as exc:
@@ -4494,14 +4546,9 @@ async def decision_impact(req: DecisionImpactReq, request: Request) -> dict[str,
 async def decision_audit_trail(decision_id: str, request: Request) -> dict[str, Any]:
     principal = _decision_principal(request, 'read')
     try:
-        result = _decision_store().audit_trail(decision_id)
-        # Filter causal chain nodes to only include caller's tenant
-        if 'causal_chain' in result:
-            result['causal_chain']['nodes'] = [
-                node for node in result['causal_chain'].get('nodes', [])
-                if node.get('decision', {}).get('tenant_id') == principal.tenant_id
-            ]
-        return result
+        return _decision_store().audit_trail(
+            decision_id, tenant_id=principal.tenant_id
+        )
     except HTTPException:
         raise
     except Exception as exc:

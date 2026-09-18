@@ -222,22 +222,16 @@ class _SqliteSequenceView(MutableSequence):
         return rows[index]
 
     def __setitem__(self, index: int | slice, value: Any) -> None:
-        if isinstance(index, slice):
-            # Replace the whole sequence in one transaction (in-place [:] = kept)
-            with managed_sqlite_connection(self._store._connect) as conn:
-                conn.execute("DELETE FROM iam_assignments")
-                for obj in value:
-                    conn.execute(
-                        "INSERT INTO iam_assignments(payload) VALUES (?)",
-                        (json.dumps(_encode(obj), ensure_ascii=False),),
-                    )
-            return
-        raise NotImplementedError("single-item assignment is not supported")
+        def mutate(rows: list[Any]) -> None:
+            rows[index] = value
+
+        self._mutate(mutate)
 
     def __delitem__(self, index: int | slice) -> None:
-        rows = list(self)
-        del rows[index]
-        self[:] = rows
+        def mutate(rows: list[Any]) -> None:
+            del rows[index]
+
+        self._mutate(mutate)
 
     def append(self, obj: Any) -> None:
         with managed_sqlite_connection(self._store._connect) as conn:
@@ -246,8 +240,26 @@ class _SqliteSequenceView(MutableSequence):
                 (json.dumps(_encode(obj), ensure_ascii=False),),
             )
 
-    def insert(self, index: int, value: Any) -> None:  # pragma: no cover
-        raise NotImplementedError
+    def insert(self, index: int, value: Any) -> None:
+        def mutate(rows: list[Any]) -> None:
+            rows.insert(index, value)
+
+        self._mutate(mutate)
+
+    def _mutate(self, operation: Callable[[list[Any]], None]) -> None:
+        """Apply one list mutation and persist it in a single write lock."""
+        with managed_sqlite_connection(self._store._connect) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            encoded = conn.execute(
+                "SELECT payload FROM iam_assignments ORDER BY seq"
+            ).fetchall()
+            rows = [_decode(json.loads(row[0])) for row in encoded]
+            operation(rows)
+            conn.execute("DELETE FROM iam_assignments")
+            conn.executemany(
+                "INSERT INTO iam_assignments(payload) VALUES (?)",
+                [(json.dumps(_encode(obj), ensure_ascii=False),) for obj in rows],
+            )
 
 
 # ---------------------------------------------------------------------------

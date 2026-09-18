@@ -38,6 +38,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -143,12 +144,14 @@ class MemifyFeedbackLoop:
     
     async def _save_to_cognee_memify(self, feedback_record: dict[str, Any]) -> None:
         """保存反馈到 Cognee Memify。"""
-        # Note: Cognee 的 memify API 可能会变化，这里提供基本框架
         try:
-            from cognee.modules.memify import save_interaction
-            await save_interaction(
-                data=json.dumps(feedback_record),
-                session_id=feedback_record.get("session_id"),
+            from cognee.modules.memify import memify
+
+            session_id = str(feedback_record.get("session_id") or "default")
+            dataset_suffix = hashlib.sha256(session_id.encode("utf-8")).hexdigest()[:24]
+            await memify(
+                data=[json.dumps(feedback_record, ensure_ascii=False)],
+                dataset=f"aof-feedback-{dataset_suffix}",
             )
         except ImportError:
             # Memify 模块可能不可用

@@ -97,12 +97,150 @@ jobs:
       - name: API documentation drift
         run: python tools/export_openapi.py --check
 
+      - name: Capability inventory drift
+        run: python tools/ci/generate_capability_inventory.py --check
+
+  remediation-register:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Validate remediation register
+        run: >-
+          python tools/ci/validate_remediation_register.py
+          docs/remediation/2026-09-05/closure-register.json
+
+  enterprise-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Start enterprise integration dependencies
+        run: |
+          docker compose -f deploy/docker-compose.infra.yml up -d --wait --wait-timeout 180
+          sh deploy/keycloak-init.sh
+          sh deploy/openbao-init.sh
+
+      - name: Run enterprise integration profile with zero skips
+        run: |
+          python tools/ci/run_pytest_no_skips.py -v --tb=short \
+            tests/test_postgres_ledger_contract.py \
+            tests/test_action_run_pg_contract.py \
+            tests/test_iam_pg_contract.py \
+            tests/test_session_store_pg_contract.py \
+            tests/test_workflow_store_pg_contract.py \
+            tests/test_postgres_inbox.py \
+            tests/test_postgres_uow.py \
+            tests/test_infra_adapters.py \
+            tests/test_oidc_auth.py \
+            tests/test_oidc_keycloak.py \
+            tests/test_release_anchor_e2e.py
+
+      - name: Verify enabled enterprise capabilities are ready
+        run: python tools/ci/check_capability_profile.py --profile enterprise
+
+      - name: Show dependency logs on failure
+        if: failure()
+        run: docker compose -f deploy/docker-compose.infra.yml logs --no-color
+
+      - name: Stop enterprise integration dependencies
+        if: always()
+        run: docker compose -f deploy/docker-compose.infra.yml down -v
+
+  web-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check and production build
+        run: pnpm run build
+
+  image-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build production image
+        run: >-
+          docker build
+          --build-arg INSTALL_COGNEE=0
+          --tag aof-ci:${{ github.sha }}
+          --file services/semantic_middle_layer_api/Dockerfile .
+
+      - name: Verify non-root read-only runtime and probes
+        run: |
+          test "$(docker image inspect --format '{{.Config.User}}' aof-ci:${{ github.sha }})" = "aof"
+          container_id=$(docker run --detach --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,uid=999,gid=999,mode=1777 \
+            --tmpfs /app/AOF/data:rw,nosuid,uid=999,gid=999,mode=0750 \
+            --tmpfs /app/AOF/logs:rw,nosuid,uid=999,gid=999,mode=0750 \
+            --tmpfs /app/AOF/ontologies:rw,nosuid,uid=999,gid=999,mode=0750 \
+            --publish 127.0.0.1:8787:8787 \
+            --env AOF_RUNTIME_MODE=production \
+            --env AOF_API_AUTH_MODE=strict \
+            --env AOF_SEMANTIC_IDENTITY_SECRET=ci-identity-secret-0000000000000001 \
+            --env AOF_SEMANTIC_IDENTITY_KEY_ID=identity-ci-v1 \
+            --env AOF_QUERY_EVIDENCE_SIGNING_SECRET=ci-query-secret-000000000000000002 \
+            --env AOF_QUERY_EVIDENCE_SIGNING_KEY_ID=query-ci-v1 \
+            --env AOF_RELEASE_SIGNING_SECRET=ci-release-secret-0000000000000001 \
+            --env AOF_RELEASE_SIGNING_KEY_ID=release-ci-v1 \
+            --env AOF_OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318 \
+            --env AOF_SLO_TARGETS_FILE=/app/AOF/config/observability/slo_targets.yaml \
+            aof-ci:${{ github.sha }})
+          trap 'docker logs "$container_id"; docker rm --force "$container_id"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8787/healthz >/dev/null && \
+               curl --fail --silent http://127.0.0.1:8787/readyz >/dev/null && \
+               curl --fail --silent http://127.0.0.1:8787/ | grep --quiet '<div id="app"></div>'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
   # W11.02: the summary gate always runs, reads the ACTUAL conclusion of
   # every required job, and fails on any failure/skip/absence - platform
   # green alone is not trusted (required checks can accept skipped).
   closure-gate:
     runs-on: ubuntu-latest
-    needs: [lint-type, unit-contract, governance, api-contract]
+    needs: [lint-type, unit-contract, governance, api-contract, remediation-register, enterprise-integration, web-build, image-smoke]
     if: always()
     steps:
       - name: Checkout
@@ -114,7 +252,11 @@ jobs:
             --job "lint-type=${{ needs['lint-type'].result }}" \
             --job "unit-contract=${{ needs['unit-contract'].result }}" \
             --job "governance=${{ needs.governance.result }}" \
-            --job "api-contract=${{ needs['api-contract'].result }}"
+            --job "api-contract=${{ needs['api-contract'].result }}" \
+            --job "remediation-register=${{ needs['remediation-register'].result }}" \
+            --job "enterprise-integration=${{ needs['enterprise-integration'].result }}" \
+            --job "web-build=${{ needs['web-build'].result }}" \
+            --job "image-smoke=${{ needs['image-smoke'].result }}"
 
   # W11.02: negative drill (W11.05) hook - a workflow_dispatch job that
   # deliberately fails to verify the gate cannot be bypassed.
