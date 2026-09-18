@@ -9,7 +9,25 @@ docker exec -i aof-infra-keycloak-1 sh -s << 'INNER'
 set -eu
 KC="/opt/keycloak/bin/kcadm.sh"
 SERVER="http://localhost:8080"
-$KC config credentials --server "$SERVER" --realm master --user admin --password kc-dev-only >/dev/null 2>&1
+
+# The compose service has no healthcheck, so `docker compose up --wait`
+# returns while start-dev is still initializing; the first kcadm call then
+# fails and `set -e` aborts the whole script with no diagnostics. Poll until
+# the admin login actually succeeds (max ~120s).
+READY=0
+i=0
+while [ "$i" -lt 60 ]; do
+  if $KC config credentials --server "$SERVER" --realm master --user admin --password kc-dev-only >/dev/null 2>&1; then
+    READY=1
+    break
+  fi
+  i=$((i + 1))
+  sleep 2
+done
+if [ "$READY" -ne 1 ]; then
+  echo "ERROR: keycloak did not become ready at $SERVER within 120s" >&2
+  exit 1
+fi
 
 if ! $KC get realms/aof --server "$SERVER" >/dev/null 2>&1; then
   $KC create realms --server "$SERVER" -s realm=aof -s enabled=true -s displayName="AOF Governance"
