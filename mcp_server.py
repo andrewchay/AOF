@@ -197,6 +197,7 @@ _MCP_IDENTITY_FIELDS: dict[str, dict[str, str]] = {
     "aof_datalog_reason": {"agent_id": "reason"},
     "aof_publish_datalog_ruleset": {"actor": "publish"},
     "aof_run_datalog_ruleset": {"agent_id": "reason"},
+    "aof_knowledge_build": {"tenant_id": "tenant", "actor": "create"},
 }
 
 _MCP_PASSTHROUGH_PRINCIPAL_HEADERS = {
@@ -989,8 +990,28 @@ def _register_semantic_query_tools(server: McpServer) -> None:
 # Build and run server
 # ---------------------------------------------------------------------------
 
+async def _tool_knowledge_build(args: dict[str, Any]) -> dict[str, Any]:
+    """构建 tenant-scoped release 并 promote 到 production channel。"""
+    from bridge.knowledge_build_mcp import build_knowledge_release
+
+    knowledge_root = Path(
+        os.environ.get("AOF_KNOWLEDGE_STATE_DIR", str(PROJECT_ROOT / "data" / "knowledge_build"))
+    )
+    compiler_root = Path(
+        os.environ.get("AOF_COMPILER_STATE_DIR", str(PROJECT_ROOT / "data" / "semantic_compiler"))
+    )
+    return build_knowledge_release(
+        kb_id=str(args["kb_id"]),
+        docs=list(args["docs"]),
+        tenant_id=str(args["tenant_id"]),
+        actor=str(args["actor"]),
+        knowledge_state_root=knowledge_root,
+        compiler_state_root=compiler_root,
+    )
+
+
 def build_server() -> McpServer:
-    server = McpServer(name="aof", version="2.1.0")
+    server = McpServer(name="aof", version="2.2.0")
 
     server.register_tool(McpTool(
         name="aof_hybrid_search",
@@ -1303,6 +1324,32 @@ def build_server() -> McpServer:
 
     _register_semantic_compiler_tools(server)
     _register_semantic_query_tools(server)
+    server.register_tool(McpTool(
+        name="aof_knowledge_build",
+        description="摄入文档快照、治理发布并将可查询 release promote 到 production。",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "kb_id": {"type": "string"},
+                "docs": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "relative_path": {"type": "string"},
+                            "title": {"type": "string"},
+                            "content": {"type": "string"},
+                            "sha256": {"type": "string"},
+                            "links": {"type": "array", "items": {"type": "string"}},
+                        },
+                        "required": ["relative_path", "title", "content", "sha256"],
+                    },
+                },
+            },
+            "required": ["kb_id", "docs"],
+        },
+        handler=_tool_knowledge_build,
+    ))
     _secure_mcp_schemas(server)
 
     from bridge.access.operation_registry import validate_mcp_server

@@ -4554,6 +4554,22 @@
       "classification": "static-hosting",
       "public": true,
       "auth": "anonymous"
+    },
+    {
+      "operation_id": "mcp:aof_knowledge_build",
+      "method": "TOOL",
+      "path": "aof_knowledge_build",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "write",
+        "allowed_roles": [
+          "admin",
+          "owner",
+          "publisher"
+        ]
+      }
     }
   ]
 }

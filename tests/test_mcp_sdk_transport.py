@@ -95,7 +95,7 @@ def test_sdk_transport_protocol_and_auth():
 
     asyncio.run(_run_client(scenario))
 
-    assert collected["tool_count"] == 37
+    assert collected["tool_count"] == 38  # 37 个存量工具 + aof_knowledge_build
     assert collected["has_hybrid_search"] is True
     assert collected["principal_required"] is True
     assert collected["no_principal_is_error"] is True
