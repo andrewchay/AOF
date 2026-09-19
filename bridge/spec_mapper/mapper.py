@@ -21,9 +21,14 @@ def map_aof_spec_to_cognee(spec: dict) -> dict:
     This function is intentionally thin. It only maps fields and defaults.
     """
     runtime = spec.get("runtime", {})
-    return {
+    result = {
         "datasets": spec.get("dataset") or spec.get("datasets"),
         "run_in_background": runtime.get("run_in_background", False),
         "incremental_loading": runtime.get("incremental_loading", True),
         "data_per_batch": runtime.get("data_per_batch", 20),
     }
+    # 大型结构化 schema 必须显式限制抽取文本块与并发批次，避免图谱工具调用超出模型输出上限。
+    for key in ("chunk_size", "chunks_per_batch"):
+        if runtime.get(key) is not None:
+            result[key] = runtime[key]
+    return result
