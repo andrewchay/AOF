@@ -198,6 +198,7 @@ _MCP_IDENTITY_FIELDS: dict[str, dict[str, str]] = {
     "aof_publish_datalog_ruleset": {"actor": "publish"},
     "aof_run_datalog_ruleset": {"agent_id": "reason"},
     "aof_knowledge_build": {"tenant_id": "tenant", "actor": "create"},
+    "aof_list_datasets": {"tenant_id": "tenant"},
 }
 
 _MCP_PASSTHROUGH_PRINCIPAL_HEADERS = {
@@ -420,8 +421,17 @@ async def _tool_export_markdown(args: dict[str, Any]) -> dict[str, Any]:
 
 
 async def _tool_list_datasets(args: dict[str, Any]) -> dict[str, Any]:
+    """List only datasets with explicit ownership proof for the signed tenant."""
     from bridge.dataset_manager import list_all_datasets
+    from bridge.tenant_dataset_registry import list_owned_dataset_ids
 
+    state_root = Path(
+        os.environ.get("AOF_KNOWLEDGE_STATE_DIR", str(PROJECT_ROOT / "data" / "knowledge_build"))
+    )
+    owned_ids = list_owned_dataset_ids(
+        state_root=state_root,
+        tenant_id=str(args["tenant_id"]),
+    )
     datasets = await list_all_datasets()
     return {
         "datasets": [
@@ -433,6 +443,7 @@ async def _tool_list_datasets(args: dict[str, Any]) -> dict[str, Any]:
                 "status": d.status,
             }
             for d in datasets
+            if d.id in owned_ids
         ]
     }
 
