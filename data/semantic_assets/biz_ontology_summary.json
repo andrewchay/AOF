@@ -1,0 +1,36 @@
+{
+  "biz_entity_count": 2316,
+  "biz_logical_classes": 2316,
+  "biz_datatype_properties": 24389,
+  "biz_object_properties": 2943,
+  "biz_triples": 129065,
+  "full_triples": 130479,
+  "full_classes": 2538,
+  "full_datatype_properties": 24618,
+  "full_object_properties": 2989,
+  "physical_tables_covered": 3804,
+  "domain_distribution": {
+    "Combat": 410,
+    "Player": 889,
+    "Commerce": 168,
+    "UGC": 101,
+    "GameEntity": 560,
+    "Time": 18,
+    "Platform": 162,
+    "BizMisc": 8
+  },
+  "kind_distribution": {
+    "Entity": 779,
+    "Dimension": 571,
+    "Fact": 727,
+    "Aggregate": 239
+  },
+  "complete_triples": 131857,
+  "complete_classes": 2538,
+  "complete_datatype_properties": 24620,
+  "complete_object_properties": 2989,
+  "complete_named_individuals": 131,
+  "biz_sha256": "sha256:e0b9f690f52e343374eebcc007605cc488fa252c6d30d1415cf7fea2b18f65d0",
+  "full_sha256": "sha256:5fb48c9db2cdf21e85dee2c629317d0c79c7bbfd9cac2828c817eb1834d8f946",
+  "complete_sha256": "sha256:182bbc22f130862640dec407467f72e333c357d4445c2e4b497277b86502d4e2"
+}

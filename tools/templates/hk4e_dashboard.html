@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hk4e 权威知识图谱 · 可视化仪表盘</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --panel2: #1c2330; --border: #2d3748;
+    --text: #e6edf3; --muted: #8b949e; --accent: #5b8cff; --green: #37c988;
+    --orange: #d19a66; --purple: #c678dd; --yellow: #ffb86c; --red: #ff7b72;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--panel); flex-wrap: wrap; }
+  header h1 { font-size: 16px; font-weight: 600; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { font-size: 12px; color: var(--muted); background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 3px 10px; }
+  .chip b { color: var(--accent); font-weight: 600; }
+  nav { display: flex; gap: 4px; padding: 8px 20px 0; background: var(--panel); }
+  nav button { background: none; border: none; color: var(--muted); font-size: 14px; padding: 8px 16px; cursor: pointer; border-bottom: 2px solid transparent; }
+  nav button.active { color: var(--text); border-bottom-color: var(--accent); }
+  main { position: absolute; top: 92px; bottom: 0; left: 0; right: 0; }
+  .tab { display: none; height: 100%; }
+  .tab.active { display: block; }
+  /* ---- 概览 ---- */
+  .cards { display: flex; gap: 12px; padding: 16px 20px 0; flex-wrap: wrap; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; min-width: 170px; }
+  .card .v { font-size: 24px; font-weight: 700; color: var(--accent); }
+  .card .k { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .bars { display: flex; gap: 24px; padding: 16px 20px; flex-wrap: wrap; }
+  .barbox { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; flex: 1 1 380px; }
+  .barbox h3 { font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 10px; }
+  .brow { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 12px; }
+  .brow .lbl { width: 130px; text-align: right; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+  .brow .track { flex: 1; height: 14px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+  .brow .fill { height: 100%; border-radius: 4px; min-width: 2px; }
+  .brow .num { width: 64px; color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  /* ---- 图布区 ---- */
+  .graphwrap { position: relative; height: calc(100% - 0px); }
+  canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+  canvas.dragging { cursor: grabbing; }
+  .legend { position: absolute; top: 12px; left: 12px; background: rgba(22,27,34,.92); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
+  .legend .li { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .legend .ln { width: 18px; height: 3px; border-radius: 2px; }
+  .tip { position: absolute; display: none; background: rgba(13,17,23,.96); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; max-width: 380px; pointer-events: none; z-index: 10; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+  .tip .t-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .tip .t-id { color: var(--muted); word-break: break-all; margin-bottom: 4px; }
+  .tip .t-desc { color: var(--text); line-height: 1.5; }
+  .tip .t-facts { color: var(--orange); margin-top: 4px; line-height: 1.5; }
+  /* ---- 探索器 ---- */
+  .explorer-bar { display: flex; gap: 10px; padding: 12px 20px; align-items: center; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .explorer-bar input { flex: 0 1 420px; background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; }
+  .explorer-bar input:focus { border-color: var(--accent); }
+  .explorer-bar button { background: var(--accent); border: none; color: #fff; border-radius: 8px; padding: 8px 18px; font-size: 14px; cursor: pointer; }
+  .hopctl { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .hopctl button { background: var(--panel2); color: var(--muted); border: none; border-radius: 0; padding: 8px 14px; font-size: 13px; }
+  .hopctl button.on { background: var(--accent); color: #fff; }
+  .hint { color: var(--muted); font-size: 12px; }
+  .edgepanel { position: absolute; right: 12px; bottom: 12px; width: 340px; max-height: 42%; overflow: auto; background: rgba(22,27,34,.94); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; }
+  .edgepanel h4 { color: var(--muted); font-weight: 500; margin-bottom: 6px; font-size: 12px; }
+  .edgepanel .erow { padding: 3px 0; border-bottom: 1px dashed var(--border); color: var(--text); line-height: 1.5; }
+  .matchlist .mi .mt { color: var(--muted); font-size: 11px; }
+  .edgepanel .erow b { color: var(--orange); font-weight: 500; }
+  #tab-explorer.active { display: flex; flex-direction: column; }
+  #tab-explorer .graphwrap { flex: 1; min-height: 0; }
+  .matchlist { position: absolute; top: 64px; left: 20px; background: rgba(22,27,34,.96); border: 1px solid var(--border); border-radius: 8px; max-height: 300px; overflow: auto; display: none; z-index: 5; min-width: 340px; }
+  .matchlist .mi { padding: 7px 12px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .matchlist .mi:hover { background: var(--panel2); }
+  .matchlist .mi .mt { color: var(--muted); font-size: 11px; }
+  /* ---- 域级总览 ---- */
+  .domwrap { display: flex; height: 100%; }
+  .domcanvas { flex: 1; position: relative; }
+  .domtable { width: 320px; border-left: 1px solid var(--border); background: var(--panel); overflow: auto; padding: 12px; }
+  .domtable table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .domtable th { color: var(--muted); text-align: left; font-weight: 500; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+  .domtable td { padding: 6px 4px; border-bottom: 1px solid var(--border); }
+  .domtable td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>hk4e 权威知识图谱</h1>
+  <div class="chips">
+    <span class="chip">三元组 <b>__TRIPLES__</b></span>
+    <span class="chip">节点 <b id="chip-nodes"></b></span>
+    <span class="chip">边 <b id="chip-edges"></b></span>
+    <span class="chip">SemanticResource <b id="chip-res"></b></span>
+    <span class="chip" style="color:var(--muted)">__GENERATED__</span>
+  </div>
+</header>
+<nav>
+  <button data-tab="overview" class="active">概览</button>
+  <button data-tab="semantic">语义桥接</button>
+  <button data-tab="explorer">子图探索</button>
+  <button data-tab="domain">域级总览</button>
+</nav>
+<main>
+  <section class="tab active" id="tab-overview">
+    <div class="cards" id="cards"></div>
+    <div class="bars" id="bars"></div>
+  </section>
+  <section class="tab" id="tab-semantic">
+    <div class="graphwrap">
+      <canvas id="cv-semantic"></canvas>
+      <div class="legend" id="lg-semantic"></div>
+      <div id="tooltip" class="tip"></div>
+    </div>
+  </section>
+  <section class="tab" id="tab-explorer">
+    <div class="explorer-bar">
+      <input id="q" placeholder="搜索实体：圣遗物 / TempleBattle / 深渊 / 庙宇挑战 …" autofocus>
+      <button id="go">探索</button>
+      <div class="hopctl"><button data-hop="1" class="on">1 跳</button><button data-hop="2">2 跳</button></div>
+      <span class="hint">回车或点击「探索」；点击图中节点可换种子；拖拽移动，滚轮缩放</span>
+    </div>
+    <div class="graphwrap">
+      <canvas id="cv-explorer"></canvas>
+      <div class="legend" id="lg-explorer"></div>
+      <div class="matchlist" id="mlist"></div>
+      <div class="edgepanel" id="epanel" style="display:none"><h4>关系路径</h4><div id="ebody"></div></div>
+      <div id="tooltip2" class="tip"></div>
+    </div>
+  </section>
+  <section class="tab" id="tab-domain">
+    <div class="domwrap">
+      <div class="domcanvas graphwrap">
+        <canvas id="cv-domain"></canvas>
+        <div class="legend" id="lg-domain"></div>
+        <div id="tooltip3" class="tip"></div>
+      </div>
+      <div class="domtable"><table id="dtable"></table></div>
+    </div>
+  </section>
+</main>
+<script>
+"use strict";
+const DATA = __DATA_JSON__;
+</script>
+<script>
+/* __APP_JS__ */
+</script>
+</body>
+</html>

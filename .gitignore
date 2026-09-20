@@ -35,3 +35,6 @@ workspace-files/
 .context/
 .claude/
 CLAUDE.md
+data/hk4e_ontology/
+.worktrees/
+visualizations/

@@ -148,8 +148,13 @@ def match_seed_nodes(
                 continue
             if c == label_lower or c == node_id_lower:
                 score = 10.0
-            elif c in label_lower or label_lower in c:
+            elif c in label_lower:
+                # 候选词是标签子串：覆盖越长越好
                 score = 6.0 * (len(c) / max(len(label_lower), 1))
+            elif len(label_lower) >= 3 and label_lower in c:
+                # 标签是候选词子串：弱信号（防止 'm'/'p' 等超短标签
+                # 作为任意候选词的子串反而得高分）
+                score = 2.0
             elif c in node_id_lower or node_id_lower in c:
                 score = 5.0 * (len(c) / max(len(node_id_lower), 1))
             else:

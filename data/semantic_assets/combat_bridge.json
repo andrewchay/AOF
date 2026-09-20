@@ -1,0 +1,17 @@
+{
+  "Avatar": "PlayableCharacter",
+  "Item": "GameElement",
+  "Weapon": "GameElement",
+  "Reliquary": "GameElement",
+  "Area": "Region",
+  "Scene": "Region",
+  "Dungeon": "GameplaySystem",
+  "Gacha": "GameplaySystem",
+  "Achievement": "GameplaySystem",
+  "CombatStage": "GameplaySystem",
+  "TowerRun": "GameplaySystem",
+  "RoleCombatRun": "GameplaySystem",
+  "DungeonRun": "GameplaySystem",
+  "WorldBossFight": "GameplaySystem",
+  "GCGCard": "GameElement"
+}

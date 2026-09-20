@@ -1,7 +1,8 @@
 [tool.ruff]
 # docs/** 下的证据存档脚本为历史复现材料（诊断快照），保持原样不 lint。
+# tools/hk4e_pipeline/archive/ 为一次性历史脚本原样归档（压缩风格，路径指向旧工作区）。
 # 仅排除目录，不改变 CI 的默认规则集（与修复前的 CI 行为一致）。
-extend-exclude = ["docs"]
+extend-exclude = ["docs", "tools/hk4e_pipeline/archive"]
 
 [tool.mypy]
 python_version = "3.13"
