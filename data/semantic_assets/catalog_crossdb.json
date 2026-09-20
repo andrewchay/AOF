@@ -1,0 +1,3546 @@
+{
+ "ads_advert.ads_advert_rta_hk4e_uid_login_device_df": {
+  "table_name": "ads_advert.ads_advert_rta_hk4e_uid_login_device_df",
+  "columns": [
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "分区日期",
+    "partition": true
+   },
+   {
+    "column_name": "device_code_type",
+    "data_type": "string",
+    "comment": "关联物理设备类型",
+    "partition": true
+   },
+   {
+    "column_name": "uid",
+    "data_type": "string",
+    "comment": "用户ID",
+    "partition": false
+   },
+   {
+    "column_name": "aid",
+    "data_type": "string",
+    "comment": "通行证ID",
+    "partition": false
+   },
+   {
+    "column_name": "register_date",
+    "data_type": "string",
+    "comment": "注册日期",
+    "partition": false
+   },
+   {
+    "column_name": "last_active_date",
+    "data_type": "string",
+    "comment": "用户末次活跃日期",
+    "partition": false
+   },
+   {
+    "column_name": "device_code_origin",
+    "data_type": "string",
+    "comment": "关联物理设备号原值",
+    "partition": false
+   },
+   {
+    "column_name": "device_code_md5",
+    "data_type": "string",
+    "comment": "物理设备号加密取值",
+    "partition": false
+   },
+   {
+    "column_name": "version",
+    "data_type": "string",
+    "comment": "caid版本号",
+    "partition": false
+   },
+   {
+    "column_name": "uid_silent_days",
+    "data_type": "int",
+    "comment": "用户沉默天数",
+    "partition": false
+   },
+   {
+    "column_name": "login_visit_rbm",
+    "data_type": "string",
+    "comment": "用户登录rbm标识",
+    "partition": false
+   },
+   {
+    "column_name": "is_uid_42d_login_device_365d",
+    "data_type": "int",
+    "comment": "是否42日内活跃uid在365天内登录过的设备",
+    "partition": false
+   },
+   {
+    "column_name": "recharge_amount_a",
+    "data_type": "decimal(20,4)",
+    "comment": "历史付费金额",
+    "partition": false
+   },
+   {
+    "column_name": "active_version_cnt",
+    "data_type": "int",
+    "comment": "历史曾活跃过的版本数",
+    "partition": false
+   },
+   {
+    "column_name": "is_alt_account",
+    "data_type": "int",
+    "comment": "是否小号",
+    "partition": false
+   },
+   {
+    "column_name": "maweika_held_cnt",
+    "data_type": "int",
+    "comment": "持有玛薇卡个数，0表示不持有",
+    "partition": false
+   },
+   {
+    "column_name": "xitelali_held_cnt",
+    "data_type": "int",
+    "comment": "持有茜特菈莉个数，0表示不持有",
+    "partition": false
+   },
+   {
+    "column_name": "avatar_rbm",
+    "data_type": "string",
+    "comment": "角色持有标识",
+    "partition": false
+   },
+   {
+    "column_name": "recharge_level",
+    "data_type": "int",
+    "comment": "充值等级，大R:2，中R:1，小R：0",
+    "partition": false
+   },
+   {
+    "column_name": "is_douyin_game_uid",
+    "data_type": "int",
+    "comment": "是否命中抖音游戏人群包",
+    "partition": false
+   },
+   {
+    "column_name": "is_douyin_game_skip",
+    "data_type": "int",
+    "comment": "是否抖音游戏豁免设备ID",
+    "partition": false
+   },
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "游戏区服",
+    "partition": false
+   }
+  ],
+  "column_count": 22
+ },
+ "biz_growth.biz_growth_wf_zrr_final_person_map": {
+  "table_name": "biz_growth.biz_growth_wf_zrr_final_person_map",
+  "columns": [
+   {
+    "column_name": "game_uid",
+    "data_type": "int",
+    "comment": "uid",
+    "partition": false
+   },
+   {
+    "column_name": "account_id",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "seg12",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "seg24",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "churn_days",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "class3",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "person_id",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "relink_method",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "is_new_person",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   }
+  ],
+  "column_count": 10
+ },
+ "biz_growth.biz_growth_wf_zrr_first_level_fp_info_seg": {
+  "table_name": "biz_growth.biz_growth_wf_zrr_first_level_fp_info_seg",
+  "columns": [
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "game_uid",
+    "data_type": "int",
+    "comment": "uid",
+    "partition": false
+   },
+   {
+    "column_name": "level",
+    "data_type": "int",
+    "comment": "等级",
+    "partition": false
+   },
+   {
+    "column_name": "world_level",
+    "data_type": "int",
+    "comment": "世界等级",
+    "partition": false
+   },
+   {
+    "column_name": "total_login_days",
+    "data_type": "int",
+    "comment": "累积登入天数",
+    "partition": false
+   },
+   {
+    "column_name": "vip_point",
+    "data_type": "bigint",
+    "comment": "vip_点数",
+    "partition": false
+   },
+   {
+    "column_name": "hcoin",
+    "data_type": "bigint",
+    "comment": "原石",
+    "partition": false
+   },
+   {
+    "column_name": "tag",
+    "data_type": "int",
+    "comment": "标签",
+    "partition": false
+   },
+   {
+    "column_name": "account_type",
+    "data_type": "int",
+    "comment": "账号类型",
+    "partition": false
+   },
+   {
+    "column_name": "platform",
+    "data_type": "string",
+    "comment": "注册平台",
+    "partition": false
+   },
+   {
+    "column_name": "register_cps",
+    "data_type": "string",
+    "comment": "注册CPS",
+    "partition": false
+   },
+   {
+    "column_name": "reg_date",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_date",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "account_id",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "realname_label",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "delete_account_status",
+    "data_type": "string",
+    "comment": "账号删除状态",
+    "partition": false
+   },
+   {
+    "column_name": "is_valid_realname",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "hash_identity_card",
+    "data_type": "string",
+    "comment": "身份证 hash",
+    "partition": false
+   },
+   {
+    "column_name": "mobile_hash",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "birthday",
+    "data_type": "string",
+    "comment": "生日，如20010101",
+    "partition": false
+   },
+   {
+    "column_name": "xiaomi_migrate_flag",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "has_device_row",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "has_any_fp",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "has_valid_fp",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "has_valid_client_fp",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "valid_client_fp_cnt",
+    "data_type": "bigint",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "device_row_cnt",
+    "data_type": "bigint",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "in_rta",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "has_rta_adid",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "has_rta_md5",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "rta_min_silent_days",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "rta_active_168",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "churn_days",
+    "data_type": "int",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "nofp_sub_seg",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "seg12",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "seg24",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   }
+  ],
+  "column_count": 36
+ },
+ "biz_growth.cz_game_user_battle_nd_v2": {
+  "table_name": "biz_growth.cz_game_user_battle_nd_v2",
+  "columns": [
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "cn_gf01 / cn_qd01",
+    "partition": true
+   },
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "数据日期 yyyy-MM-dd, 跟 T1 v2 对齐",
+    "partition": true
+   },
+   {
+    "column_name": "uid",
+    "data_type": "int",
+    "comment": "原神游戏内 UID",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_ever_joined",
+    "data_type": "int",
+    "comment": "深渊是否参与过 0/1 (历史口径,可信)",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_prev_joined_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 上期深渊是否参与 0/1。T1 离线快照,锚点滞后≥3天时不能直接解读为\"未参与\",需交叉 dws_hk4e_user_tower_avatar_info_1d 明细",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_curr_joined_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 本期深渊是否参与 0/1。T1 快照口径,值=0 可能是\"快照早于当期开放\",必须交叉明细确认",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_join_pct100_6t",
+    "data_type": "double",
+    "comment": "近 6 期深渊参与率【0-100 百分制】= 参与期数 × 100 / 6",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_max_floor_ltd",
+    "data_type": "int",
+    "comment": "历史最高深渊层 1-12",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_max_floor_prev",
+    "data_type": "int",
+    "comment": "上期最高层",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_max_floor_curr",
+    "data_type": "int",
+    "comment": "本期最高层",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_max_floor_6t",
+    "data_type": "int",
+    "comment": "近 6 期最高层",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_full_floor_pct100_ltd",
+    "data_type": "double",
+    "comment": "历史 12 层达成率【0-100 百分制】= floor=12 期数 × 100 / 总参与期数",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_full_floor_pct100_6t",
+    "data_type": "double",
+    "comment": "近 6 期 12 层达成率【0-100 百分制】",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_max_star_ltd",
+    "data_type": "int",
+    "comment": "历史最高星数 0-36",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_max_star_prev",
+    "data_type": "int",
+    "comment": "上期最高星",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_max_star_curr",
+    "data_type": "int",
+    "comment": "本期最高星",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_max_star_6t",
+    "data_type": "int",
+    "comment": "近 6 期最高星",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_full_star_pct100_ltd",
+    "data_type": "double",
+    "comment": "历史 36 星达成率【0-100 百分制】",
+    "partition": false
+   },
+   {
+    "column_name": "abyss_full_star_pct100_6t",
+    "data_type": "double",
+    "comment": "近 6 期 36 星达成率【0-100 百分制】",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_ever_joined",
+    "data_type": "int",
+    "comment": "真境是否参与过 0/1 (历史口径,可信)",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_prev_joined_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 上期真境是否参与 0/1。T1 快照滞后陷阱,需交叉 dws_hk4e_user_role_combat_play_settle_1d 明细",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_curr_joined_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 本期真境是否参与 0/1。同上,T1 快照滞后陷阱",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_join_pct100_ltd",
+    "data_type": "double",
+    "comment": "历史真境参与率【0-100 百分制】",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_join_pct100_6t",
+    "data_type": "double",
+    "comment": "近 6 期真境参与率【0-100 百分制】",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_max_diff_ltd",
+    "data_type": "string",
+    "comment": "历史最高真境难度 D0~D5",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_max_diff_prev",
+    "data_type": "string",
+    "comment": "上期最高难度 D0~D5",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_max_diff_curr",
+    "data_type": "string",
+    "comment": "本期最高难度 D0~D5",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_borrow_flag",
+    "data_type": "int",
+    "comment": "是否使用过借用角色 0/1 (近 75 天窗口,受冷存储限制)",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_borrow_pct100_6t",
+    "data_type": "double",
+    "comment": "近 6 期借用局占比【0-100 百分制】= 借用局 × 100 / 总结算局",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_borrow_pct100_prev",
+    "data_type": "double",
+    "comment": "上期借用局占比【0-100 百分制】",
+    "partition": false
+   },
+   {
+    "column_name": "rcombat_borrow_pct100_curr",
+    "data_type": "double",
+    "comment": "本期借用局占比【0-100 百分制】",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_join_cnt_ltd",
+    "data_type": "int",
+    "comment": "历史参与危战版本数 (累计计数,可信)",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_prev_joined_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 上版本危战是否参与 0/1。T1 快照滞后,需交叉 dwd_inr_pqt_comp_hk4e_hourly_ley_line_challenge 明细",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_curr_joined_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 本版本危战是否参与 0/1。已踩坑 (UID 179547969, 2026-06-02)",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_join_cnt_6t",
+    "data_type": "int",
+    "comment": "近 6 个版本参与次数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_max_diff_ltd",
+    "data_type": "int",
+    "comment": "历史最高有效难度 1-7 (7=不联机+难度6+时长≤180秒 速通加成)",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_max_diff_min_sec_ltd",
+    "data_type": "int",
+    "comment": "? 历史最高难度下最短通关秒数 (来自 c_body.total_time_cost, 反映该难度的极限战斗效率, NULL=未通关过)",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_max_diff_prev",
+    "data_type": "int",
+    "comment": "上版本最高有效难度",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_max_diff_min_sec_prev",
+    "data_type": "int",
+    "comment": "? 上版本最高难度下最短通关秒数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_max_diff_curr",
+    "data_type": "int",
+    "comment": "本版本最高有效难度",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_max_diff_min_sec_curr",
+    "data_type": "int",
+    "comment": "? 本版本最高难度下最短通关秒数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_max_diff_6t",
+    "data_type": "int",
+    "comment": "近 6 版本最高有效难度",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_max_diff_min_sec_6t",
+    "data_type": "int",
+    "comment": "? 近 6 版本最高难度下最短通关秒数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_avg_attempt_ltd",
+    "data_type": "double",
+    "comment": "历史场均尝试次数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_attempt_prev",
+    "data_type": "int",
+    "comment": "上版本尝试次数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_attempt_curr",
+    "data_type": "int",
+    "comment": "本版本尝试次数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_avg_attempt_6t",
+    "data_type": "double",
+    "comment": "近 6 版本场均尝试次数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_clear_pct100_ltd",
+    "data_type": "double",
+    "comment": "历史危战通关率【0-100 百分制】= 通关版本数 × 100 / 参与版本数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_prev_clear_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 上版本是否通关 0/1。T1 快照滞后陷阱",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_curr_clear_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 本版本是否通关 0/1。期次切换后明细可能已变,值=0 不等于真未通关",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_clear_pct100_6t",
+    "data_type": "double",
+    "comment": "近 6 版本通关率【0-100 百分制】",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_team_clear_pct100_ltd",
+    "data_type": "double",
+    "comment": "历史联机通关占比【0-100 百分制】= 联机通关版本数 × 100 / 通关版本数",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_prev_clear_is_team_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 上版本【是否】联机通关 0/1 (旧 rogue_team_rate_prev DOUBLE 是误命名)",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_curr_clear_is_team_at_snapshot",
+    "data_type": "int",
+    "comment": "⚠️ 本版本【是否】联机通关 0/1",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_team_clear_pct100_6t",
+    "data_type": "double",
+    "comment": "近 6 版本联机通关占比【0-100 百分制】",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_max_clear_attempt",
+    "data_type": "int",
+    "comment": "通关所用最多尝试次数 (挑战程度指标)",
+    "partition": false
+   },
+   {
+    "column_name": "rogue_min_clear_attempt",
+    "data_type": "int",
+    "comment": "通关所用最少尝试次数 (熟练度指标)",
+    "partition": false
+   }
+  ],
+  "column_count": 57
+ },
+ "biz_growth.cz_game_user_profile_nd_v2": {
+  "table_name": "biz_growth.cz_game_user_profile_nd_v2",
+  "columns": [
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "区服 cn_gf01 / cn_qd01",
+    "partition": true
+   },
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "数据日期 yyyy-MM-dd",
+    "partition": true
+   },
+   {
+    "column_name": "uid",
+    "data_type": "int",
+    "comment": "原神游戏内 UID",
+    "partition": false
+   },
+   {
+    "column_name": "account_uid",
+    "data_type": "int",
+    "comment": "米哈游通行证 account_id (来自 uid_aid_full_daily 桥接)",
+    "partition": false
+   },
+   {
+    "column_name": "gender_idcard",
+    "data_type": "int",
+    "comment": "实名性别 0=男 / 1=女 / -1=未知",
+    "partition": false
+   },
+   {
+    "column_name": "age_idcard",
+    "data_type": "int",
+    "comment": "实名年龄 -1=未知",
+    "partition": false
+   },
+   {
+    "column_name": "active_city_180days",
+    "data_type": "string",
+    "comment": "近 180 天主要活跃城市",
+    "partition": false
+   },
+   {
+    "column_name": "active_province_180days",
+    "data_type": "string",
+    "comment": "近 180 天主要活跃省份",
+    "partition": false
+   },
+   {
+    "column_name": "tag",
+    "data_type": "int",
+    "comment": "⚠️ 小号/测试标签 (3=测试或内部,任何分析必须排除)",
+    "partition": false
+   },
+   {
+    "column_name": "register_platform_code",
+    "data_type": "int",
+    "comment": "⚠️ INT 注册平台【编码】(上游 register_platform,如 1=PC/2=iOS/3=Android,具体编码参见枚举表)",
+    "partition": false
+   },
+   {
+    "column_name": "register_device_name",
+    "data_type": "string",
+    "comment": "⚠️ STRING 注册设备【机型字符串】(上游 register_device,如 \"iPhone 13\",cn_gf01 自 2020-09-22 起有数据)",
+    "partition": false
+   },
+   {
+    "column_name": "register_date",
+    "data_type": "string",
+    "comment": "注册日期 yyyy-MM-dd (来自 register_time TO_DATE)",
+    "partition": false
+   },
+   {
+    "column_name": "register_days",
+    "data_type": "int",
+    "comment": "账号存活天数 = 今天 - 注册日",
+    "partition": false
+   },
+   {
+    "column_name": "activity_days",
+    "data_type": "int",
+    "comment": "累计登录天数 (上游 total_login_days, 全生命周期)",
+    "partition": false
+   },
+   {
+    "column_name": "activity_pct100",
+    "data_type": "double",
+    "comment": "⚠️ 0-100 百分制 活跃率 = 累计登录天数 × 100 / 账号存活天数",
+    "partition": false
+   },
+   {
+    "column_name": "active_version_count",
+    "data_type": "int",
+    "comment": "累计活跃版本数 (来自 user_version_info 表 MAX 累计值)",
+    "partition": false
+   },
+   {
+    "column_name": "days_since_last_login",
+    "data_type": "int",
+    "comment": "距上次登录天数 (上游 silent_days,旧字段名 churn_days 改名避免\"流失\"歧义)",
+    "partition": false
+   },
+   {
+    "column_name": "activity_type",
+    "data_type": "string",
+    "comment": "活跃分级: 7日内活跃 / 8-42日活跃 / 43-167日活跃 / 168+流失",
+    "partition": false
+   },
+   {
+    "column_name": "ar_level",
+    "data_type": "int",
+    "comment": "冒险等阶 1-60 (上游 level)",
+    "partition": false
+   },
+   {
+    "column_name": "active_days_7d",
+    "data_type": "int",
+    "comment": "近 7 天登录天数",
+    "partition": false
+   },
+   {
+    "column_name": "active_days_30d",
+    "data_type": "int",
+    "comment": "近 30 天登录天数",
+    "partition": false
+   },
+   {
+    "column_name": "active_days_42d",
+    "data_type": "int",
+    "comment": "近 42 天登录天数",
+    "partition": false
+   },
+   {
+    "column_name": "active_density_change_ratio_30d",
+    "data_type": "double",
+    "comment": "活跃密度变化率 = (7日均 - 30日均) / 30日均, 可正可负 (旧字段名 activity_trends_30d)",
+    "partition": false
+   },
+   {
+    "column_name": "last_active_device_name",
+    "data_type": "string",
+    "comment": "⚠️ STRING 最后一次活跃设备【机型字符串】 (上游 last_active_device, 如 \"iPhone 13\")",
+    "partition": false
+   },
+   {
+    "column_name": "most_used_platform_30d_code",
+    "data_type": "int",
+    "comment": "⚠️ INT 近 30 天最常用平台【编码】(众数, 来自 daily_primary_platform; 旧字段名 last_active_device_30d 是错误命名)",
+    "partition": false
+   },
+   {
+    "column_name": "avg_valid_play_time_7d_min",
+    "data_type": "double",
+    "comment": "近 7 天活跃日均有效游戏时长 (分钟, 仅 is_login_today=1 的活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "med_valid_play_time_7d_min",
+    "data_type": "double",
+    "comment": "近 7 天活跃日中位有效时长 (分钟)",
+    "partition": false
+   },
+   {
+    "column_name": "avg_valid_play_time_30d_min",
+    "data_type": "double",
+    "comment": "近 30 天活跃日均有效时长 (分钟)",
+    "partition": false
+   },
+   {
+    "column_name": "med_valid_play_time_30d_min",
+    "data_type": "double",
+    "comment": "近 30 天活跃日中位有效时长 (分钟)",
+    "partition": false
+   },
+   {
+    "column_name": "avg_valid_play_time_ltd_min",
+    "data_type": "double",
+    "comment": "全生命周期日均有效时长 (分钟, ≈ total_online_time / activity_days / 60)",
+    "partition": false
+   },
+   {
+    "column_name": "med_valid_play_time_ltd_min",
+    "data_type": "double",
+    "comment": "全生命周期有效时长中位 (分钟, 当前为 NULL 占位)",
+    "partition": false
+   },
+   {
+    "column_name": "active_play_time_change_ratio",
+    "data_type": "double",
+    "comment": "时长变化率 = (7日均 - 30日均) / 30日均, 可正可负",
+    "partition": false
+   },
+   {
+    "column_name": "valid_play_time_cv_30d",
+    "data_type": "double",
+    "comment": "近 30 天有效时长变异系数 CV = STDDEV / AVG (无量纲, 衡量活跃稳定性)",
+    "partition": false
+   },
+   {
+    "column_name": "explore_overall_ratio",
+    "data_type": "double",
+    "comment": "总探索完成度【0-1 真比率】(全区域 sum / 全服动态 max 分母)",
+    "partition": false
+   },
+   {
+    "column_name": "explore_v1_ratio",
+    "data_type": "double",
+    "comment": "蒙德+璃月探索度【0-1 真比率】",
+    "partition": false
+   },
+   {
+    "column_name": "explore_v2_ratio",
+    "data_type": "double",
+    "comment": "稻妻探索度【0-1 真比率】",
+    "partition": false
+   },
+   {
+    "column_name": "explore_v3_ratio",
+    "data_type": "double",
+    "comment": "须弥探索度【0-1 真比率】",
+    "partition": false
+   },
+   {
+    "column_name": "explore_v4_ratio",
+    "data_type": "double",
+    "comment": "枫丹探索度【0-1 真比率】",
+    "partition": false
+   },
+   {
+    "column_name": "explore_v5_ratio",
+    "data_type": "double",
+    "comment": "纳塔探索度【0-1 真比率】",
+    "partition": false
+   },
+   {
+    "column_name": "explore_v6_ratio",
+    "data_type": "double",
+    "comment": "挪德卡莱探索度【0-1 真比率】",
+    "partition": false
+   },
+   {
+    "column_name": "archon_quest_status_json",
+    "data_type": "string",
+    "comment": "⚠️ 魔神任务完成状态 JSON 全量映射: {\"v10\":1,\"v11\":0,...}, key=版本号 / value=1已完成 0未完成 (旧字段名 unfinished_archon_versions 是反语义命名)",
+    "partition": false
+   },
+   {
+    "column_name": "archon_finished_version_cnt",
+    "data_type": "int",
+    "comment": "⚠️ 已完成魔神任务版本数【绝对计数】= JSON 里 \":1\" 出现次数, 30=全部完成 (旧字段名 archon_quest_pct DOUBLE 是误命名)",
+    "partition": false
+   },
+   {
+    "column_name": "archon_total_version_cnt",
+    "data_type": "int",
+    "comment": "当前有魔神任务的版本总数【绝对计数】= JSON 里 \":\" 出现次数 (新增字段, 让下游能算比率: finished_cnt / total_cnt)",
+    "partition": false
+   },
+   {
+    "column_name": "legend_quest_ratio",
+    "data_type": "double",
+    "comment": "传说任务完成率【0-1 真比率】(上游 lq_quest_precentage, 已实测验证 max=1.0)",
+    "partition": false
+   },
+   {
+    "column_name": "world_quest_ratio",
+    "data_type": "double",
+    "comment": "世界任务完成率【0-1 真比率】, 系列口径 (同 father_quest_group 聚合)",
+    "partition": false
+   },
+   {
+    "column_name": "hangout_quest_ratio",
+    "data_type": "double",
+    "comment": "邀约任务完成率【0-1 真比率】, 系列口径",
+    "partition": false
+   },
+   {
+    "column_name": "community_register_date",
+    "data_type": "string",
+    "comment": "社区注册日期 yyyy-MM-dd HH:mm:ss",
+    "partition": false
+   },
+   {
+    "column_name": "community_last_visit_date",
+    "data_type": "string",
+    "comment": "社区最后访问日期 yyyy-MM-dd HH:mm:ss",
+    "partition": false
+   },
+   {
+    "column_name": "community_days_since_last_visit",
+    "data_type": "int",
+    "comment": "距上次社区访问天数 (旧字段名 community_churn_days)",
+    "partition": false
+   },
+   {
+    "column_name": "community_active_days_30d",
+    "data_type": "int",
+    "comment": "近 30 天社区活跃天数 (原神版区, platform=ALL 全平台口径)",
+    "partition": false
+   },
+   {
+    "column_name": "community_active_level_30d",
+    "data_type": "string",
+    "comment": "社区活跃等级: inactive_0days / low_7days / mid_20days / high_30days",
+    "partition": false
+   },
+   {
+    "column_name": "community_signin_total",
+    "data_type": "int",
+    "comment": "社区累计签到次数",
+    "partition": false
+   },
+   {
+    "column_name": "community_signin_7d",
+    "data_type": "int",
+    "comment": "近 7 天签到次数 (从 signin_30_bits 前 7 位 bit 计数)",
+    "partition": false
+   },
+   {
+    "column_name": "community_signin_30d",
+    "data_type": "int",
+    "comment": "近 30 天签到次数 (从 signin_30_bits 全 30 位 bit 计数)",
+    "partition": false
+   },
+   {
+    "column_name": "community_post_total",
+    "data_type": "int",
+    "comment": "累计发帖数 (原神版区, 排除沙盒+已删)",
+    "partition": false
+   },
+   {
+    "column_name": "community_post_7d",
+    "data_type": "int",
+    "comment": "近 7 天发帖数",
+    "partition": false
+   },
+   {
+    "column_name": "community_post_30d",
+    "data_type": "int",
+    "comment": "近 30 天发帖数",
+    "partition": false
+   },
+   {
+    "column_name": "community_browse_time_avg_ltd_sec",
+    "data_type": "double",
+    "comment": "⚠️ 单位:秒。日均浏览时长_全生命周期 (受冷存储限制取近 60 天, 分母=实际有记录天数, platform=ALL 社区整体口径稀释~1%)",
+    "partition": false
+   },
+   {
+    "column_name": "community_browse_time_avg_7d_sec",
+    "data_type": "double",
+    "comment": "⚠️ 单位:秒。日均浏览时长_近 7 天",
+    "partition": false
+   },
+   {
+    "column_name": "community_browse_time_avg_30d_sec",
+    "data_type": "double",
+    "comment": "⚠️ 单位:秒。日均浏览时长_近 30 天",
+    "partition": false
+   },
+   {
+    "column_name": "community_consume_post_avg_ltd",
+    "data_type": "double",
+    "comment": "日均消费帖数_全生命周期 (帖/天, 近 60 天 / 60.0 固定分母, 含未消费日)",
+    "partition": false
+   },
+   {
+    "column_name": "community_consume_post_avg_7d",
+    "data_type": "double",
+    "comment": "日均消费帖数_近 7 天 (帖/天, /7.0)",
+    "partition": false
+   },
+   {
+    "column_name": "community_consume_post_avg_30d",
+    "data_type": "double",
+    "comment": "日均消费帖数_近 30 天 (帖/天, /30.0)",
+    "partition": false
+   },
+   {
+    "column_name": "community_top_tool_30d",
+    "data_type": "string",
+    "comment": "近 30 天最常用 H5 工具 app_name",
+    "partition": false
+   },
+   {
+    "column_name": "first_recharge_date",
+    "data_type": "string",
+    "comment": "首次充值日期 yyyy-MM-dd",
+    "partition": false
+   },
+   {
+    "column_name": "last_recharge_date",
+    "data_type": "string",
+    "comment": "最近充值日期 yyyy-MM-dd",
+    "partition": false
+   },
+   {
+    "column_name": "total_recharge_days",
+    "data_type": "int",
+    "comment": "累计充值天数",
+    "partition": false
+   },
+   {
+    "column_name": "recharge_interval_days_avg",
+    "data_type": "double",
+    "comment": "平均付费间隔 (天) = 充值跨度 / (total_recharge_days - 1), 仅当 total_recharge_days > 1",
+    "partition": false
+   },
+   {
+    "column_name": "days_since_last_recharge",
+    "data_type": "int",
+    "comment": "距上次充值天数",
+    "partition": false
+   },
+   {
+    "column_name": "total_recharge_yuan",
+    "data_type": "double",
+    "comment": "⚠️ 单位:元。累计充值金额 = SUM(vip_point_add) / 10.0",
+    "partition": false
+   },
+   {
+    "column_name": "total_recharge_yuan_log2",
+    "data_type": "double",
+    "comment": "累计充值 log2(元+1) 长尾压缩变换",
+    "partition": false
+   },
+   {
+    "column_name": "avg_recharge_per_day_yuan",
+    "data_type": "double",
+    "comment": "⚠️ 单位:元/天。全周期日均 = 累计充值 / (今天 - 首充日)",
+    "partition": false
+   },
+   {
+    "column_name": "active_version_recharge_yuan",
+    "data_type": "double",
+    "comment": "⚠️ 单位:元。当前版本充值金额 (NULL 占位, 待补充)",
+    "partition": false
+   },
+   {
+    "column_name": "recharge_90d_yuan",
+    "data_type": "double",
+    "comment": "⚠️ 单位:元。近 90 天充值金额",
+    "partition": false
+   },
+   {
+    "column_name": "recharge_90d_yuan_log2",
+    "data_type": "double",
+    "comment": "近 90 天充值 log2(元+1) 变换",
+    "partition": false
+   },
+   {
+    "column_name": "recharge_activity_change_ratio",
+    "data_type": "double",
+    "comment": "充值活跃度变化率 = (近 90 天日均 / 90) / 全周期日均, >1 加强 / <1 减弱",
+    "partition": false
+   },
+   {
+    "column_name": "avg_recharge_per_day_90d_yuan",
+    "data_type": "double",
+    "comment": "⚠️ 单位:元/天。近 90 天日均充值 (固定分母 90)",
+    "partition": false
+   },
+   {
+    "column_name": "recharge_intensity_ratio",
+    "data_type": "double",
+    "comment": "近期充值强度比 = 近 90 天 / (累计 × 90 / register_days), >1 强度提升 / <1 强度下降",
+    "partition": false
+   },
+   {
+    "column_name": "is_month_card_retain",
+    "data_type": "int",
+    "comment": "月卡当前是否有效 0/1",
+    "partition": false
+   },
+   {
+    "column_name": "is_bp_cur_version",
+    "data_type": "int",
+    "comment": "本版本是否购买通行证 0/1",
+    "partition": false
+   },
+   {
+    "column_name": "friend_cnt",
+    "data_type": "int",
+    "comment": "游戏好友数 (上游 friend_cnt, 全量无窗口)",
+    "partition": false
+   },
+   {
+    "column_name": "mp_time_ratio_90d",
+    "data_type": "double",
+    "comment": "近 90 天联机时长占比【0-1 真比率】 = 联机时长 / 总活跃时长 (上游 mp_gametime_percentage, 已实测 max=1.0)",
+    "partition": false
+   },
+   {
+    "column_name": "mp_friend_uid_cnt_90d",
+    "data_type": "int",
+    "comment": "近 90 天联机好友数 (上游 mp_friend_uid_cnt, COMMENT 明确 90 天窗口)",
+    "partition": false
+   },
+   {
+    "column_name": "cross_game_list",
+    "data_type": "string",
+    "comment": "有账号的其他米家游戏逗号列表 (hkrpg / nap), 来自 is_hkrpg/nap_register",
+    "partition": false
+   },
+   {
+    "column_name": "hkrpg_active_days_42d",
+    "data_type": "int",
+    "comment": "近 42 天星铁活跃天数 0-42",
+    "partition": false
+   },
+   {
+    "column_name": "nap_active_days_42d",
+    "data_type": "int",
+    "comment": "近 42 天绝区零活跃天数 0-42",
+    "partition": false
+   },
+   {
+    "column_name": "register_platform_name",
+    "data_type": "string",
+    "comment": "注册平台名称(iOS/Android/PC/主机/云/移动/未知)",
+    "partition": false
+   },
+   {
+    "column_name": "most_used_platform_30d_name",
+    "data_type": "string",
+    "comment": "近30天最常用平台名称",
+    "partition": false
+   },
+   {
+    "column_name": "last_active_platform_name",
+    "data_type": "string",
+    "comment": "最后活跃平台名称",
+    "partition": false
+   },
+   {
+    "column_name": "gender_name",
+    "data_type": "string",
+    "comment": "性别(男/女/未知)",
+    "partition": false
+   }
+  ],
+  "column_count": 90
+ },
+ "biz_growth.cz_user_game_routine_last_nd_v2": {
+  "table_name": "biz_growth.cz_user_game_routine_last_nd_v2",
+  "columns": [
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "区服 cn_gf01 / cn_qd01",
+    "partition": true
+   },
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "数据日期 yyyy-MM-dd, T2 切快照日",
+    "partition": true
+   },
+   {
+    "column_name": "uid",
+    "data_type": "int",
+    "comment": "原神游戏内 UID",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_date",
+    "data_type": "string",
+    "comment": "⚠️ 最后一次登录日期 yyyy-MM-dd (T2 表所有 last_login_* 字段对应这一天的快照)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_daily_game_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日游戏时长 (秒, 含挂机)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_hangup_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日挂机时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_valid_play_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日有效游戏时长 (秒, = daily_game_time - hangup_cost_time, 已用 GREATEST 兜底负值)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_daily_resin_consume",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日树脂消耗量 (2023-01-01 之前缺浓缩树脂数据)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_explore_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日大世界探索时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_fish_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日钓鱼时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_home_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日尘歌壶时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_wq_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日世界任务时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_aq_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日魔神任务时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_lq_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日传说任务时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_coop_quest_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日邀约任务时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_daily_task_finish_num",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日委托完成数 (今日4点-明日4点)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_daily_task_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日委托总用时 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_mp_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日联机时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_daily_gacha_num",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日扭蛋次数",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_avatar_cnt",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日截至时已获取角色累计数 (单日快照, 2021-02-02 之前缺数据)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_boss40_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日 40 体 boss 时长 (秒, 2023-01-01 起)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_boss60_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日周本 boss 时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_dungeon_skill_weapon_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日天赋/武器地城时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_dungeon_relic_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日圣遗物地城时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_blossom_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日地脉花时长 (秒, 2023-01-01 起)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_gather_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日大世界采集时长 (秒, 2023-01-01 起)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_combat_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日纯战斗时长 (秒, 2023-01-01 起)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_tower_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日深境螺旋时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_gcg_cost_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日七圣召唤时长 (秒)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_evt_scene_time_sec",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日活动剧情时长 (秒, 0=未释出/未参与, -1=无法追溯)",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_daily_skin_num",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日皮肤购买数",
+    "partition": false
+   },
+   {
+    "column_name": "last_login_get_sign_in_reward",
+    "data_type": "int",
+    "comment": "⚠️ 最后登录日是否领取签到奖励 0/1 (2023-01-01 起追溯,2024-01-01 之前缺邮件领取部分)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_active_days",
+    "data_type": "bigint",
+    "comment": "近 7 天活跃天数 0-7 (last_7d_* 时长字段的隐含分母)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_daily_game_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均游戏时长 (秒/活跃日, 含挂机)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_hangup_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均挂机时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_valid_play_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均有效游戏时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_daily_resin_consume",
+    "data_type": "double",
+    "comment": "近 7 天日均树脂消耗",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_explore_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均探索时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_fish_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均钓鱼时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_home_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均家园时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_wq_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均世界任务时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_aq_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均魔神任务时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_lq_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均传说任务时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_coop_quest_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均邀约任务时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_daily_task_finish_num",
+    "data_type": "double",
+    "comment": "近 7 天日均委托完成数",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_daily_task_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均委托用时 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_mp_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均联机时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_daily_gacha_num",
+    "data_type": "double",
+    "comment": "近 7 天日均扭蛋次数",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_avatar_cnt_growth",
+    "data_type": "int",
+    "comment": "⚠️ 近 7 天角色【净增数】= 窗口 MAX - MIN (新抽到的角色数, 不是累计快照)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_boss40_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均 40 体 boss 时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_boss60_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均周本 boss 时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_dungeon_skill_weapon_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均天赋/武器地城时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_dungeon_relic_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均圣遗物地城时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_blossom_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均地脉花时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_gather_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均采集时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_combat_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均纯战斗时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_tower_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均深境螺旋时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_gcg_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均七圣召唤时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_evt_scene_time_sec",
+    "data_type": "double",
+    "comment": "近 7 天日均活动剧情时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_daily_skin_num",
+    "data_type": "double",
+    "comment": "近 7 天日均皮肤购买数",
+    "partition": false
+   },
+   {
+    "column_name": "last_7d_get_sign_in_reward_ratio",
+    "data_type": "double",
+    "comment": "⚠️ 近 7 天签到领取率【0-1 真比率】= 领取天数 / 活跃天数",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_active_days",
+    "data_type": "bigint",
+    "comment": "近 30 天活跃天数 0-30 (last_30d_* 时长字段的隐含分母)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_daily_game_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均游戏时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_hangup_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均挂机时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_valid_play_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均有效游戏时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_daily_resin_consume",
+    "data_type": "double",
+    "comment": "近 30 天日均树脂消耗",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_explore_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均探索时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_fish_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均钓鱼时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_home_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均家园时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_wq_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均世界任务时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_aq_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均魔神任务时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_lq_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均传说任务时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_coop_quest_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均邀约任务时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_daily_task_finish_num",
+    "data_type": "double",
+    "comment": "近 30 天日均委托完成数",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_daily_task_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均委托用时 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_mp_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均联机时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_daily_gacha_num",
+    "data_type": "double",
+    "comment": "近 30 天日均扭蛋次数",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_avatar_cnt_growth",
+    "data_type": "int",
+    "comment": "⚠️ 近 30 天角色【净增数】= 窗口 MAX - MIN (新抽到的角色数, 不是累计快照)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_boss40_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均 40 体 boss 时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_boss60_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均周本 boss 时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_dungeon_skill_weapon_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均天赋/武器地城时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_dungeon_relic_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均圣遗物地城时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_blossom_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均地脉花时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_gather_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均采集时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_combat_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均纯战斗时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_tower_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均深境螺旋时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_gcg_cost_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均七圣召唤时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_evt_scene_time_sec",
+    "data_type": "double",
+    "comment": "近 30 天日均活动剧情时长 (秒/活跃日)",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_daily_skin_num",
+    "data_type": "double",
+    "comment": "近 30 天日均皮肤购买数",
+    "partition": false
+   },
+   {
+    "column_name": "last_30d_get_sign_in_reward_ratio",
+    "data_type": "double",
+    "comment": "⚠️ 近 30 天签到领取率【0-1 真比率】= 领取天数 / 活跃天数",
+    "partition": false
+   }
+  ],
+  "column_count": 90
+ },
+ "biz_growth.hk4e_user_age_info_0330": {
+  "table_name": "biz_growth.hk4e_user_age_info_0330",
+  "error": "Palladium API error: Table is not exists"
+ },
+ "biz_uprofile.biz_uprofile_account_game_active_core_value_daily": {
+  "table_name": "biz_uprofile.biz_uprofile_account_game_active_core_value_daily",
+  "columns": [
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "",
+    "partition": true
+   },
+   {
+    "column_name": "region",
+    "data_type": "string",
+    "comment": "",
+    "partition": true
+   },
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "active_country",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "game_biz",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "act_type",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "act_game_num",
+    "data_type": "bigint",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "aid_num",
+    "data_type": "bigint",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "pay_amount",
+    "data_type": "bigint",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "pay_aid_num",
+    "data_type": "bigint",
+    "comment": "",
+    "partition": false
+   }
+  ],
+  "column_count": 10
+ },
+ "dwd_community.dwd_community_forum_post_reply_pid_snapshot": {
+  "table_name": "dwd_community.dwd_community_forum_post_reply_pid_snapshot",
+  "columns": [
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "",
+    "partition": true
+   },
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "",
+    "partition": true
+   },
+   {
+    "column_name": "id",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "game_id",
+    "data_type": "string",
+    "comment": "",
+    "partition": false
+   },
+   {
+    "column_name": "reply_id",
+    "data_type": "string",
+    "comment": "回复id",
+    "partition": false
+   },
+   {
+    "column_name": "post_id",
+    "data_type": "string",
+    "comment": "帖子id",
+    "partition": false
+   },
+   {
+    "column_name": "uid",
+    "data_type": "string",
+    "comment": "用户uid",
+    "partition": false
+   },
+   {
+    "column_name": "r_uid",
+    "data_type": "string",
+    "comment": "回复用户uid",
+    "partition": false
+   },
+   {
+    "column_name": "content",
+    "data_type": "string",
+    "comment": "内容",
+    "partition": false
+   },
+   {
+    "column_name": "structured_content",
+    "data_type": "string",
+    "comment": "结构化富文本内容",
+    "partition": false
+   },
+   {
+    "column_name": "f_forum_id",
+    "data_type": "string",
+    "comment": "父板块id",
+    "partition": false
+   },
+   {
+    "column_name": "f_reply_id",
+    "data_type": "string",
+    "comment": "父回复id,f_reply_id=0时代表主楼",
+    "partition": false
+   },
+   {
+    "column_name": "floor_id",
+    "data_type": "string",
+    "comment": "层级id",
+    "partition": false
+   },
+   {
+    "column_name": "is_delete",
+    "data_type": "string",
+    "comment": "删除操作来源， 0 未删除， 1：个人删除，2：OP/C端管理员删除，3：封禁触发，4：楼主（帖子主人）删除，5：审核平台删除，6：风控删除，7：众裁删除，8：审核中台删除",
+    "partition": false
+   },
+   {
+    "column_name": "delete_src",
+    "data_type": "string",
+    "comment": "删除层级状态，0：未删除，1：主贴删除，2：楼层删除，3：子回帖删除",
+    "partition": false
+   },
+   {
+    "column_name": "created_at",
+    "data_type": "string",
+    "comment": "创建时间",
+    "partition": false
+   },
+   {
+    "column_name": "updated_at",
+    "data_type": "string",
+    "comment": "更新时间",
+    "partition": false
+   },
+   {
+    "column_name": "deleted_at",
+    "data_type": "string",
+    "comment": "删除时间",
+    "partition": false
+   },
+   {
+    "column_name": "is_sandbox",
+    "data_type": "string",
+    "comment": "1:沙盒; 0:正常",
+    "partition": false
+   }
+  ],
+  "column_count": 19
+ },
+ "dwd_growth.dwd_growth_creator_artwork_log_di": {
+  "table_name": "dwd_growth.dwd_growth_creator_artwork_log_di",
+  "columns": [
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "分区日期: yyyy-MM-dd",
+    "partition": true
+   },
+   {
+    "column_name": "platform_code",
+    "data_type": "string",
+    "comment": "平台编码: douyin",
+    "partition": true
+   },
+   {
+    "column_name": "game_code",
+    "data_type": "string",
+    "comment": "游戏编码: hk4e",
+    "partition": true
+   },
+   {
+    "column_name": "log_id",
+    "data_type": "string",
+    "comment": "日志ID",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_id",
+    "data_type": "string",
+    "comment": "社媒回传，作品ID,对于小红书该字段是广告创意ID",
+    "partition": false
+   },
+   {
+    "column_name": "platform",
+    "data_type": "string",
+    "comment": "平台: 抖音",
+    "partition": false
+   },
+   {
+    "column_name": "task_id",
+    "data_type": "string",
+    "comment": "社媒回传，任务ID",
+    "partition": false
+   },
+   {
+    "column_name": "game_name",
+    "data_type": "string",
+    "comment": "游戏名称: 原神",
+    "partition": false
+   },
+   {
+    "column_name": "device_id_encrypted",
+    "data_type": "string",
+    "comment": "通过oaid,caid2023,caid2025,idfa加密后加工而来的设备ID",
+    "partition": false
+   },
+   {
+    "column_name": "oaid_encrypted",
+    "data_type": "string",
+    "comment": "社媒回传,加密后OAID,加密方式：抖音sha256",
+    "partition": false
+   },
+   {
+    "column_name": "caid2023_encrypted",
+    "data_type": "string",
+    "comment": "社媒回传,加密后CAID2023,加密方式：抖音商业化SHA256",
+    "partition": false
+   },
+   {
+    "column_name": "caid2025_encrypted",
+    "data_type": "string",
+    "comment": "社媒回传,加密后CAID2025,加密方式：抖音商业化SHA256",
+    "partition": false
+   },
+   {
+    "column_name": "idfa_encrypted",
+    "data_type": "string",
+    "comment": "社媒回传,加密后IDFA,加密方式：抖音商业化SHA256",
+    "partition": false
+   },
+   {
+    "column_name": "event_time",
+    "data_type": "string",
+    "comment": "社媒回传，作品行为事件时间",
+    "partition": false
+   },
+   {
+    "column_name": "event_type",
+    "data_type": "string",
+    "comment": "社媒回传，作品行为事件类型",
+    "partition": false
+   },
+   {
+    "column_name": "uid",
+    "data_type": "string",
+    "comment": "uid,通过aid-uid关系获得，取AID最近一次绑定的UID",
+    "partition": false
+   },
+   {
+    "column_name": "aid",
+    "data_type": "string",
+    "comment": "aid,通过设备ID关联获得,取最近一次设备登录的AID",
+    "partition": false
+   },
+   {
+    "column_name": "aid_mapping_key",
+    "data_type": "string",
+    "comment": "aid关联的key,enum:oaid,caid2023,caid2025,idfa",
+    "partition": false
+   },
+   {
+    "column_name": "mapping_last_login_oaid",
+    "data_type": "string",
+    "comment": "映射后的OAID,来自于did-aid映射关系表，取最近一次登录活跃数据",
+    "partition": false
+   },
+   {
+    "column_name": "mapping_last_login_caid2023",
+    "data_type": "string",
+    "comment": "映射后的CAID2023,来自于did-aid映射关系表，取最近一次登录活跃数据",
+    "partition": false
+   },
+   {
+    "column_name": "mapping_last_login_caid2025",
+    "data_type": "string",
+    "comment": "映射后的CAID2025,来自于did-aid映射关系表，取最近一次登录活跃数据",
+    "partition": false
+   },
+   {
+    "column_name": "mapping_last_login_idfa",
+    "data_type": "string",
+    "comment": "映射后的IDFA,来自于did-aid映射关系表，取最近一次登录活跃数据",
+    "partition": false
+   },
+   {
+    "column_name": "mapping_last_login_timestamp",
+    "data_type": "string",
+    "comment": "最近一次游戏登录时间，来自于did-aid映射关系表，取最近一次登录活跃数据",
+    "partition": false
+   },
+   {
+    "column_name": "mapping_last_login_region",
+    "data_type": "string",
+    "comment": "最近一次游戏登录区域，来自于did-aid映射关系表，取最近一次登录活跃数据",
+    "partition": false
+   },
+   {
+    "column_name": "mapping_last_login_pkgname",
+    "data_type": "string",
+    "comment": "最近一次游戏登录包名，来自于did-aid映射关系表，取最近一次登录活跃数据",
+    "partition": false
+   },
+   {
+    "column_name": "mapping_last_login_caid2026",
+    "data_type": "string",
+    "comment": "映射后的CAID2026,来自于did-aid映射关系表，取最近一次登录活跃数据",
+    "partition": false
+   },
+   {
+    "column_name": "caid2026_encrypted",
+    "data_type": "string",
+    "comment": "社媒回传,加密后CAID2026,加密方式：SHA256",
+    "partition": false
+   }
+  ],
+  "column_count": 27
+ },
+ "dwd_growth.dwd_growth_hk4e_user_profile_df": {
+  "table_name": "dwd_growth.dwd_growth_hk4e_user_profile_df",
+  "columns": [
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "",
+    "partition": true
+   },
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "",
+    "partition": true
+   },
+   {
+    "column_name": "aid",
+    "data_type": "bigint",
+    "comment": "通行证id",
+    "partition": false
+   },
+   {
+    "column_name": "uid",
+    "data_type": "bigint",
+    "comment": "用户id",
+    "partition": false
+   },
+   {
+    "column_name": "tag",
+    "data_type": "int",
+    "comment": "风控小号标识",
+    "partition": false
+   },
+   {
+    "column_name": "level",
+    "data_type": "int",
+    "comment": "大世界等级",
+    "partition": false
+   },
+   {
+    "column_name": "age_idcard",
+    "data_type": "int",
+    "comment": "实名年龄，-1未知",
+    "partition": false
+   },
+   {
+    "column_name": "gender_idcard",
+    "data_type": "int",
+    "comment": "实名性别，0 男,1 女,-1未知",
+    "partition": false
+   },
+   {
+    "column_name": "revised_age",
+    "data_type": "int",
+    "comment": "修正后年龄，-1未知",
+    "partition": false
+   },
+   {
+    "column_name": "revised_gender",
+    "data_type": "int",
+    "comment": "修正后性别，-1未知",
+    "partition": false
+   },
+   {
+    "column_name": "is_v1_complete",
+    "data_type": "smallint",
+    "comment": "蒙德",
+    "partition": false
+   },
+   {
+    "column_name": "is_v2_complete",
+    "data_type": "smallint",
+    "comment": "璃月",
+    "partition": false
+   },
+   {
+    "column_name": "is_v3_complete",
+    "data_type": "smallint",
+    "comment": "稻妻",
+    "partition": false
+   },
+   {
+    "column_name": "is_v4_complete",
+    "data_type": "smallint",
+    "comment": "须弥",
+    "partition": false
+   },
+   {
+    "column_name": "is_v5_complete",
+    "data_type": "smallint",
+    "comment": "枫丹",
+    "partition": false
+   },
+   {
+    "column_name": "is_v6_complete",
+    "data_type": "smallint",
+    "comment": "纳塔",
+    "partition": false
+   },
+   {
+    "column_name": "is_v7_complete",
+    "data_type": "smallint",
+    "comment": "至冬",
+    "partition": false
+   },
+   {
+    "column_name": "aq_progress",
+    "data_type": "string",
+    "comment": "大版本剧情进度",
+    "partition": false
+   },
+   {
+    "column_name": "recharge_amount_total",
+    "data_type": "decimal(10,2)",
+    "comment": "累计付费",
+    "partition": false
+   },
+   {
+    "column_name": "gacha_vip_level",
+    "data_type": "string",
+    "comment": "付费能力",
+    "partition": false
+   },
+   {
+    "column_name": "is_finish_version_quest",
+    "data_type": "string",
+    "comment": "原始剧情进度json",
+    "partition": false
+   }
+  ],
+  "column_count": 21
+ },
+ "dwd_growth.dwd_growth_hk4e_user_tag_df": {
+  "table_name": "dwd_growth.dwd_growth_hk4e_user_tag_df",
+  "columns": [
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "",
+    "partition": true
+   },
+   {
+    "column_name": "account_id",
+    "data_type": "bigint",
+    "comment": "通行证id",
+    "partition": false
+   },
+   {
+    "column_name": "tag",
+    "data_type": "int",
+    "comment": "小号标识",
+    "partition": false
+   },
+   {
+    "column_name": "uid",
+    "data_type": "bigint",
+    "comment": "原神用户uid",
+    "partition": false
+   },
+   {
+    "column_name": "recharge_amount_total",
+    "data_type": "bigint",
+    "comment": "总充值金额",
+    "partition": false
+   },
+   {
+    "column_name": "active_version_count",
+    "data_type": "int",
+    "comment": "活跃版本数量",
+    "partition": false
+   },
+   {
+    "column_name": "vip_level_total",
+    "data_type": "string",
+    "comment": "原神付费等级：未付费、小R_0_300、中R_300_2000、大R_2000+、other",
+    "partition": false
+   },
+   {
+    "column_name": "register_time",
+    "data_type": "string",
+    "comment": "注册日期：格式为yyyy-MM-dd",
+    "partition": false
+   },
+   {
+    "column_name": "register_version",
+    "data_type": "string",
+    "comment": "注册日期对应的原神版本:v0_开服首周、v1.x_蒙德+璃月、v2.x_稻妻、v3.x_须弥、v4.x_枫丹、v5.x_纳塔、other",
+    "partition": false
+   },
+   {
+    "column_name": "hk4e_user_type",
+    "data_type": "string",
+    "comment": "原神活跃类型:1_新用户、2_DAU用户、3_周活用户、4_版本活跃用户、5_沉默用户、6_流失用户",
+    "partition": false
+   },
+   {
+    "column_name": "hk4e_silent_days",
+    "data_type": "int",
+    "comment": "原神流失天数",
+    "partition": false
+   },
+   {
+    "column_name": "nap_user_type",
+    "data_type": "string",
+    "comment": "nap活跃类型：1-新用户、2-42日内回流、2-超过42日回流、3-在玩DAU用户、4-版本活跃、5-流失、未注册绝区零、other",
+    "partition": false
+   },
+   {
+    "column_name": "nap_last_active_date",
+    "data_type": "string",
+    "comment": "nap最后活跃日期",
+    "partition": false
+   },
+   {
+    "column_name": "rpg_user_type",
+    "data_type": "string",
+    "comment": "rpg活跃类型：1_rpg日活、2_rpg周活、3_rpg版本活跃、4_rpg沉默42天+、未注册rpg",
+    "partition": false
+   },
+   {
+    "column_name": "rpg_last_active_date",
+    "data_type": "string",
+    "comment": "rpg最后活跃日期",
+    "partition": false
+   },
+   {
+    "column_name": "stored_wish",
+    "data_type": "string",
+    "comment": "原神囤积抽数",
+    "partition": false
+   },
+   {
+    "column_name": "stored_wish_level",
+    "data_type": "string",
+    "comment": "原神囤积抽数等级：0~20抽、21~50抽、51~90抽、91~180抽、>180抽、other",
+    "partition": false
+   },
+   {
+    "column_name": "avatar_1_status",
+    "data_type": "string",
+    "comment": "原神当期up卡池角色1持有情况：未持有、1命、2命、3命、4命、5命、6命",
+    "partition": false
+   },
+   {
+    "column_name": "avatar_2_status",
+    "data_type": "string",
+    "comment": "原神当期up卡池角色2持有情况：未持有、1命、2命、3命、4命、5命、6命",
+    "partition": false
+   },
+   {
+    "column_name": "avatar_1_id",
+    "data_type": "bigint",
+    "comment": "原神当期up卡池角色1ID",
+    "partition": false
+   },
+   {
+    "column_name": "avatar_1_name",
+    "data_type": "string",
+    "comment": "原神当期up卡池角色1名称",
+    "partition": false
+   },
+   {
+    "column_name": "avatar_2_id",
+    "data_type": "bigint",
+    "comment": "原神当期up卡池角色2ID",
+    "partition": false
+   },
+   {
+    "column_name": "avatar_2_name",
+    "data_type": "string",
+    "comment": "原神当期up卡池角色2名称",
+    "partition": false
+   },
+   {
+    "column_name": "age_idcard",
+    "data_type": "int",
+    "comment": "实名年龄，-1未知",
+    "partition": false
+   },
+   {
+    "column_name": "gender_idcard",
+    "data_type": "int",
+    "comment": "实名性别，0 男,1 女,-1未知",
+    "partition": false
+   },
+   {
+    "column_name": "revised_age",
+    "data_type": "string",
+    "comment": "按照实名年龄分为： 0-17、18-24、24-35、35+",
+    "partition": false
+   },
+   {
+    "column_name": "revised_gender",
+    "data_type": "string",
+    "comment": "年龄35+以上用户标记为“未知（35+）”，其余采用实名性别",
+    "partition": false
+   },
+   {
+    "column_name": "logregion",
+    "data_type": "string",
+    "comment": "游戏区服",
+    "partition": false
+   }
+  ],
+  "column_count": 28
+ },
+ "dws_growth.dws_growth_creator_artwork_order_nd": {
+  "table_name": "dws_growth.dws_growth_creator_artwork_order_nd",
+  "columns": [
+   {
+    "column_name": "logdate",
+    "data_type": "string",
+    "comment": "",
+    "partition": true
+   },
+   {
+    "column_name": "artwork_id",
+    "data_type": "string",
+    "comment": "作品ID",
+    "partition": false
+   },
+   {
+    "column_name": "submission_artwork_no",
+    "data_type": "string",
+    "comment": "投稿作品编号",
+    "partition": false
+   },
+   {
+    "column_name": "platform",
+    "data_type": "string",
+    "comment": "作品所属平台",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_title",
+    "data_type": "string",
+    "comment": "作品标题",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_url",
+    "data_type": "string",
+    "comment": "作品链接",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_pub_time",
+    "data_type": "string",
+    "comment": "作品发布时间",
+    "partition": false
+   },
+   {
+    "column_name": "is_popular_artwork",
+    "data_type": "string",
+    "comment": "是否为热门作品(0:否,1:是)",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_highlights",
+    "data_type": "string",
+    "comment": "作品亮点",
+    "partition": false
+   },
+   {
+    "column_name": "author_id",
+    "data_type": "string",
+    "comment": "作者ID",
+    "partition": false
+   },
+   {
+    "column_name": "author_aid",
+    "data_type": "bigint",
+    "comment": "作者C端通行证ID",
+    "partition": false
+   },
+   {
+    "column_name": "author_name",
+    "data_type": "string",
+    "comment": "作者名称",
+    "partition": false
+   },
+   {
+    "column_name": "author_business_id",
+    "data_type": "string",
+    "comment": "作者商业化ID",
+    "partition": false
+   },
+   {
+    "column_name": "author_home_url",
+    "data_type": "string",
+    "comment": "作者主页链接",
+    "partition": false
+   },
+   {
+    "column_name": "author_score",
+    "data_type": "string",
+    "comment": "达人指数",
+    "partition": false
+   },
+   {
+    "column_name": "author_gender",
+    "data_type": "string",
+    "comment": "作者性别",
+    "partition": false
+   },
+   {
+    "column_name": "author_region",
+    "data_type": "string",
+    "comment": "作者常驻地域",
+    "partition": false
+   },
+   {
+    "column_name": "author_third_party_tags",
+    "data_type": "string",
+    "comment": "平台作者标签",
+    "partition": false
+   },
+   {
+    "column_name": "author_cates_tags",
+    "data_type": "string",
+    "comment": "作者内容题材标签",
+    "partition": false
+   },
+   {
+    "column_name": "author_mcn_name",
+    "data_type": "string",
+    "comment": "作者签约机构",
+    "partition": false
+   },
+   {
+    "column_name": "author_mcn_type",
+    "data_type": "string",
+    "comment": "作者签约类型",
+    "partition": false
+   },
+   {
+    "column_name": "author_cooperation_cnt_td",
+    "data_type": "bigint",
+    "comment": "作者累计合作次数",
+    "partition": false
+   },
+   {
+    "column_name": "author_actual_cpm",
+    "data_type": "decimal(15,4)",
+    "comment": "作者实际CPM",
+    "partition": false
+   },
+   {
+    "column_name": "author_first_business_post_timestamp",
+    "data_type": "string",
+    "comment": "作者首次合作时间",
+    "partition": false
+   },
+   {
+    "column_name": "author_last_business_post_timestamp",
+    "data_type": "string",
+    "comment": "作者末次合作时间",
+    "partition": false
+   },
+   {
+    "column_name": "task_id",
+    "data_type": "string",
+    "comment": "任务ID",
+    "partition": false
+   },
+   {
+    "column_name": "task_no",
+    "data_type": "string",
+    "comment": "任务编号",
+    "partition": false
+   },
+   {
+    "column_name": "task_name",
+    "data_type": "string",
+    "comment": "任务名称",
+    "partition": false
+   },
+   {
+    "column_name": "task_type",
+    "data_type": "string",
+    "comment": "任务类型",
+    "partition": false
+   },
+   {
+    "column_name": "task_create_timestamp",
+    "data_type": "string",
+    "comment": "任务创建时间",
+    "partition": false
+   },
+   {
+    "column_name": "internal_task_id",
+    "data_type": "string",
+    "comment": "内部任务ID",
+    "partition": false
+   },
+   {
+    "column_name": "internal_task_name",
+    "data_type": "string",
+    "comment": "内部任务名称",
+    "partition": false
+   },
+   {
+    "column_name": "internal_task_type",
+    "data_type": "string",
+    "comment": "内部任务类型",
+    "partition": false
+   },
+   {
+    "column_name": "internal_task_status",
+    "data_type": "string",
+    "comment": "内部任务状态",
+    "partition": false
+   },
+   {
+    "column_name": "internal_task_budget",
+    "data_type": "decimal(15,4)",
+    "comment": "内部任务预算",
+    "partition": false
+   },
+   {
+    "column_name": "internal_task_start_timestamp",
+    "data_type": "string",
+    "comment": "内部任务开始时间",
+    "partition": false
+   },
+   {
+    "column_name": "internal_task_end_timestamp",
+    "data_type": "string",
+    "comment": "内部任务结束时间",
+    "partition": false
+   },
+   {
+    "column_name": "task_business_category",
+    "data_type": "string",
+    "comment": "任务对应的业务归属分类,enum: 活动,版本",
+    "partition": false
+   },
+   {
+    "column_name": "task_business_version",
+    "data_type": "string",
+    "comment": "任务对应的业务版本,当分类为活动时，该字段为活动名称",
+    "partition": false
+   },
+   {
+    "column_name": "task_business_type",
+    "data_type": "string",
+    "comment": "任务对应的业务类型,enum:商单/自孵化/社群/创体服",
+    "partition": false
+   },
+   {
+    "column_name": "game_name",
+    "data_type": "string",
+    "comment": "任务对应的游戏名称",
+    "partition": false
+   },
+   {
+    "column_name": "game_code",
+    "data_type": "string",
+    "comment": "游戏编码,enum:hk4e",
+    "partition": false
+   },
+   {
+    "column_name": "game_mode",
+    "data_type": "string",
+    "comment": "游戏对应的玩法,enum: 原神:本篇玩法,千星:UGC玩法",
+    "partition": false
+   },
+   {
+    "column_name": "game_version",
+    "data_type": "string",
+    "comment": "游戏版本",
+    "partition": false
+   },
+   {
+    "column_name": "operation_name",
+    "data_type": "string",
+    "comment": "内部运营人名称",
+    "partition": false
+   },
+   {
+    "column_name": "settlement_status",
+    "data_type": "string",
+    "comment": "结算状态",
+    "partition": false
+   },
+   {
+    "column_name": "settlement_author_mcn_type",
+    "data_type": "string",
+    "comment": "结算时作者签约机构类型",
+    "partition": false
+   },
+   {
+    "column_name": "settlement_author_vertical_type",
+    "data_type": "string",
+    "comment": "结算时作者垂类类型",
+    "partition": false
+   },
+   {
+    "column_name": "settlement_estimated_amt",
+    "data_type": "decimal(15,4)",
+    "comment": "结算预计可得金额",
+    "partition": false
+   },
+   {
+    "column_name": "settlement_actual_amt",
+    "data_type": "decimal(15,4)",
+    "comment": "结算实际可得金额",
+    "partition": false
+   },
+   {
+    "column_name": "acceptance_status",
+    "data_type": "string",
+    "comment": "验收状态",
+    "partition": false
+   },
+   {
+    "column_name": "accepted_by",
+    "data_type": "string",
+    "comment": "验收操作人域账号",
+    "partition": false
+   },
+   {
+    "column_name": "accepted_timestamp",
+    "data_type": "timestamp",
+    "comment": "验收时间",
+    "partition": false
+   },
+   {
+    "column_name": "submission_artwork_status",
+    "data_type": "string",
+    "comment": "审核状态",
+    "partition": false
+   },
+   {
+    "column_name": "order_id",
+    "data_type": "string",
+    "comment": "订单ID",
+    "partition": false
+   },
+   {
+    "column_name": "order_bill_price",
+    "data_type": "decimal(15,4)",
+    "comment": "订单金额",
+    "partition": false
+   },
+   {
+    "column_name": "order_bill_service_price",
+    "data_type": "decimal(15,4)",
+    "comment": "订单服务费",
+    "partition": false
+   },
+   {
+    "column_name": "order_bill_special_price",
+    "data_type": "decimal(15,4)",
+    "comment": "订单特殊价格",
+    "partition": false
+   },
+   {
+    "column_name": "order_bill_total_price",
+    "data_type": "decimal(15,4)",
+    "comment": "订单总金额",
+    "partition": false
+   },
+   {
+    "column_name": "order_bill_total_price_include_special",
+    "data_type": "decimal(15,4)",
+    "comment": "订单总金额(包含特殊服务费)",
+    "partition": false
+   },
+   {
+    "column_name": "order_create_time",
+    "data_type": "string",
+    "comment": "订单创建时间",
+    "partition": false
+   },
+   {
+    "column_name": "order_account_id",
+    "data_type": "string",
+    "comment": "下单账号ID",
+    "partition": false
+   },
+   {
+    "column_name": "order_account_name",
+    "data_type": "string",
+    "comment": "下单账号名称",
+    "partition": false
+   },
+   {
+    "column_name": "order_company_name",
+    "data_type": "string",
+    "comment": "下单账号主体",
+    "partition": false
+   },
+   {
+    "column_name": "order_account_type",
+    "data_type": "string",
+    "comment": "下单账号类型",
+    "partition": false
+   },
+   {
+    "column_name": "cooperation_type",
+    "data_type": "string",
+    "comment": "商单合作类型",
+    "partition": false
+   },
+   {
+    "column_name": "order_no",
+    "data_type": "string",
+    "comment": "订单编号",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_show_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计展示量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_play_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_play_uv_td",
+    "data_type": "bigint",
+    "comment": "作品累计播放UV",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_paid_play_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计付费播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_organic_play_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计自然播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_finish_play_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计完成播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_effective_play_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计有效播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_play_duration_td",
+    "data_type": "bigint",
+    "comment": "作品累计播放时长",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_like_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计点赞量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_collect_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计收藏量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_comment_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计评论量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_danmu_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计弹幕量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_share_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计分享量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_interact_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计互动量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_show_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日展示量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_play_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_paid_play_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日付费播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_organic_play_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日自然播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_finish_play_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日完成播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_effective_play_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日有效播放量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_play_duration_1d",
+    "data_type": "bigint",
+    "comment": "作品当日播放时长",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_like_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日点赞量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_collect_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日收藏量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_comment_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日评论量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_danmu_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日弹幕量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_share_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日分享量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_interact_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日互动量",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_play_cnt_post_3d",
+    "data_type": "bigint",
+    "comment": "作品3日累计播放量（发布后第3日）",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_play_cnt_post_7d",
+    "data_type": "bigint",
+    "comment": "作品7日累计播放量（发布后第7日）",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_play_cnt_post_14d",
+    "data_type": "bigint",
+    "comment": "作品14日累计播放量（发布后第14日）",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_like_cnt_post_3d",
+    "data_type": "bigint",
+    "comment": "作品3日累计点赞量（发布后第3日）",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_like_cnt_post_7d",
+    "data_type": "bigint",
+    "comment": "作品7日累计点赞量（发布后第7日）",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_like_cnt_post_14d",
+    "data_type": "bigint",
+    "comment": "作品14日累计点赞量（发布后第14日）",
+    "partition": false
+   },
+   {
+    "column_name": "cpm",
+    "data_type": "decimal(15,4)",
+    "comment": "作品CPM",
+    "partition": false
+   },
+   {
+    "column_name": "cpe",
+    "data_type": "decimal(15,4)",
+    "comment": "作品CPE",
+    "partition": false
+   },
+   {
+    "column_name": "cpm_post_3d",
+    "data_type": "decimal(15,4)",
+    "comment": "作品3日CPM（发布后第3日）",
+    "partition": false
+   },
+   {
+    "column_name": "cpm_post_7d",
+    "data_type": "decimal(15,4)",
+    "comment": "作品7日CPM（发布后第7日）",
+    "partition": false
+   },
+   {
+    "column_name": "cpm_post_14d",
+    "data_type": "decimal(15,4)",
+    "comment": "作品14日CPM（发布后第14日）",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品发布后累计看后搜索量",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_uv_td",
+    "data_type": "double",
+    "comment": "作品发布后累计看后搜索人数",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_rate_td",
+    "data_type": "double",
+    "comment": "作品发布后累计看后搜索率",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_cnt_2d",
+    "data_type": "bigint",
+    "comment": "作品发布后2天内累计看后搜索量",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_uv_2d",
+    "data_type": "double",
+    "comment": "作品发布后2天内累计看后搜索人数",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_rate_2d",
+    "data_type": "double",
+    "comment": "作品发布后2天内累计看后搜索率",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_cnt_7d",
+    "data_type": "bigint",
+    "comment": "作品发布后7天内累计看后搜索量",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_uv_7d",
+    "data_type": "double",
+    "comment": "作品发布后7天内累计看后搜索人数",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_rate_7d",
+    "data_type": "double",
+    "comment": "作品发布后7天内累计看后搜索率",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_cnt_15d",
+    "data_type": "bigint",
+    "comment": "作品发布后15天内累计看后搜索量",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_uv_15d",
+    "data_type": "double",
+    "comment": "作品发布后15天内累计看后搜索人数",
+    "partition": false
+   },
+   {
+    "column_name": "back_search_rate_15d",
+    "data_type": "double",
+    "comment": "作品发布后15天内累计看后搜索率",
+    "partition": false
+   },
+   {
+    "column_name": "positive_comment_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计正面评论量",
+    "partition": false
+   },
+   {
+    "column_name": "negative_comment_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计负面评论量",
+    "partition": false
+   },
+   {
+    "column_name": "neutral_comment_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计中性评论量",
+    "partition": false
+   },
+   {
+    "column_name": "positive_comment_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日正面评论量",
+    "partition": false
+   },
+   {
+    "column_name": "negative_comment_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日负面评论量",
+    "partition": false
+   },
+   {
+    "column_name": "neutral_comment_cnt_1d",
+    "data_type": "bigint",
+    "comment": "作品当日中性评论量",
+    "partition": false
+   },
+   {
+    "column_name": "comment_content",
+    "data_type": "string",
+    "comment": "评论内容",
+    "partition": false
+   },
+   {
+    "column_name": "hot_comment_words",
+    "data_type": "string",
+    "comment": "热评词",
+    "partition": false
+   },
+   {
+    "column_name": "gamepad_show_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计Gamepad展示量",
+    "partition": false
+   },
+   {
+    "column_name": "gamepad_click_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计Gamepad点击量",
+    "partition": false
+   },
+   {
+    "column_name": "gamepad_download_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计Gamepad下载量",
+    "partition": false
+   },
+   {
+    "column_name": "gamepad_install_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计Gamepad安装量",
+    "partition": false
+   },
+   {
+    "column_name": "gamepad_active_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计Gamepad活跃量",
+    "partition": false
+   },
+   {
+    "column_name": "leads_cnt_td",
+    "data_type": "bigint",
+    "comment": "作品累计线索数",
+    "partition": false
+   },
+   {
+    "column_name": "total_score",
+    "data_type": "double",
+    "comment": "作品综合表现得分",
+    "partition": false
+   },
+   {
+    "column_name": "spread_score",
+    "data_type": "double",
+    "comment": "作品传播表现得分",
+    "partition": false
+   },
+   {
+    "column_name": "recommend_score",
+    "data_type": "double",
+    "comment": "作品种草表现得分",
+    "partition": false
+   },
+   {
+    "column_name": "convert_score",
+    "data_type": "double",
+    "comment": "作品转化表现得分",
+    "partition": false
+   },
+   {
+    "column_name": "direct_gmv",
+    "data_type": "decimal(15,2)",
+    "comment": "直接GMV",
+    "partition": false
+   },
+   {
+    "column_name": "direct_order_cnt_td",
+    "data_type": "bigint",
+    "comment": "直接订单数",
+    "partition": false
+   },
+   {
+    "column_name": "reach_frequency_dis",
+    "data_type": "string",
+    "comment": "触达人群频次分布",
+    "partition": false
+   },
+   {
+    "column_name": "max_submission_per_account",
+    "data_type": "int",
+    "comment": "内部任务每个账号可投稿次数",
+    "partition": false
+   },
+   {
+    "column_name": "submission_content_type",
+    "data_type": "string",
+    "comment": "内部任务投稿作品内容类型",
+    "partition": false
+   },
+   {
+    "column_name": "other_platform_submission_json",
+    "data_type": "string",
+    "comment": "内部任务投稿作品其他平台信息 JSON",
+    "partition": false
+   },
+   {
+    "column_name": "attr_hk4e_recharge_amt_1d",
+    "data_type": "decimal(15,2)",
+    "comment": "当日归因原神充值金额（元）",
+    "partition": false
+   },
+   {
+    "column_name": "attr_hk4e_recharge_amt_td",
+    "data_type": "decimal(15,2)",
+    "comment": "累计归因原神充值金额（元）- 计算该作品在对应版本内带来的收入",
+    "partition": false
+   },
+   {
+    "column_name": "attr_ugc_recharge_amt_1d",
+    "data_type": "decimal(15,2)",
+    "comment": "当日归因千星奇域充值金额（元）",
+    "partition": false
+   },
+   {
+    "column_name": "attr_ugc_recharge_amt_td",
+    "data_type": "decimal(15,2)",
+    "comment": "累计归因千星奇域充值金额（元）- 计算该作品在对应版本内带来的收入",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_creator_platform_url",
+    "data_type": "string",
+    "comment": "作品创作者平台链接",
+    "partition": false
+   },
+   {
+    "column_name": "author_creator_platform_url",
+    "data_type": "string",
+    "comment": "作者创作者平台链接",
+    "partition": false
+   },
+   {
+    "column_name": "agency_commission_rate",
+    "data_type": "decimal(5,2)",
+    "comment": "代理的抽成比例 - 仅对效果类任务有效",
+    "partition": false
+   },
+   {
+    "column_name": "agency_commission_amt",
+    "data_type": "decimal(15,4)",
+    "comment": "代理佣金金额 - 仅对效果类任务有效",
+    "partition": false
+   },
+   {
+    "column_name": "cooperation_total_amt",
+    "data_type": "decimal(15,4)",
+    "comment": "合作总价 - 仅对效果类任务有效",
+    "partition": false
+   },
+   {
+    "column_name": "cooperation_total_cpm",
+    "data_type": "decimal(15,4)",
+    "comment": "合作总CPM(这个CPM包括 = (作品实际可得金额 + 平台抽成 + 代理抽成金额) / 作品结算日播放量) - 仅对效果类任务有效",
+    "partition": false
+   },
+   {
+    "column_name": "platform_commission_amt",
+    "data_type": "decimal(15,4)",
+    "comment": "平台佣金金额",
+    "partition": false
+   },
+   {
+    "column_name": "author_fans_num_td",
+    "data_type": "bigint",
+    "comment": "作者累计粉丝数",
+    "partition": false
+   },
+   {
+    "column_name": "author_like_cnt_td",
+    "data_type": "bigint",
+    "comment": "作者累计获赞数",
+    "partition": false
+   },
+   {
+    "column_name": "author_collect_cnt_td",
+    "data_type": "bigint",
+    "comment": "作者累计收藏数",
+    "partition": false
+   },
+   {
+    "column_name": "order_status",
+    "data_type": "string",
+    "comment": "订单状态",
+    "partition": false
+   },
+   {
+    "column_name": "order_release_timestamp",
+    "data_type": "string",
+    "comment": "订单发布时间戳",
+    "partition": false
+   },
+   {
+    "column_name": "order_update_timestamp",
+    "data_type": "string",
+    "comment": "订单更新时间戳",
+    "partition": false
+   },
+   {
+    "column_name": "task_business_theme",
+    "data_type": "string",
+    "comment": "任务对应的业务主题",
+    "partition": false
+   },
+   {
+    "column_name": "hk4e_effective_cooperation_cnt_by_game_version_dis",
+    "data_type": "string",
+    "comment": "按游戏版本-仅原神玩法有效合作次数分布（JSON）,排除活动类任务，排除社群、自孵化、创体服",
+    "partition": false
+   },
+   {
+    "column_name": "ugc_effective_cooperation_cnt_by_game_version_dis",
+    "data_type": "string",
+    "comment": "按游戏版本-仅千星奇域玩法有效合作次数分布（JSON）,排除活动类任务，排除社群、自孵化、创体服",
+    "partition": false
+   },
+   {
+    "column_name": "hk4e_newface_by_game_version_dis",
+    "data_type": "string",
+    "comment": "按游戏版本-仅原神玩法是否是newface（JSON）仅看6.0及之后版本的new_face,统计合作次数排除活动类任务，排除社群、自孵化、创体服",
+    "partition": false
+   },
+   {
+    "column_name": "ugc_newface_by_game_version_dis",
+    "data_type": "string",
+    "comment": "按游戏版本-仅千星奇域玩法是否是newface（JSON）仅看6.0及之后版本的new_face,统计合作次数排除活动类任务，排除社群、自孵化、创体服",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_content_sell_point",
+    "data_type": "string",
+    "comment": "作品内容卖点",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_content_theme",
+    "data_type": "string",
+    "comment": "作品内容主题",
+    "partition": false
+   },
+   {
+    "column_name": "artwork_content_genre",
+    "data_type": "string",
+    "comment": "作品内容题材",
+    "partition": false
+   },
+   {
+    "column_name": "play_cnt_after_task_finish_7d",
+    "data_type": "bigint",
+    "comment": "任务完成后7日累计播放量 仅效果类任务才有",
+    "partition": false
+   },
+   {
+    "column_name": "cost_amt_after_task_finish_7d",
+    "data_type": "decimal(15,2)",
+    "comment": "任务完成后7日累计费用(单位：元)，仅效果类任务才有",
+    "partition": false
+   }
+  ],
+  "column_count": 168
+ }
+}
