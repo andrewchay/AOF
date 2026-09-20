@@ -58,7 +58,8 @@ WILDCARD = "dwd_hk4e.dwd_inr_pqt_comp_hk4e_hourly_"  # 族级引用，不建实�
 
 def ttl_classes(ttl_text: str):
     """label(zh)/label(en) → subject IRI；以及全部 class subject 集合。"""
-    zh2iri, iri_set = {}, set()
+    zh2iri: dict[str, str] = {}
+    iri_set: set[str] = set()
     for m in re.finditer(r"<([^>]+)> a owl:Class ;", ttl_text):
         iri_set.add(m.group(1))
     for m in re.finditer(r"<([^>]+)> a owl:Class ;[^.]*?rdfs:label \"([^\"]+)\"@en,\s*\"([^\"]+)\"@zh", ttl_text, re.S):

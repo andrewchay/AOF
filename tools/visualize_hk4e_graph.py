@@ -32,6 +32,7 @@ import time
 from collections import Counter, defaultdict, deque
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import kuzu
 
@@ -57,8 +58,13 @@ def _local(uri: str) -> str:
 def load_graph(db_path: str) -> tuple[dict, list[tuple[str, str, str]]]:
     """kuzu 只读直连，拉全量节点/边。"""
     conn = kuzu.Connection(kuzu.Database(db_path, read_only=True))
+
+    def _exec(query: str) -> Any:
+        res = conn.execute(query)
+        assert not isinstance(res, list)
+        return res
     nodes: dict[str, dict] = {}
-    for nid, name, ntype, props in conn.execute(
+    for nid, name, ntype, props in _exec(
         "MATCH (n:Node) RETURN n.id, n.name, n.type, n.properties"
     ).get_all():
         p: dict = {}
@@ -75,7 +81,7 @@ def load_graph(db_path: str) -> tuple[dict, list[tuple[str, str, str]]]:
         }
     edges = [
         (a, rel, b)
-        for a, rel, b in conn.execute(
+        for a, rel, b in _exec(
             "MATCH (x:Node)-[r:EDGE]->(y:Node) RETURN x.id, r.relationship_name, y.id"
         ).get_all()
     ]
@@ -299,7 +305,7 @@ def main() -> int:
         import subprocess
 
         subprocess.run(["open", str(out)], check=False)
-        print(f"[4/4] 已在默认浏览器打开")
+        print("[4/4] 已在默认浏览器打开")
     else:
         print(f"[4/4] 完成：open {out}")
     print(f"elapsed={time.time() - t0:.1f}s")

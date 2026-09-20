@@ -47,7 +47,9 @@ def parse_tables(ref_dir: Path) -> list[dict]:
         idx = next((i for i, c in enumerate(cells) if TBL_RE.search(c)), None)
         if idx is None:
             continue
-        full = TBL_RE.search(cells[idx]).group(1)
+        m_full = TBL_RE.search(cells[idx])
+        assert m_full is not None
+        full = m_full.group(1)
         if full in seen:
             continue
         seen.add(full)

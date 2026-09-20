@@ -176,10 +176,10 @@ def parse_ttl(ttl_path: Path) -> dict[str, Any]:
         r = prop_range.get(pu)
         if d and r and _is_http(d) and _is_http(r):
             rel = _local(pu)
-            key = (d, r, rel)
-            if key not in edges:
-                edges.add(key)
-                edge_props[key] = {"property_uri": pu, "label": _pick_label(labels.get(pu, [])) or rel}
+            edge_key = (d, r, rel)
+            if edge_key not in edges:
+                edges.add(edge_key)
+                edge_props[edge_key] = {"property_uri": pu, "label": _pick_label(labels.get(pu, [])) or rel}
                 n_prop_edges += 1
 
     # 构建节点

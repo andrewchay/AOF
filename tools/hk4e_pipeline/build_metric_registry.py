@@ -89,8 +89,10 @@ def resolve_tables(text: str, tbl2uri: dict, bare2uri: dict) -> list[str]:
 
 def parse_koujing(path: Path) -> list[dict]:
     """返回条目列表：{topic, name|None, text}。跨行 bullet 聚合成整段。"""
-    items, topic = [], "总则"
-    buf_name, buf_text = None, []
+    items: list[dict] = []
+    topic = "总则"
+    buf_name: str | None = None
+    buf_text: list[str] = []
 
     def flush():
         nonlocal buf_name, buf_text
