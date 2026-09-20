@@ -130,7 +130,19 @@ async def test_knowledge_build_then_semantic_query(tmp_path: Path):
         hits = result["governed_result"]["result"]["data"]["hits"]
         assert any("Alpha" in str(h.get("name", "")) for h in hits), result
 
-        # 3) digest 不匹配被拒
+        # 3) build 仅为自身 tenant 登记 ownership（K03 Task 3 写侧）
+        kb_descriptor = f"kb-{hashlib.sha256(b'kb-e2e').hexdigest()[:16]}"
+        registry_a = tmp_path / "knowledge" / "tenant-a" / "dataset-ownership.json"
+        registry_payload = json.loads(registry_a.read_text(encoding="utf-8"))
+        assert registry_payload["tenant_id"] == "tenant-a"
+        assert kb_descriptor in registry_payload["dataset_ids"]
+        # tenant-b 未 build，不应看到 tenant-a 的 descriptor
+        registry_b = tmp_path / "knowledge" / "tenant-b" / "dataset-ownership.json"
+        assert not registry_b.exists() or kb_descriptor not in json.loads(
+            registry_b.read_text(encoding="utf-8")
+        ).get("dataset_ids", [])
+
+        # 4) digest 不匹配被拒
         stale = await session.call_tool(
             "aof_semantic_query",
             {

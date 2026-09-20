@@ -25,6 +25,7 @@ from typing import Any
 
 from bridge.decision_provenance import DecisionProvenanceStore
 from bridge.semantic_core import ResourceKind, SemanticResource
+from bridge.tenant_dataset_registry import register_owned_dataset
 from bridge.semantic_core.compilers import (
     CompilationRunRepository,
     CompilationRunService,
@@ -245,6 +246,14 @@ def build_knowledge_release(
         rationale="promote",
     )
     ledger["query_runtime"] = {"promoted_channel": "production", "run_id": replay.run_id}
+    # 为本次构建产生的 KB descriptor 登记当前签名 tenant 的 ownership；
+    # 这是 aof_list_datasets 过滤的写侧依据。只登记自己的 KB 编号，
+    # 不伪装为 Cognee 原始数据所有权，也不写其他 tenant 的记录。
+    register_owned_dataset(
+        state_root=knowledge_state_root,
+        tenant_id=tenant_id,
+        dataset_id=f"kb-{_slug(kb_id)}",
+    )
     return {
         "ok": True,
         "release_id": release_id,
