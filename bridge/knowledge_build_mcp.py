@@ -81,7 +81,26 @@ class _SnapshotConnector(SourceConnector):
             }
             for doc in self.docs
         )
-        snapshot = json.dumps([doc["sha256"] for doc in self.docs], separators=(",", ":"))
+        # 快照指针覆盖四维输入：正文哈希、路径、标题、解析后链接；
+        # 与 GravitAI 侧 computeSnapshotDigest 的敏感面一致，
+        # 同输入必得同 cursor，任一维度变化必换 cursor。
+        snapshot = json.dumps(
+            sorted(
+                (
+                    {
+                        "path": str(doc["relative_path"]),
+                        "sha256": str(doc["sha256"]),
+                        "title": str(doc["title"]),
+                        "links": sorted(str(link) for link in doc.get("resolved_links", [])),
+                    }
+                    for doc in self.docs
+                ),
+                key=lambda item: (item["path"], item["sha256"]),
+            ),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
         return SourceBatch.create(
             cursor_from=cursor,
             cursor_to=f"snapshot-{_slug(snapshot)}",
