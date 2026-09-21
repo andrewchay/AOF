@@ -30,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -198,6 +199,7 @@ _MCP_IDENTITY_FIELDS: dict[str, dict[str, str]] = {
     "aof_publish_datalog_ruleset": {"actor": "publish"},
     "aof_run_datalog_ruleset": {"agent_id": "reason"},
     "aof_knowledge_build": {"tenant_id": "tenant", "actor": "create"},
+    "aof_knowledge_build_status": {"tenant_id": "tenant"},
     "aof_list_datasets": {"tenant_id": "tenant"},
 }
 
@@ -1001,9 +1003,44 @@ def _register_semantic_query_tools(server: McpServer) -> None:
 # Build and run server
 # ---------------------------------------------------------------------------
 
+AOF_MCP_VERSION = "2.2.1"
+
+
+def _source_commit() -> str:
+    configured = os.environ.get("AOF_SOURCE_COMMIT", "").strip()
+    if configured:
+        return configured
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=PROJECT_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        return result.stdout.strip() or "unknown"
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+
+
+async def _tool_runtime_health(args: dict[str, Any]) -> dict[str, Any]:
+    """返回不含密钥的运行时身份快照；调用仍需签名 principal。"""
+    return {
+        "engine": "aof",
+        "version": AOF_MCP_VERSION,
+        "profile": os.environ.get("AOF_CAPABILITY_PROFILE", "development").strip() or "development",
+        "source_commit": _source_commit(),
+    }
+
+
 async def _tool_knowledge_build(args: dict[str, Any]) -> dict[str, Any]:
-    """构建 tenant-scoped release 并 promote 到 production channel。"""
+    """幂等构建 tenant-scoped release 并 promote 到 production channel。"""
     from bridge.knowledge_build_mcp import build_knowledge_release
+    from bridge.knowledge_build_operations import (
+        KnowledgeBuildOperationStore,
+        snapshot_digest,
+    )
 
     knowledge_root = Path(
         os.environ.get("AOF_KNOWLEDGE_STATE_DIR", str(PROJECT_ROOT / "data" / "knowledge_build"))
@@ -1011,18 +1048,94 @@ async def _tool_knowledge_build(args: dict[str, Any]) -> dict[str, Any]:
     compiler_root = Path(
         os.environ.get("AOF_COMPILER_STATE_DIR", str(PROJECT_ROOT / "data" / "semantic_compiler"))
     )
-    return build_knowledge_release(
-        kb_id=str(args["kb_id"]),
-        docs=list(args["docs"]),
-        tenant_id=str(args["tenant_id"]),
-        actor=str(args["actor"]),
-        knowledge_state_root=knowledge_root,
-        compiler_state_root=compiler_root,
+    kb_id = str(args["kb_id"])
+    docs = list(args["docs"])
+    tenant_id = str(args["tenant_id"])
+    operation_id = str(args["operation_id"])
+    store = KnowledgeBuildOperationStore(knowledge_root / "knowledge-build-operations.sqlite3")
+    operation, claimed = store.begin(
+        tenant_id=tenant_id,
+        operation_id=operation_id,
+        kb_id=kb_id,
+        digest=snapshot_digest(kb_id, docs),
     )
+    if not claimed:
+        if operation["state"] == "succeeded" and isinstance(operation.get("result"), dict):
+            return operation["result"]
+        return {
+            "ok": False,
+            "operation_id": operation_id,
+            "operation_state": operation["state"],
+            "error": {
+                "type": "OperationNotReplayable",
+                "message": operation.get("error") or "operation is not in a replayable terminal state",
+            },
+        }
+    try:
+        result = build_knowledge_release(
+            kb_id=kb_id,
+            docs=docs,
+            tenant_id=tenant_id,
+            actor=str(args["actor"]),
+            knowledge_state_root=knowledge_root,
+            compiler_state_root=compiler_root,
+        )
+        enriched = {
+            **result,
+            "operation_id": operation_id,
+            "operation_snapshot_digest": operation["snapshot_digest"],
+        }
+        if result.get("ok") is True:
+            enriched["operation_state"] = "succeeded"
+            store.complete(tenant_id=tenant_id, operation_id=operation_id, result=enriched)
+        else:
+            enriched["operation_state"] = "failed"
+            raw_error = result.get("error")
+            error_message = (
+                str(raw_error.get("message") or "knowledge build failed")
+                if isinstance(raw_error, dict)
+                else "knowledge build failed"
+            )
+            store.fail(
+                tenant_id=tenant_id,
+                operation_id=operation_id,
+                error=error_message,
+                result=enriched,
+            )
+        return enriched
+    except Exception as exc:
+        store.fail(tenant_id=tenant_id, operation_id=operation_id, error=str(exc))
+        raise
+
+
+async def _tool_knowledge_build_status(args: dict[str, Any]) -> dict[str, Any]:
+    """查询当前签名 tenant 的持久构建 operation；未知 ID 不跨租户探测。"""
+    from bridge.knowledge_build_operations import KnowledgeBuildOperationStore
+
+    knowledge_root = Path(
+        os.environ.get("AOF_KNOWLEDGE_STATE_DIR", str(PROJECT_ROOT / "data" / "knowledge_build"))
+    )
+    operation_id = str(args["operation_id"])
+    item = KnowledgeBuildOperationStore(
+        knowledge_root / "knowledge-build-operations.sqlite3"
+    ).get(tenant_id=str(args["tenant_id"]), operation_id=operation_id)
+    if item is None:
+        return {"found": False, "operation_id": operation_id}
+    return {
+        "found": True,
+        "operation_id": item["operation_id"],
+        "kb_id": item["kb_id"],
+        "snapshot_digest": item["snapshot_digest"],
+        "state": item["state"],
+        "started_at": item["started_at"],
+        "updated_at": item["updated_at"],
+        "result": item["result"],
+        "error": item["error"],
+    }
 
 
 def build_server() -> McpServer:
-    server = McpServer(name="aof", version="2.2.0")
+    server = McpServer(name="aof", version=AOF_MCP_VERSION)
 
     server.register_tool(McpTool(
         name="aof_hybrid_search",
@@ -1336,11 +1449,28 @@ def build_server() -> McpServer:
     _register_semantic_compiler_tools(server)
     _register_semantic_query_tools(server)
     server.register_tool(McpTool(
+        name="aof_runtime_health",
+        description="返回 AOF engine/version/profile/source commit 运行时身份快照。",
+        input_schema={"type": "object", "properties": {}},
+        handler=_tool_runtime_health,
+    ))
+    server.register_tool(McpTool(
+        name="aof_knowledge_build_status",
+        description="查询当前 tenant 的持久知识构建 operation 状态。",
+        input_schema={
+            "type": "object",
+            "properties": {"operation_id": {"type": "string"}},
+            "required": ["operation_id"],
+        },
+        handler=_tool_knowledge_build_status,
+    ))
+    server.register_tool(McpTool(
         name="aof_knowledge_build",
         description="摄入文档快照、治理发布并将可查询 release promote 到 production。",
         input_schema={
             "type": "object",
             "properties": {
+                "operation_id": {"type": "string"},
                 "kb_id": {"type": "string"},
                 "docs": {
                     "type": "array",
@@ -1357,7 +1487,7 @@ def build_server() -> McpServer:
                     },
                 },
             },
-            "required": ["kb_id", "docs"],
+            "required": ["operation_id", "kb_id", "docs"],
         },
         handler=_tool_knowledge_build,
     ))

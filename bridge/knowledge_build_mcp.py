@@ -25,6 +25,7 @@ from typing import Any
 
 from bridge.decision_provenance import DecisionProvenanceStore
 from bridge.semantic_core import ResourceKind, SemanticResource
+from bridge.tenant_dataset_registry import register_owned_dataset
 from bridge.semantic_core.compilers import (
     CompilationRunRepository,
     CompilationRunService,
@@ -80,7 +81,26 @@ class _SnapshotConnector(SourceConnector):
             }
             for doc in self.docs
         )
-        snapshot = json.dumps([doc["sha256"] for doc in self.docs], separators=(",", ":"))
+        # 快照指针覆盖四维输入：正文哈希、路径、标题、解析后链接；
+        # 与 GravitAI 侧 computeSnapshotDigest 的敏感面一致，
+        # 同输入必得同 cursor，任一维度变化必换 cursor。
+        snapshot = json.dumps(
+            sorted(
+                (
+                    {
+                        "path": str(doc["relative_path"]),
+                        "sha256": str(doc["sha256"]),
+                        "title": str(doc["title"]),
+                        "links": sorted(str(link) for link in doc.get("resolved_links", [])),
+                    }
+                    for doc in self.docs
+                ),
+                key=lambda item: (item["path"], item["sha256"]),
+            ),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
         return SourceBatch.create(
             cursor_from=cursor,
             cursor_to=f"snapshot-{_slug(snapshot)}",
@@ -245,6 +265,14 @@ def build_knowledge_release(
         rationale="promote",
     )
     ledger["query_runtime"] = {"promoted_channel": "production", "run_id": replay.run_id}
+    # 为本次构建产生的 KB descriptor 登记当前签名 tenant 的 ownership；
+    # 这是 aof_list_datasets 过滤的写侧依据。只登记自己的 KB 编号，
+    # 不伪装为 Cognee 原始数据所有权，也不写其他 tenant 的记录。
+    register_owned_dataset(
+        state_root=knowledge_state_root,
+        tenant_id=tenant_id,
+        dataset_id=f"kb-{_slug(kb_id)}",
+    )
     return {
         "ok": True,
         "release_id": release_id,

@@ -49,14 +49,16 @@ async def _run_client(coro):
             "AOF_SEMANTIC_IDENTITY_KEY_ID": TEST_KEY_ID,
             "AOF_SPEC_PATH": str(PROJECT_ROOT / "aof_spec.example.json"),
             "AOF_REVOCATIONS_FILE": "/tmp/aof-sdk-transport-test-revocations.sqlite",
+            "AOF_CAPABILITY_PROFILE": "development",
+            "AOF_SOURCE_COMMIT": "test-source-commit",
         },
     )
 
     async def _scoped():
         async with stdio_client(params) as (read, write):
             async with ClientSession(read, write) as session:
-                await session.initialize()
-                return await coro(session)
+                initialized = await session.initialize()
+                return await coro(session, initialized)
 
     return await asyncio.wait_for(_scoped(), timeout=180)
 
@@ -66,7 +68,9 @@ def test_sdk_transport_protocol_and_auth():
     """Given 官方 MCP 客户端 When 走 stdio 连接 Then 协议互通且鉴权语义不变。"""
     collected: dict = {}
 
-    async def scenario(session: ClientSession) -> None:
+    async def scenario(session: ClientSession, initialized) -> None:
+        collected["server_name"] = initialized.server_info.name
+        collected["server_version"] = initialized.server_info.version
         tools = await session.list_tools()
         collected["tool_count"] = len(tools.tools)
         collected["has_hybrid_search"] = any(t.name == "aof_hybrid_search" for t in tools.tools)
@@ -96,9 +100,19 @@ def test_sdk_transport_protocol_and_auth():
         collected["authorized_code"] = data.get("code")
         collected["datasets_returned"] = "datasets" in data
 
+        # runtime health 必须受签名保护并返回可追踪身份。
+        unsigned_health = await session.call_tool("aof_runtime_health", {})
+        collected["unsigned_health_error"] = unsigned_health.is_error
+        health = await session.call_tool(
+            "aof_runtime_health", {"principal_headers": _principal_headers("viewer")}
+        )
+        collected["health"] = json.loads(health.content[0].text)
+
     asyncio.run(_run_client(scenario))
 
-    assert collected["tool_count"] == 38  # 37 个存量工具 + aof_knowledge_build
+    assert collected["server_name"] == "aof"
+    assert collected["server_version"] == "2.2.1"
+    assert collected["tool_count"] == 40  # 37 个存量工具 + build/status + runtime health
     assert collected["has_hybrid_search"] is True
     assert collected["principal_required"] is True
     assert collected["no_principal_is_error"] is True
@@ -107,3 +121,10 @@ def test_sdk_transport_protocol_and_auth():
     assert collected["forged_principal_code"] == "authentication_required"
     assert collected["authorized_code"] != "authentication_required"
     assert collected["datasets_returned"] is True or collected["authorized_code"] == "tool_execution_failed"
+    assert collected["unsigned_health_error"] is True
+    assert collected["health"] == {
+        "engine": "aof",
+        "version": "2.2.1",
+        "profile": "development",
+        "source_commit": "test-source-commit",
+    }

@@ -8,11 +8,10 @@
 
 """官方 MCP SDK（mcp>=1.8）stdio 封装的 AOF server。
 
-背景：``mcp_server.py`` 是 AOF 自己的换行 JSON-RPC 实现，不是 MCP 标准
-stdio 帧协议，标准 MCP 客户端（如 Gravitas/GravitAI 的
-@modelcontextprotocol/sdk）无法直接连接。本模块复用同一工具注册表与同一
-签名主体鉴权管线，只替换传输层为官方 SDK，保证两个入口的工具与授权语义
-完全一致。
+背景：``mcp_server.py`` 是 AOF 自己的换行 JSON-RPC 实现；官方 MCP SDK
+当前的 stdio transport 同样按行分隔消息。迁移官方 SDK 的价值在 initialize
+生命周期、schema 校验和客户端兼容性，而不是改变消息分帧。本模块复用同一
+工具注册表与同一签名主体鉴权管线，保证两个入口的工具与授权语义一致。
 
 用法：``python mcp_server_sdk.py``（stdio 传输）。
 """
@@ -31,7 +30,7 @@ import mcp_server as legacy
 def _build_sdk_server() -> SdkServer:
     """把 legacy 注册表包装成官方 SDK Server，鉴权语义保持不变。"""
     registry = legacy.build_server()
-    server: SdkServer = SdkServer(registry.name)
+    server: SdkServer = SdkServer(registry.name, version=registry.version)
 
     async def handle_list_tools(ctx: object, request: types.PaginatedRequestParams) -> types.ListToolsResult:
         return types.ListToolsResult(

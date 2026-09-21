@@ -4570,6 +4570,57 @@
           "publisher"
         ]
       }
+    },
+    {
+      "operation_id": "mcp:aof_runtime_health",
+      "method": "TOOL",
+      "path": "aof_runtime_health",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "read",
+        "allowed_roles": [
+          "admin",
+          "analyst",
+          "compiler",
+          "editor",
+          "ingestor",
+          "operator",
+          "owner",
+          "publisher",
+          "reasoner",
+          "reviewer",
+          "risk-owner",
+          "validator",
+          "viewer",
+          "worker"
+        ]
+      }
+    },
+    {
+      "operation_id": "mcp:aof_knowledge_build_status",
+      "method": "TOOL",
+      "path": "aof_knowledge_build_status",
+      "classification": "governed",
+      "public": false,
+      "auth": "signed-principal",
+      "policy": {
+        "action": "read",
+        "allowed_roles": [
+          "admin",
+          "analyst",
+          "compiler",
+          "editor",
+          "ingestor",
+          "operator",
+          "owner",
+          "publisher",
+          "reviewer",
+          "viewer",
+          "worker"
+        ]
+      }
     }
   ]
 }
