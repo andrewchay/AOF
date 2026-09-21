@@ -111,7 +111,7 @@ def test_sdk_transport_protocol_and_auth():
     asyncio.run(_run_client(scenario))
 
     assert collected["server_name"] == "aof"
-    assert collected["server_version"] == "2.2.1"
+    assert collected["server_version"] == "2.2.2"
     assert collected["tool_count"] == 40  # 37 个存量工具 + build/status + runtime health
     assert collected["has_hybrid_search"] is True
     assert collected["principal_required"] is True
@@ -124,7 +124,7 @@ def test_sdk_transport_protocol_and_auth():
     assert collected["unsigned_health_error"] is True
     assert collected["health"] == {
         "engine": "aof",
-        "version": "2.2.1",
+        "version": "2.2.2",
         "profile": "development",
         "source_commit": "test-source-commit",
     }

@@ -24,7 +24,7 @@ from rdflib import Graph, URIRef
 
 from bridge.ontology_governance import DatalogEngine, SparqlService
 
-from .canonical import canonical_data, canonical_json, content_digest
+from .canonical import canonical_data, canonical_json, content_digest, hit_provenance
 from .query_plans import (
     QueryCapability,
     QueryPlan,
@@ -345,6 +345,7 @@ class QueryExecutor:
                         "revision_id": resource["revision_id"],
                         "kind": resource["kind"],
                         "name": resource["name"],
+                        **hit_provenance(resource),
                     }
                 )
         hits.sort(key=lambda item: item["resource_id"])
