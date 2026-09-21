@@ -32,6 +32,8 @@ import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from bridge.knowledge_build_operations import snapshot_digest as status_snapshot_digest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TEST_SECRET = "knowledge-build-test-secret"
 TEST_KEY_ID = "knowledge-build-test-key"
@@ -97,6 +99,7 @@ async def test_knowledge_build_then_semantic_query(tmp_path: Path):
         build = await session.call_tool(
             "aof_knowledge_build",
             {
+                "operation_id": "op-e2e-1",
                 "kb_id": "kb-e2e",
                 "docs": _docs(),
                 "principal_headers": _headers("tenant-a"),
@@ -105,12 +108,46 @@ async def test_knowledge_build_then_semantic_query(tmp_path: Path):
         assert not build.is_error, build.content[0].text
         built = json.loads(build.content[0].text)
         assert built["ok"] is True
+        assert built["operation_id"] == "op-e2e-1"
+        assert built["operation_state"] == "succeeded"
+        assert built["operation_snapshot_digest"] == status_snapshot_digest("kb-e2e", _docs())
         assert built["ledger"]["publish"]["verify"] is True
         policy_id = built["policy_resource_id"]
         digest = built["release_digest"]
         assert policy_id == "aof://tenant-a/platform/policy/query-adapter"
 
-        # 2) release-pinned 查询命中
+        # 2) status 可查询，跨 tenant 不可见；同 operation 重试幂等返回原 release。
+        status = await session.call_tool(
+            "aof_knowledge_build_status",
+            {"operation_id": "op-e2e-1", "principal_headers": _headers("tenant-a", roles=["viewer"])},
+        )
+        assert not status.is_error, status.content[0].text
+        status_payload = json.loads(status.content[0].text)
+        assert status_payload["found"] is True
+        assert status_payload["state"] == "succeeded"
+        assert status_payload["snapshot_digest"] == built["operation_snapshot_digest"]
+        assert status_payload["result"]["operation_snapshot_digest"] == built["operation_snapshot_digest"]
+        assert status_payload["result"]["release_id"] == built["release_id"]
+
+        hidden = await session.call_tool(
+            "aof_knowledge_build_status",
+            {"operation_id": "op-e2e-1", "principal_headers": _headers("tenant-b", roles=["viewer"])},
+        )
+        assert json.loads(hidden.content[0].text) == {"found": False, "operation_id": "op-e2e-1"}
+
+        repeated = await session.call_tool(
+            "aof_knowledge_build",
+            {
+                "operation_id": "op-e2e-1",
+                "kb_id": "kb-e2e",
+                "docs": _docs(),
+                "principal_headers": _headers("tenant-a"),
+            },
+        )
+        assert not repeated.is_error, repeated.content[0].text
+        assert json.loads(repeated.content[0].text)["release_id"] == built["release_id"]
+
+        # 3) release-pinned 查询命中
         queried = await session.call_tool(
             "aof_semantic_query",
             {
@@ -130,7 +167,7 @@ async def test_knowledge_build_then_semantic_query(tmp_path: Path):
         hits = result["governed_result"]["result"]["data"]["hits"]
         assert any("Alpha" in str(h.get("name", "")) for h in hits), result
 
-        # 3) build 仅为自身 tenant 登记 ownership（K03 Task 3 写侧）
+        # 4) build 仅为自身 tenant 登记 ownership（K03 Task 3 写侧）
         kb_descriptor = f"kb-{hashlib.sha256(b'kb-e2e').hexdigest()[:16]}"
         registry_a = tmp_path / "knowledge" / "tenant-a" / "dataset-ownership.json"
         registry_payload = json.loads(registry_a.read_text(encoding="utf-8"))
@@ -142,7 +179,7 @@ async def test_knowledge_build_then_semantic_query(tmp_path: Path):
             registry_b.read_text(encoding="utf-8")
         ).get("dataset_ids", [])
 
-        # 4) digest 不匹配被拒
+        # 5) digest 不匹配被拒
         stale = await session.call_tool(
             "aof_semantic_query",
             {
@@ -174,7 +211,7 @@ async def test_knowledge_build_requires_signature(tmp_path: Path):
     async def scenario(session: ClientSession):
         res = await session.call_tool(
             "aof_knowledge_build",
-            {"kb_id": "kb-e2e", "docs": _docs()},
+            {"operation_id": "op-unsigned", "kb_id": "kb-e2e", "docs": _docs()},
         )
         assert res.is_error
         assert "authentication_required" in res.content[0].text
@@ -190,6 +227,7 @@ async def test_knowledge_build_tenant_isolation(tmp_path: Path):
         build = await session.call_tool(
             "aof_knowledge_build",
             {
+                "operation_id": "op-tenant-isolation",
                 "kb_id": "kb-e2e",
                 "docs": _docs(),
                 "principal_headers": _headers("tenant-a"),

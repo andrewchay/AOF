@@ -15,7 +15,7 @@
   "summary": {
     "http_operations": 178,
     "http_paths": 169,
-    "mcp_tools": 38,
+    "mcp_tools": 40,
     "cli_entry_points": 3,
     "ui_routes": 9,
     "dependency_manifests": 8,
@@ -609,7 +609,7 @@
     {
       "capability_id": "cap:mcp-tools",
       "domain": "mcp-tools",
-      "entry_points": 38,
+      "entry_points": 40,
       "classifications": [
         "governed"
       ],
