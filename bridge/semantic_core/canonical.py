@@ -50,3 +50,24 @@ def canonical_json(value: Any) -> str:
 
 def content_digest(value: Any) -> str:
     return f"sha256:{hashlib.sha256(canonical_json(value).encode('utf-8')).hexdigest()}"
+
+
+_HIT_PROVENANCE_KEYS = ("source_path", "content_sha256")
+
+
+def hit_provenance(resource: Mapping[str, Any]) -> dict[str, str]:
+    """Curated release-pinned provenance for semantic_search hits.
+
+    Knowledge builds store ``source_path``/``content_sha256`` in the resource
+    spec. Surfacing these curated keys lets clients locate the authoritative
+    source document without title heuristics; keys are omitted when the spec
+    does not provide them.
+    """
+    spec = resource.get("spec")
+    if not isinstance(spec, Mapping):
+        return {}
+    return {
+        key: spec[key]
+        for key in _HIT_PROVENANCE_KEYS
+        if isinstance(spec.get(key), str) and spec[key]
+    }

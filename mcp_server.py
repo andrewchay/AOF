@@ -1003,7 +1003,7 @@ def _register_semantic_query_tools(server: McpServer) -> None:
 # Build and run server
 # ---------------------------------------------------------------------------
 
-AOF_MCP_VERSION = "2.2.1"
+AOF_MCP_VERSION = "2.2.2"
 
 
 def _source_commit() -> str:

@@ -250,6 +250,56 @@ def test_unified_executor_returns_digest_bound_semantic_search_result(tmp_path) 
     assert result.to_dict()["api_version"] == "aof.query-result/v1"
 
 
+def _provenance_concept() -> SemanticResource:
+    return SemanticResource.create(
+        resource_id="aof://acme/sales/concept/doc-runbook",
+        kind=ResourceKind.CONCEPT,
+        name="customer-runbook",
+        domain="sales",
+        owner="knowledge-team",
+        description="Operator runbook describing customer onboarding.",
+        spec={"source_path": "docs/runbook.md", "content_sha256": "sha256:" + "a" * 64},
+    )
+
+
+def test_semantic_search_hits_carry_release_pinned_source_provenance(tmp_path) -> None:
+    resolver, executor = _trusted_query_runtime(tmp_path, extra_resources=(_provenance_concept(),))
+    request = QueryRequest.create(
+        channel="production",
+        capability=QueryCapability.SEMANTIC_SEARCH,
+        query="customer",
+        purpose="customer-support",
+        parameters={"limit": 10},
+    )
+    plan = resolver.plan(request, tenant_id="acme")
+
+    result = executor.execute(plan)
+
+    by_id = {hit["resource_id"]: hit for hit in result.data["hits"]}
+    hit = by_id["aof://acme/sales/concept/doc-runbook"]
+    assert hit["source_path"] == "docs/runbook.md"
+    assert hit["content_sha256"] == "sha256:" + "a" * 64
+    # 未经知识构建标注的资源不携带来源键：缺位即“无原生定位”，客户端不得启发式补齐。
+    assert "source_path" not in by_id["aof://acme/sales/concept/customer"]
+
+
+def test_semantic_search_vector_mode_hits_carry_provenance(tmp_path) -> None:
+    resolver, executor = _trusted_query_runtime(tmp_path, extra_resources=(_provenance_concept(),))
+    request = QueryRequest.create(
+        channel="production",
+        capability=QueryCapability.SEMANTIC_SEARCH,
+        query="customer",
+        purpose="customer-support",
+        parameters={"limit": 10, "retrieval_mode": "vector"},
+    )
+    plan = resolver.plan(request, tenant_id="acme")
+
+    result = executor.execute(plan)
+
+    by_id = {hit["resource_id"]: hit for hit in result.data["hits"]}
+    assert by_id["aof://acme/sales/concept/doc-runbook"]["source_path"] == "docs/runbook.md"
+
+
 def test_sqlite_executor_runs_deterministic_semantic_sql_against_real_data(tmp_path) -> None:
     resolver, _ = _trusted_query_runtime(tmp_path)
     main_database = tmp_path / "warehouse-main.sqlite3"

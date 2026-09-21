@@ -11,6 +11,7 @@ import math
 import re
 from collections import Counter
 
+from .canonical import hit_provenance
 from .semantic_query import SemanticIntent, SemanticQueryCompileError
 
 
@@ -95,6 +96,7 @@ def rank_resources(query, resources, mode, kinds=()):
                     )
                     if key in resource
                 }
+                | hit_provenance(resource)
                 | {"score": round(score, 8)}
             )
     hits.sort(key=lambda hit: (-hit["score"], hit["resource_id"]))
